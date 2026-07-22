@@ -1,0 +1,548 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+# Descreibe:this gui will generate specific pattern for gpls
+# base version:v1.0 
+# version update log:
+#   V1.1  Update gui fitting in linux & Added comma autocompletion 
+# 
+# 
+
+
+import os
+import sys
+import tkinter.filedialog
+import tkinter as tk
+import tkinter.font as tkFont
+from   tkinter import ttk
+
+class gen_gui:
+    def __init__(self):
+        self.root=tk.Tk()
+        self.root.title("Generate Pattern")
+        self.root.geometry("1200x800")
+        self.root.resizable(True, True)
+        self.dis_path = tk.StringVar()
+        self.dis_design_core_num = tk.StringVar()
+        self.dis_tb_st = tk.StringVar()
+        self.dis_rtl_st = tk.StringVar()
+        self.dis_slice_num = tk.StringVar()
+        self.dis_slice_core_num = tk.StringVar()
+        self.pat_text_factor =7.2
+        self.con_text_factor =12.2
+        self.vld_pattern=[]
+        self.static_cnt=0
+        self.init_done=False
+
+        #main menu
+        self.main_menu=tk.Menu(self.root,tearoff=False)
+        self.main_menu.add_command(label="Help",command=self.creat_new_win)
+        self.root.config(menu=self.main_menu)
+
+        #windon size change
+        self.root.bind("<Configure>",self.window_resize)
+        self.root.update()
+        self.pat_text_width=int(self.root.winfo_width()/self.pat_text_factor)
+        self.con_text_width=int(self.root.winfo_width()/self.con_text_factor)
+
+        self.root.bind("<Motion>",self.mouce_move)
+
+        # compenent place
+        #self.root.iconbitmap("uvm.ico")
+        tk.Label(self.root,text = "Destination File:").place(x=10,y=5)
+        tk.Entry(self.root,width="80",textvariable = self.dis_path).place(x=125,y=5)
+        tk.Button(self.root, text = "Choose  File", bg="green",command = self.selectPath).place(x=700,y=0)
+        tk.Label(self.root, text = "Design Core Num:").place(x=10,y=30)
+        self.entry_design_core_num=tk.Entry(self.root, textvariable = self.dis_design_core_num, width="10")
+        self.entry_design_core_num.place(x=125,y=30)
+        tk.Label(self.root,text = "Please input your pattern below, and use * instead of index").place(x=10,y=50)
+        tk.Button(self.root, text = "Begin to run", bg="green",command =  self.common_begin).place(x=700,y=45)
+        
+        self.tx_common_partten=tk.Text(self.root, width=self.pat_text_width, height=10, undo=True, autoseparators=False)
+        self.tx_common_partten.place(x=10,y=75)
+        # # Descreibe:this gui will generate specific pattern for gpls
+        tk.Label(self.root,text = "Please input your discontinuous pattern below, and use */$/& instead of index").place(x=10,y=235)
+        #combox
+        second_pat_ctrl_yaxis=255
+        self.cbox_sameslice=ttk.Combobox(self.root,width="12")
+        self.cbox_sameslice.place(x=10,y=second_pat_ctrl_yaxis)
+        self.cbox_sameslice["value"]=("same slice","diff slice")
+        self.cbox_sameslice.current(0)
+
+        tk.Label(self.root,text = "enable testbeach:&").place(x=140,y=second_pat_ctrl_yaxis)
+        self.cbox_enable_tb=ttk.Combobox(self.root,width="3")
+        self.cbox_enable_tb.place(x=260,y=second_pat_ctrl_yaxis)
+        self.cbox_enable_tb["value"]=("YES","NO")
+        self.cbox_enable_tb.current(0)
+
+        tk.Label(self.root,text = "successive core:").place(x=320,y=second_pat_ctrl_yaxis)
+        self.cbox_succ_core=ttk.Combobox(self.root,width="3")
+        self.cbox_succ_core.place(x=430,y=second_pat_ctrl_yaxis)
+        self.cbox_succ_core["value"]=("YES","NO")
+        self.cbox_succ_core.current(1)
+
+        tb_start_xaxis=490
+        tk.Label(self.root,text = "tb start:").place(x=tb_start_xaxis,y=second_pat_ctrl_yaxis)
+        self.entry_tb_start=tk.Entry(self.root,width="6",textvariable = self.dis_tb_st)
+        self.entry_tb_start.place(x=tb_start_xaxis+60,y=second_pat_ctrl_yaxis)
+        tk.Label(self.root,text = "rtl start:").place(x=tb_start_xaxis+120,y=second_pat_ctrl_yaxis)
+        self.entry_rtl_start=tk.Entry(self.root,width="6",textvariable = self.dis_rtl_st)
+        self.entry_rtl_start.place(x=tb_start_xaxis+180,y=second_pat_ctrl_yaxis)
+  
+        tk.Label(self.root,text = "slice num:*").place(x=tb_start_xaxis+240,y=second_pat_ctrl_yaxis)
+        self.entry_slice_num=tk.Entry(self.root,width="6",textvariable = self.dis_slice_num)
+        self.entry_slice_num.place(x=tb_start_xaxis+310,y=second_pat_ctrl_yaxis)
+        tk.Label(self.root,text = "slice core num:$").place(x=tb_start_xaxis+380,y=second_pat_ctrl_yaxis)
+        self.entry_slice_core_num=tk.Entry(self.root,width="6",textvariable = self.dis_slice_core_num)
+        self.entry_slice_core_num.place(x=tb_start_xaxis+480,y=second_pat_ctrl_yaxis)
+
+
+
+        tk.Button(self.root, text = "Begin to run", bg="green",command =  self.special_begin).place(x=1050,y=(second_pat_ctrl_yaxis-5))
+
+        self.tx_special_patten=tk.Text(self.root, width=self.pat_text_width, height=10, undo=True, autoseparators=False)
+        self.tx_special_patten.place(x=10,y=280)
+        
+        #console
+        tk.Label(self.root,text = "Console Window:").place(x=10,y=440)
+        self.console=tk.Text(self.root, width=self.con_text_width, height=15, undo=True, autoseparators=False,bg="black",fg="white",insertbackground="white")
+        self.console.place(x=10,y=460)
+        self.console.configure(state='disabled',font=("Cascadia", 14))
+
+        #print("core_num:",self.dis_design_core_num.get())
+        #fontfamilylist = tkFont.families(self.root)
+        #print(fontfamilylist)
+
+        #for copy paste   
+        self.menu_com = tk.Menu(self.root,tearoff=False)
+        self.menu_com.add_command(label="cut", command=self.com_cut)
+        self.menu_com.add_command(label="copy", command=self.com_copy)
+        self.menu_com.add_command(label="paste", command=self.com_paste)
+        self.tx_common_partten.bind("<Button-3>", self.com_pop)     
+
+        self.menu_spl = tk.Menu(self.root,tearoff=False)
+        self.menu_spl.add_command(label="cut", command=self.spl_cut)
+        self.menu_spl.add_command(label="copy", command=self.spl_copy)
+        self.menu_spl.add_command(label="paste", command=self.spl_paste)
+        self.tx_special_patten.bind("<Button-3>", self.spl_pop)  
+
+        #cbox event bind 
+        self.cbox_sameslice.bind("<<ComboboxSelected>>",self.same_slice_select) 
+        self.cbox_enable_tb.bind("<<ComboboxSelected>>",self.enable_tb_select)
+        self.cbox_succ_core.bind("<<ComboboxSelected>>",self.successive_select)
+
+        #for slice default choose
+        if(self.cbox_sameslice.get()=="same slice"):
+            self.entry_tb_start.configure(state='disabled')
+            self.entry_rtl_start.configure(state='disabled')
+            self.entry_slice_num.configure(state='normal')
+            self.entry_slice_core_num.configure(state='normal')
+        else:
+            self.entry_tb_start.configure(state='normal')
+            self.entry_rtl_start.configure(state='normal')
+            self.entry_slice_num.configure(state='normal')
+            self.entry_slice_core_num.configure(state='normal')    
+           
+        self.root.mainloop()
+
+    def mouce_move(self,event):
+        print("initial done!")
+        self.init_done=True   
+        self.root.unbind("<Motion>")
+
+    def window_resize(self,event):
+        if(self.init_done):
+            self.root.update()
+            self.pat_text_width=int(self.root.winfo_width()/self.pat_text_factor)
+            self.con_text_width=int(self.root.winfo_width()/self.con_text_factor)
+            self.console.configure(width=self.con_text_width)
+            self.tx_special_patten.configure(width=self.pat_text_width)
+            self.tx_common_partten.configure(width=self.pat_text_width)
+
+    def creat_new_win(self):
+        self.help_win=tk.Toplevel(self.root)
+        self.help_win.title("help details")
+        self.help_win.geometry("300x100+300+200")
+        self.help_win.resizable(False, False)
+        self.help_text =tk.Text(self.help_win, width=42, height=20,undo=True,autoseparators=False)
+        self.help_text.grid(row = 0,column =0)
+        self.help_text.insert(tk.END, "more help detail in follow link:\n")
+        start_index=tk.END  
+        self.help_text.tag_add('help',start_index)
+        self.help_text.tag_config('help',foreground='red',font=("Cascadia", 10))
+        self.help_text.insert(tk.END,"\thttps://kvftsfijpo.feishu.cn/docx/IkondxDVlodVBZxZ1nTcyF8GnIh","help")
+        self.help_text.configure(state='disabled')
+
+        self.menu_hlp = tk.Menu(self.help_win,tearoff=False)
+        self.menu_hlp.add_command(label="copy", command=self.hlp_copy)
+        self.help_text.bind("<Button-3>", self.hlp_pop) 
+
+
+    def same_slice_select(self,event):
+        if(self.cbox_sameslice.get()=="same slice"):
+
+            self.entry_tb_start.configure(state='disabled')
+            self.entry_rtl_start.configure(state='disabled')
+            self.entry_slice_num.configure(state='normal')
+            self.entry_slice_core_num.configure(state='normal')
+            self.cbox_enable_tb.current(0)
+            self.cbox_succ_core.current(1)
+            self.set_console_info("Chose all slices have same core num")
+        else:
+            self.entry_tb_start.configure(state='normal')
+            self.entry_rtl_start.configure(state='disabled')
+            self.entry_slice_num.configure(state='normal')
+            self.entry_slice_core_num.configure(state='normal')
+            self.cbox_enable_tb.current(0)
+            self.cbox_succ_core.current(1)
+            self.set_console_info("Chose some slices have different core num")
+
+    def enable_tb_select(self,event):
+        if(self.cbox_sameslice.get()=="same slice"):
+            if(self.cbox_enable_tb.get()=="YES"):
+                self.set_console_info("Support Testbeach Encode & Enabled")
+            else:
+                self.set_console_info("Support Testbeach Encode & Disabled")
+        else:
+            if(self.cbox_enable_tb.get()=="YES"):
+                self.set_console_info("Support Testbeach Encode & Enabled")           
+                self.entry_tb_start.configure(state='normal')
+            else:
+                self.set_console_info("Support Testbeach Encode & Disabled")
+                self.entry_tb_start.configure(state='disabled')
+
+        
+    def successive_select(self,event):
+
+        if(self.cbox_sameslice.get()=="same slice"):
+            if(self.cbox_succ_core.get()=="YES"):
+                self.set_console_info("All slice core id setting is successive")
+            else:
+                self.set_console_info("All slice core id setting is not successive")
+        else:
+            if(self.cbox_succ_core.get()=="YES"):
+                self.set_console_info("All slice core id setting is successive")
+                self.entry_rtl_start.configure(state='normal')
+            else:
+                self.set_console_info("All slice core id setting is not successive")
+                self.entry_rtl_start.configure(state='disabled')
+ 
+    def com_pop(self,event):
+            self.menu_com.post(event.x_root, event.y_root)  
+    def com_cut(self,event=None):
+        global root
+        self.tx_common_partten.event_generate('<<Cut>>')        
+    def com_copy(self,event=None):
+        global root
+        self.tx_common_partten.event_generate('<<Copy>>')       
+    def com_paste(self,event=None):
+        global root
+        self.tx_common_partten.event_generate('<<Paste>>')
+
+    def spl_pop(self,event):
+            self.menu_spl.post(event.x_root, event.y_root)  
+
+    def spl_cut(self,event=None):
+        global root
+        self.tx_common_partten.event_generate('<<Cut>>')
+        
+    def spl_copy(self,event=None):
+        global root
+        self.tx_common_partten.event_generate('<<Copy>>')
+        
+    def spl_paste(self,event=None):
+        global root
+        self.tx_common_partten.event_generate('<<Paste>>')
+
+    def hlp_copy(self,event=None):
+        global root
+        self.help_text.event_generate('<<Copy>>')
+
+    def hlp_pop(self,event):
+        self.menu_hlp.post(event.x_root, event.y_root)
+
+    def get_common_patttern(self):
+        self.vld_pattern=[]
+        self.common_all_data=self.tx_common_partten.get("1.0",tk.END)
+        self.pattern_ls=self.common_all_data.split('\n')
+        #print("ls:",self.pattern_ls)
+
+        for pattern in self.pattern_ls:
+            if((len(pattern)!=0) and ("*" in pattern)):
+                self.vld_pattern.append(pattern)
+                
+        self.vld_pattern_length=len(self.vld_pattern)
+
+        print("vld_pattern length:",self.vld_pattern_length)
+        print("vld_pattern:",self.vld_pattern)
+
+
+    def get_special_patttern(self):
+        self.vld_pattern=[]
+        self.special_all_data=self.tx_special_patten.get("1.0",tk.END)
+        self.pattern_ls=self.special_all_data.split('\n')
+        #print("ls:",self.pattern_ls)
+
+        for pattern in self.pattern_ls:
+            if((len(pattern)!=0) and ("*" in pattern) and ("$" in pattern)):
+                self.vld_pattern.append(pattern)
+
+        self.vld_pattern_length=len(self.vld_pattern)
+        
+        print("vld_pattern length:",self.vld_pattern_length)
+        print("vld_pattern:",self.vld_pattern)
+
+
+    def gen_common_patttern(self):
+        with open(self.des_path,mode="a+") as file:
+            file.write("\n\n")
+            file.write("//===================================================================================\n")
+            file.write("//======= The following code is automatically generated based on the pattern ========\n")
+            file.write("//===================================================================================\n")
+            for pattern in self.vld_pattern:
+                for index in range(eval(self.core_num)):
+                    pat_line =pattern.replace("*",str(index))
+                    if(pat_line.endswith(";")):
+                        pat_line = pat_line+"\t\t// AUTO_GENERATE \n"
+                    else:
+                        pat_line = pat_line+";"+"\t\t// AUTO_GENERATE \n"
+                    #self.set_console_result(pat_line)
+                    file.write(pat_line)
+                file.write("\n")   
+
+            self.set_console_done("generare pattern done!,check results in your detination file")  
+            file.write("//===================================================================================\n")
+            file.write("//==============The end of the auto-generated part code =============================\n")
+            file.write("//===================================================================================\n")
+
+    def gen_special_patttern(self):
+        
+        with open(self.des_path,mode="a+") as file:
+            file.write("\n\n")
+            file.write("//===================================================================================\n")
+            file.write("//======= The following code is automatically generated based on the pattern ========\n")
+            file.write("//===================================================================================\n")
+
+            if(self.cbox_sameslice.get()=="same slice"):
+                #this function can be combined
+                if(self.cbox_enable_tb.get()=="YES"):
+                    for pattern in self.vld_pattern:
+                        for slice_index in range(eval(self.slice_num)):
+                            file.write("//slice"+str(slice_index)+"\n") 
+                            for coreid in range(eval(self.slice_core_num)):
+                                pat_line=pattern.replace("*",str(slice_index))
+                                #for testbeach encode
+                                pat_line=pat_line.replace("&",str(coreid+slice_index*eval(self.slice_core_num)))
+
+                                if(self.cbox_succ_core.get()=="NO"):
+                                    pat_line=pat_line.replace("$",str(coreid))
+                                else:
+                                    pat_line=pat_line.replace("$",str(coreid+slice_index*eval(self.slice_core_num)))
+
+                                if(pat_line.endswith(";")):
+                                    pat_line = pat_line+"\t\t// AUTO_GENERATE \n"
+                                else:
+                                    pat_line = pat_line+";"+"\t\t// AUTO_GENERATE \n"
+
+                                #self.set_console_result(pat_line)
+                                file.write(pat_line)
+                            file.write("\n") 
+                else:
+                    gen_stop=False
+                    for pattern in self.vld_pattern:
+                        if("&" in pattern):
+                            gen_stop=True
+                    if(not gen_stop):
+                        for pattern in self.vld_pattern:
+                            for slice_index in range(eval(self.slice_num)):
+                                file.write("//slice"+str(slice_index)+"\n") 
+                                for coreid in range(eval(self.slice_core_num)):
+                                    pat_line=pattern.replace("*",str(slice_index))
+                                    if(self.cbox_succ_core.get()=="NO"):
+                                        pat_line=pat_line.replace("$",str(coreid))
+                                    else:
+                                        pat_line=pat_line.replace("$",str(coreid+slice_index*eval(self.slice_core_num)))
+
+                                    pat_line=pat_line+"\t\t// AUTO_GENERATE \n"
+                                    #self.set_console_result(pat_line)
+                                    file.write(pat_line)
+                                file.write("\n")
+                    else:
+                        self.set_console_warning("detected & in your input pattern,please enable testbeach encode!")                  
+            else:   
+                for pattern in self.vld_pattern:
+                    slice_st_index=eval(self.slice_num.split("-")[0])
+                    slice_end_index=eval(self.slice_num.split("-")[1])
+                    print("slice_st_index:",slice_st_index)
+                    print("slice_end_index:",slice_end_index)
+
+                    for slice_index in range(slice_st_index,(slice_end_index+1),1):
+                        file.write("//slice"+str(slice_index)+"\n") 
+                        for coreid in range(eval(self.slice_core_num)):
+                            pat_line=pattern.replace("*",str(slice_index))
+
+                            if(self.cbox_enable_tb.get()=="YES"):
+                                pat_line=pat_line.replace("&",str(coreid+(slice_index-slice_st_index)*eval(self.slice_core_num)+eval(self.tb_st)))
+
+                            if(self.cbox_succ_core.get()=="NO"):
+                                pat_line=pat_line.replace("$",str(coreid))
+                            else:
+                                pat_line=pat_line.replace("$",str(coreid+(slice_index-slice_st_index)*eval(self.slice_core_num)+eval(self.rtl_st)))
+
+                            pat_line=pat_line+"\t\t// AUTO_GENERATE \n"
+                            #self.set_console_result(pat_line)
+                            file.write(pat_line)
+                        file.write("\n")
+
+            self.set_console_done("generare pattern done!,check results in your detination file")        
+            file.write("//===================================================================================\n")
+            file.write("//==============The end of the auto-generated part code =============================\n")
+            file.write("//===================================================================================\n")
+
+
+
+    def set_console_warning(self,warn_info):
+        self.console.configure(state='normal')
+        start_index=tk.END  
+        self.console.tag_add('tag_warning',start_index)
+        self.console.tag_config('tag_warning',foreground='yellow',font=("Cascadia", 14))
+        self.console.insert(tk.END, "[WARNING] "+warn_info+'\n',"tag_warning")
+        self.console.see(tk.END)
+        self.console.configure(state='disabled')
+
+    def set_console_result(self,res_info):
+        self.console.configure(state='normal')
+        start_index=tk.END  
+        self.console.tag_add('result',start_index)
+        self.console.tag_config('result',foreground='cyan',font=("Cascadia", 14))
+        self.console.insert(tk.END, "[RESULT] "+res_info+'\n',"result")
+        self.console.see(tk.END)
+        self.console.configure(state='disabled')
+
+    def set_console_done(self,warn_info):
+        self.console.configure(state='normal')
+        start_index=tk.END  
+        self.console.tag_add('done',start_index)
+        self.console.tag_config('done',foreground='cyan',font=("Cascadia", 14))
+        self.console.insert(tk.END, "[Info] "+warn_info+'\n',"done")
+        self.console.see(tk.END)
+        self.console.configure(state='disabled')
+
+    def set_console_info(self,info):
+        self.console.configure(state='normal')
+        self.console.insert(tk.END, "[Info] "+info+'\n')
+        self.console.see(tk.END)
+        self.console.configure(state='disabled')
+           
+    def selectPath(self):
+        self.des_path = tkinter.filedialog.askopenfilename(title="choose destination file")  
+        self.dis_path.set(self.des_path)
+        self.set_console_info("Destination File:"+self.des_path)
+    
+    def special_begin(self):
+        stop=False
+
+        if(self.dis_path.get()==""):
+            stop=True
+            self.set_console_warning('Set destination file first please,then rerun again')
+            return
+        if(self.cbox_sameslice.get()!="same slice"):
+            if(self.cbox_enable_tb.get()=="YES" and self.dis_tb_st.get()==""):
+                stop=True
+                self.set_console_warning("Set tb start first please,then rerun again")
+                return
+            if(self.cbox_succ_core.get()=="YES" and self.dis_rtl_st.get()==""):
+                stop=True
+                self.set_console_warning("Set rtl start first please,then rerun again")
+                return
+            if("-" not in self.entry_slice_num.get()):
+                self.set_console_warning("detected your slice num pattern mismatched.when select [diff slice].expected pattern as:2-6,3-7")
+                return
+            elif(len(self.entry_slice_num.get().split("-"))!=2):
+                self.set_console_warning("detected your slice num pattern mismatched.when select [diff slice],expected pattern as:2-6,3-7")
+                return
+
+        if(self.dis_slice_num.get()==""):
+            stop=True
+            self.set_console_warning("Set slice num first please,then rerun again")
+            return
+        if(self.dis_slice_core_num.get()==""):
+            stop=True
+            self.set_console_warning("Set slice core num first please,then rerun again")
+            return
+
+        if(stop==False):
+            self.set_console_info("="*30+"start to run with follow setting"+"="*30)
+            self.set_console_info("Destination File:"+self.des_path)
+            if(self.cbox_sameslice.get()!="same slice"):
+                if(self.cbox_enable_tb.get()=="YES"):
+                    self.tb_st=self.entry_tb_start.get()
+                    self.dis_tb_st.set(self.tb_st)
+                    self.set_console_info("Tb Start Index:"+self.tb_st)
+                if(self.cbox_succ_core.get()=="YES"):
+                    self.rtl_st=self.entry_rtl_start.get()
+                    self.dis_rtl_st.set(self.rtl_st)
+                    self.set_console_info("Rtl Start Index:"+self.rtl_st)
+
+            self.slice_num=self.entry_slice_num.get()
+            self.slice_core_num=self.entry_slice_core_num.get()
+            self.dis_slice_num.set(self.slice_num)
+            self.dis_slice_core_num.set(self.slice_core_num)
+            self.set_console_info("Slice Num :"+self.slice_num)
+            self.set_console_info("Slice Core Num:"+self.slice_core_num)
+            self.set_console_info("Support Testbeach Encode:"+self.cbox_enable_tb.get())
+            self.set_console_info("All core id successive:"+self.cbox_succ_core.get())
+
+            self.mode="special"
+
+            self.get_special_patttern()
+            if(len(self.special_all_data.replace(" ",""))==1):
+                self.set_console_warning("Input your pattern first,then rerun again")
+
+            else:
+                self.set_console_info("input "+str(self.vld_pattern_length)+" patterns as follows:")
+                self.console.configure(state='normal')
+                for line in self.vld_pattern:
+                    self.console.insert(tk.END, "\t\t"+line+'\n')
+                self.console.see(tk.END)
+                self.console.configure(state='disable')
+
+                self.set_console_info("The pattern is generatting...")
+                self.gen_special_patttern()
+
+                      
+    def common_begin(self):
+        stop=False
+        if(self.dis_path.get()==""):
+            stop=True
+            self.set_console_warning("Set destination file first please,then rerun again")
+            return 
+        if(self.dis_design_core_num.get()==""):
+            stop=True
+            self.set_console_warning("Set design core num first please,then rerun again")     
+            return  
+        if(stop==False):
+            self.set_console_info("="*30+"start to run with follow setting"+"="*30)
+            self.set_console_info("Destination File:"+self.des_path)
+            self.core_num=self.entry_design_core_num.get()
+            self.dis_design_core_num.set(self.core_num)
+            self.set_console_info("Design Core Num:"+self.core_num)
+            self.mode="common"
+
+            self.get_common_patttern()
+            if(len(self.common_all_data.replace(" ",""))==1):
+                self.set_console_warning("Input your pattern first,then rerun again")
+            else:
+                self.set_console_info("input "+str(self.vld_pattern_length)+" patterns as follows:")
+                self.console.configure(state='normal')
+                for line in self.vld_pattern:
+                    self.console.insert(tk.END, "\t\t"+line+'\n')
+                self.console.see(tk.END)
+                self.console.configure(state='disable')
+
+                self.set_console_info("The pattern is generatting...")
+                self.gen_common_patttern()
+
+
+
+if __name__ == '__main__':
+    gen_gui()

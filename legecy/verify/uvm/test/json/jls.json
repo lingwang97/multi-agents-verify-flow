@@ -1,0 +1,231 @@
+{
+    "name": "jls",
+    "COMMON_VCS_MACRO_OPT": "+STUB_OTP+STUB_FAKE_PLL_FREQ=500",
+    "tests": {
+        "jls_chipaddr_255_000_003_jlm_test": {
+            "stage1": "false",
+            "stage2": "true",
+            "smoke": "false",
+            "full": "true",
+            "codecoverage": "false",
+            "iteration": "1",
+            "UVM_TESTNAME": "jls_chipaddr_255_10_test",
+            "VCS_MACRO_OPT": "+JLM_RANDOM_CO_JLM+NO_INIT+STUB_P+STUB_V+STUB_T+NO_ECC_CHK+USE_JAMLINK_DRV+JLM_DATA_DEBUG+CHIP_NUM=255+JLS_000_003",
+            "VCS_PLUSARGS_OPT": ""
+        },
+        "jls_chipaddr_255_004_007_jlm_test": {
+            "stage1": "false",
+            "stage2": "true",
+            "smoke": "false",
+            "full": "true",
+            "codecoverage": "false",
+            "iteration": "1",
+            "UVM_TESTNAME": "jls_chipaddr_255_10_test",
+            "VCS_MACRO_OPT": "+JLM_RANDOM_CO_JLM+NO_INIT+NO_ECC_CHK+USE_JAMLINK_DRV+JLM_DATA_DEBUG+CHIP_NUM=255+JLS_004_007",
+            "VCS_PLUSARGS_OPT": ""
+        },
+        "jls_chipaddr_255_008_011_jlm_test": {
+            "stage1": "false",
+            "stage2": "true",
+            "smoke": "false",
+            "full": "true",
+            "codecoverage": "false",
+            "iteration": "1",
+            "UVM_TESTNAME": "jls_chipaddr_255_10_test",
+            "VCS_MACRO_OPT": "+JLM_RANDOM_CO_JLM+NO_INIT+NO_ECC_CHK+USE_JAMLINK_DRV+JLM_DATA_DEBUG+CHIP_NUM=255+JLS_008_011",
+            "VCS_PLUSARGS_OPT": ""
+        },
+        "jls_chipaddr_255_012_015_jlm_test": {
+            "stage1": "false",
+            "stage2": "true",
+            "smoke": "false",
+            "full": "true",
+            "codecoverage": "false",
+            "iteration": "1",
+            "UVM_TESTNAME": "jls_chipaddr_255_10_test",
+            "VCS_MACRO_OPT": "+JLM_RANDOM_CO_JLM+NO_INIT+NO_ECC_CHK+USE_JAMLINK_DRV+JLM_DATA_DEBUG+CHIP_NUM=255+JLS_012_015",
+            "VCS_PLUSARGS_OPT": ""
+        },
+        "jls_chipaddr_255_016_019_jlm_test": {
+            "stage1": "false",
+            "stage2": "true",
+            "smoke": "false",
+            "full": "true",
+            "codecoverage": "false",
+            "iteration": "1",
+            "UVM_TESTNAME": "jls_chipaddr_255_10_test",
+            "VCS_MACRO_OPT": "+JLM_RANDOM_CO_JLM+NO_INIT+NO_ECC_CHK+USE_JAMLINK_DRV+JLM_DATA_DEBUG+CHIP_NUM=255+JLS_016_019",
+            "VCS_PLUSARGS_OPT": ""
+        },
+        "jls_chipaddr_255_020_023_jlm_test": {
+            "stage1": "false",
+            "stage2": "true",
+            "smoke": "false",
+            "full": "true",
+            "codecoverage": "false",
+            "iteration": "1",
+            "UVM_TESTNAME": "jls_chipaddr_255_10_test",
+            "VCS_MACRO_OPT": "+JLM_RANDOM_CO_JLM+NO_INIT+NO_ECC_CHK+USE_JAMLINK_DRV+JLM_DATA_DEBUG+CHIP_NUM=255+JLS_020_023",
+            "VCS_PLUSARGS_OPT": ""
+        },
+        "jls_chipaddr_255_024_027_jlm_test": {
+            "stage1": "false",
+            "stage2": "true",
+            "smoke": "false",
+            "full": "true",
+            "codecoverage": "false",
+            "iteration": "1",
+            "UVM_TESTNAME": "jls_chipaddr_255_10_test",
+            "VCS_MACRO_OPT": "+JLM_RANDOM_CO_JLM+NO_INIT+NO_ECC_CHK+USE_JAMLINK_DRV+JLM_DATA_DEBUG+CHIP_NUM=255+JLS_024_027",
+            "VCS_PLUSARGS_OPT": ""
+        },
+        "jls_chipaddr_255_028_031_jlm_test": {
+            "stage1": "false",
+            "stage2": "true",
+            "smoke": "false",
+            "full": "true",
+            "codecoverage": "false",
+            "iteration": "1",
+            "UVM_TESTNAME": "jls_chipaddr_255_10_test",
+            "VCS_MACRO_OPT": "+JLM_RANDOM_CO_JLM+NO_INIT+NO_ECC_CHK+USE_JAMLINK_DRV+JLM_DATA_DEBUG+CHIP_NUM=255+JLS_028_031",
+            "VCS_PLUSARGS_OPT": ""
+        },
+        "jls_chipaddr_255_032_035_jlm_test": {
+            "stage1": "false",
+            "stage2": "true",
+            "smoke": "false",
+            "full": "true",
+            "codecoverage": "false",
+            "iteration": "1",
+            "UVM_TESTNAME": "jls_chipaddr_255_10_test",
+            "VCS_MACRO_OPT": "+JLM_RANDOM_CO_JLM+NO_INIT+NO_ECC_CHK+USE_JAMLINK_DRV+JLM_DATA_DEBUG+CHIP_NUM=255+JLS_032_035",
+            "VCS_PLUSARGS_OPT": ""
+        },
+        "jls_chipaddr_255_036_039_jlm_test": {
+            "stage1": "false",
+            "stage2": "true",
+            "smoke": "false",
+            "full": "true",
+            "codecoverage": "false",
+            "iteration": "1",
+            "UVM_TESTNAME": "jls_chipaddr_255_10_test",
+            "VCS_MACRO_OPT": "+JLM_RANDOM_CO_JLM+NO_INIT+NO_ECC_CHK+USE_JAMLINK_DRV+JLM_DATA_DEBUG+CHIP_NUM=255+JLS_036_039",
+            "VCS_PLUSARGS_OPT": ""
+        },
+        "jls_chipaddr_255_040_043_jlm_test": {
+            "stage1": "false",
+            "stage2": "true",
+            "smoke": "false",
+            "full": "true",
+            "codecoverage": "false",
+            "iteration": "1",
+            "UVM_TESTNAME": "jls_chipaddr_255_10_test",
+            "VCS_MACRO_OPT": "+JLM_RANDOM_CO_JLM+NO_INIT+NO_ECC_CHK+USE_JAMLINK_DRV+JLM_DATA_DEBUG+CHIP_NUM=255+JLS_040_043",
+            "VCS_PLUSARGS_OPT": ""
+        },
+        "jls_chipaddr_255_044_047_jlm_test": {
+            "stage1": "false",
+            "stage2": "true",
+            "smoke": "false",
+            "full": "true",
+            "codecoverage": "false",
+            "iteration": "1",
+            "UVM_TESTNAME": "jls_chipaddr_255_10_test",
+            "VCS_MACRO_OPT": "+JLM_RANDOM_CO_JLM+NO_INIT+NO_ECC_CHK+USE_JAMLINK_DRV+JLM_DATA_DEBUG+CHIP_NUM=255+JLS_044_047",
+            "VCS_PLUSARGS_OPT": ""
+        },
+        "jls_chipaddr_255_048_051_jlm_test": {
+            "stage1": "false",
+            "stage2": "true",
+            "smoke": "false",
+            "full": "true",
+            "codecoverage": "false",
+            "iteration": "1",
+            "UVM_TESTNAME": "jls_chipaddr_255_10_test",
+            "VCS_MACRO_OPT": "+JLM_RANDOM_CO_JLM+NO_INIT+NO_ECC_CHK+USE_JAMLINK_DRV+JLM_DATA_DEBUG+CHIP_NUM=255+JLS_048_051",
+            "VCS_PLUSARGS_OPT": ""
+        },
+        "jls_chipaddr_255_052_055_jlm_test": {
+            "stage1": "false",
+            "stage2": "true",
+            "smoke": "false",
+            "full": "true",
+            "codecoverage": "false",
+            "iteration": "1",
+            "UVM_TESTNAME": "jls_chipaddr_255_10_test",
+            "VCS_MACRO_OPT": "+JLM_RANDOM_CO_JLM+NO_INIT+NO_ECC_CHK+USE_JAMLINK_DRV+JLM_DATA_DEBUG+CHIP_NUM=255+JLS_052_055",
+            "VCS_PLUSARGS_OPT": ""
+        },
+        "jls_chipaddr_255_056_059_jlm_test": {
+            "stage1": "false",
+            "stage2": "true",
+            "smoke": "false",
+            "full": "true",
+            "codecoverage": "false",
+            "iteration": "1",
+            "UVM_TESTNAME": "jls_chipaddr_255_10_test",
+            "VCS_MACRO_OPT": "+JLM_RANDOM_CO_JLM+NO_INIT+NO_ECC_CHK+USE_JAMLINK_DRV+JLM_DATA_DEBUG+CHIP_NUM=255+JLS_056_059",
+            "VCS_PLUSARGS_OPT": ""
+        },
+        "jls_chipaddr_255_060_063_jlm_test": {
+            "stage1": "false",
+            "stage2": "true",
+            "smoke": "false",
+            "full": "true",
+            "codecoverage": "false",
+            "iteration": "1",
+            "UVM_TESTNAME": "jls_chipaddr_255_10_test",
+            "VCS_MACRO_OPT": "+JLM_RANDOM_CO_JLM+NO_INIT+NO_ECC_CHK+USE_JAMLINK_DRV+JLM_DATA_DEBUG+CHIP_NUM=255+JLS_060_063",
+            "VCS_PLUSARGS_OPT": ""
+        },
+        "jls_chipaddr_255_064_067_jlm_test": {
+            "stage1": "false",
+            "stage2": "true",
+            "smoke": "false",
+            "full": "true",
+            "codecoverage": "false",
+            "iteration": "1",
+            "UVM_TESTNAME": "jls_chipaddr_255_10_test",
+            "VCS_MACRO_OPT": "+JLM_RANDOM_CO_JLM+NO_INIT+NO_ECC_CHK+USE_JAMLINK_DRV+JLM_DATA_DEBUG+CHIP_NUM=255+JLS_064_067",
+            "VCS_PLUSARGS_OPT": ""
+        },
+        "jls_std_apb_smoke_jlm_test": {
+            "stage1": "false",
+            "stage2": "true",
+            "smoke": "false",
+            "full": "true",
+            "codecoverage": "true",
+            "gate_post_sim":"true",
+            "iteration": "1",
+            "sim_threads":"1",
+            "UVM_TESTNAME": "jls_std_apb_smoke_test",
+            "VCS_MACRO_OPT": "+NO_INIT+NO_SPEED_JLS+JLM_DATA_DEBUG+NO_ECC_CHK+STUB_P+STUB_V+STUB_T+NO_UVM_ECC2_CHK+USE_JAMLINK_DRV",
+            "VCS_PLUSARGS_OPT": ""
+        },
+        "jls_std_apb_cross_test": {
+            "stage1": "false",
+            "stage2": "true",
+            "smoke": "false",
+            "full": "true",
+            "codecoverage": "true",
+            "iteration": "4",
+            "sim_threads":"1",
+            "UVM_TESTNAME": "jls_std_apb_cross_test",
+            "VCS_MACRO_OPT": "+NO_INIT+NO_SPEED_JLS+JLM_DATA_DEBUG+NO_ECC_CHK+STUB_P+STUB_V+STUB_T+NO_UVM_ECC2_CHK",
+            "VCS_PLUSARGS_OPT": ""
+        },
+        "jls_std_apb_cross_jlm_test": {
+            "stage1": "false",
+            "stage2": "true",
+            "smoke": "false",
+            "full": "true",
+            "codecoverage": "true",
+            "iteration": "4",
+            "sim_threads":"1",
+            "UVM_TESTNAME": "jls_std_apb_cross_test",
+            "VCS_MACRO_OPT": "+NO_INIT+NO_SPEED_JLS+JLM_DATA_DEBUG+NO_ECC_CHK+STUB_P+STUB_V+STUB_T+NO_UVM_ECC2_CHK+USE_JAMLINK_DRV",
+            "VCS_PLUSARGS_OPT": ""
+        }
+    }
+}
+   

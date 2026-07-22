@@ -1,0 +1,68 @@
+#!/bin/csh
+################################################################################
+#!/bin/csh
+## -----------------------------------------------------------------------------
+## HEADER_MSG    simulation env setup script
+## HEADER_MSG    Author: sujing
+################################################################################
+echo cshrc file location $HOME/.cshrc
+
+if ( -e $HOME/.cshrc ) then
+	echo ".cshrc exists"
+else
+	echo ".cshrc does not exists. create .cshrc"
+	touch $HOME/.cshrc
+endif
+
+set put_already=`grep -c sim_cshrc $HOME/.cshrc`
+if ( $put_already == 0 ) then
+	echo source \$HOME/sim_cshrc >> $HOME/.cshrc
+endif
+
+if ( -e $HOME/sim_cshrc ) then
+	rm $HOME/sim_cshrc
+endif
+touch $HOME/sim_cshrc
+
+#set put_already=`grep -c checkout $HOME/.cshrc`
+#echo "cshrc: "$put_already
+
+#if ( $put_already == 0 ) then
+	echo "#\!/bin/csh" >> $HOME/sim_cshrc
+	echo "#set sim tool env" >> $HOME/sim_cshrc
+	echo set host\=\`env \| grep HOST= \| head -n 1 \| cut -d \'-\' -f 3\` >> $HOME/sim_cshrc
+	echo if \( \"\$host\" =\~ gat\* \) then >> $HOME/sim_cshrc
+	echo "	source /etc/profile.d/cshrc.lsf" >> $HOME/sim_cshrc
+	echo "endif" >> $HOME/sim_cshrc
+	echo "source /eda/env/init.csh" >> $HOME/sim_cshrc
+	echo "module load spyglass/vP-2019.06-SP2" >> $HOME/sim_cshrc
+	echo setenv ATRENTA_IPKIT_DIR /home/eda/synopsys/spyglass_ip_kit_L-2016.06_v1 >> $HOME/sim_cshrc
+	echo "module load vcs/T-2022.06-A" >> $HOME/sim_cshrc
+	echo "module load verdi/T-2022.06-A" >> $HOME/sim_cshrc
+	echo "module load vivado/2021.2" >> $HOME/sim_cshrc
+	echo "module load icc2/vN-2017.09-SP6" >> $HOME/sim_cshrc
+	echo "setenv SNPSLMD_LICENSE_FILE 27008@lic" >> $HOME/sim_cshrc
+	echo "#git command set" >> $HOME/sim_cshrc
+	echo "alias gtag 'git tag'" >> $HOME/sim_cshrc
+	echo "alias greset 'git reset'" >> $HOME/sim_cshrc
+	echo "alias gcheckout 'git checkout'" >> $HOME/sim_cshrc
+	echo "alias gpush 'git push origin'" >> $HOME/sim_cshrc
+	echo "alias glog 'git log'" >> $HOME/sim_cshrc
+	echo "alias gadd 'git add'" >> $HOME/sim_cshrc
+	echo "alias grm 'git rm'" >> $HOME/sim_cshrc
+	echo "alias gdiff 'git diff'" >> $HOME/sim_cshrc
+	echo "alias gcommit 'git commit'" >> $HOME/sim_cshrc
+	echo "alias gstatus 'git status'" >> $HOME/sim_cshrc
+	echo "alias gconfig 'git config'" >> $HOME/sim_cshrc
+	echo "alias gstash 'git stash'" >> $HOME/sim_cshrc
+	echo "alias gpull 'git pull origin'" >> $HOME/sim_cshrc
+	echo "alias gclone 'git clone git@nextg.b-bug.org:btc/btc_fe/git'" >> $HOME/sim_cshrc
+	echo "alias gbranch 'git branch'" >> $HOME/sim_cshrc
+	echo "alias gmerge 'git merge'" >> $HOME/sim_cshrc
+#endif
+
+
+echo "source $HOME/.cshrc"
+source $HOME/.cshrc
+
+#exit 0

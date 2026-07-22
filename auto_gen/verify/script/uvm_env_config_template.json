@@ -1,0 +1,54 @@
+{
+  "project_name": "soc",
+  "seq_name": "base",
+  "test_name": "base",
+  "env_name": "top",
+  "has_top_if_cfg": true,
+  "modules": [
+    {
+      "name": "reg",
+      "has_interface": true,
+      "has_config": true,
+      "has_tb_top": false,
+      "is_active": false,
+      "enable_adapter": false,
+      "adapter_type": "apb"
+    },
+    {
+      "name": "jls",
+      "has_interface": true,
+      "has_config": true,
+      "has_tb_top": true,
+      "is_active": true,
+      "enable_adapter": false,
+      "adapter_type": "jamlink"
+    },
+    {
+      "name": "cpft",
+      "has_interface": true,
+      "has_config": true,
+      "has_tb_top": false,
+      "is_active": false,
+      "enable_adapter": false,
+      "adapter_type": "apb"
+    },
+    {
+      "name": "uart",
+      "has_interface": true,
+      "has_config": true,
+      "has_tb_top": true,
+      "is_active": true,
+      "enable_adapter": true,
+      "adapter_type": "uart"
+    },
+    {
+      "name": "efuse",
+      "has_interface": true,
+      "has_config": true,
+      "has_tb_top": true,
+      "is_active": true,
+      "enable_adapter": true,
+      "adapter_type": "apb"
+    }
+  ]
+}

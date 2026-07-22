@@ -1,0 +1,734 @@
+#!/opt/anaconda3/bin/python
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Jul 24 11:19:25 2023
+
+@author: xuhaiyang
+"""
+from PyQt5.QtWidgets import *
+from PyQt5.QtCore import *
+from PyQt5.QtWidgets import  QTabWidget
+import os
+import glob
+import sys
+import json
+import re
+import time
+from datetime import datetime
+
+
+class DataModel(QAbstractListModel):
+    def __init__(self, data=None):
+        super().__init__()
+        self.data = data or {}
+
+    def rowCount(self, parent=QModelIndex()):
+        return len(self.data)
+
+    def data(self, index, role=Qt.DisplayRole):
+        if role == Qt.DisplayRole:
+            row = index.row()
+            key = list(self.data.keys())[row]
+            return f"{row+1}. {key}"
+        return None
+
+class MyWidget(QWidget):
+    dataSelected = pyqtSignal(dict)
+    #path_select = pyqtSignal(str)
+    def __init__(self, data=None, path=None):
+        super().__init__()
+        self.data ={
+            
+                        "name":"cpm",
+                      	"COMMON_VCS_MACRO_OPT":"+STUB_OTP+STUB_FAKE_PLL_FREQ=250",
+	                     "tests":
+                             {	"cpm_pll_basic_test":
+	                              	{
+                           		    "stage1":"true",
+		                              "UVM_TESTNAME":"cpm_pll_basic_test",
+		                              "VCS_MACRO_OPT":"+STUB_P+STUB_V+STUB_T",
+		                              "VCS_PLUSARGS_OPT":""
+                                  }
+   
+                            }
+            }
+        self.data_cur = data
+        #self.case_name = 
+        
+        if data is not None:
+
+            self.data = data["tests"]
+        if path is not None:
+            self.file_path = path
+
+        self.layout = QHBoxLayout()
+ #       self.layout.addStretch(0)
+        self.setLayout(self.layout)
+
+        splitter = QSplitter(self)
+        self.layout.addWidget(splitter)
+
+        self.list_view = QListView()
+        self.list_view.clicked.connect(self.show_data)
+        splitter.addWidget(self.list_view)
+
+        stack_widget = QStackedWidget()
+        splitter.addWidget(stack_widget)
+
+        self.data_model = DataModel(self.data)
+        self.list_view.setModel(self.data_model)
+
+        self.data_display_widget = DataDisplayWidget()
+        self.data_display_widget.dataChanged.connect(self.save_data)
+        
+        stack_widget.addWidget(self.data_display_widget)
+        
+        #add simulation widget
+        self.sim_widget = SimulationDisPlayWidget()
+        self.layout.addWidget(self.sim_widget)
+
+
+    def show_data(self, index):
+
+        row = index.row()
+
+        stack_widget = self.list_view.parent().findChild(QStackedWidget)
+        stack_widget.setCurrentIndex(row)
+
+        key = list(self.data.keys())[row]
+        value = self.data[key]
+
+        
+        self.sim_widget.display_data(key)
+        self.data_display_widget.display_data(value)
+        self.dataSelected.emit(value)
+
+    def save_data(self, data):
+
+        row = self.list_view.currentIndex().row()
+        key = list(self.data.keys())[row]
+        self.data[key] = data
+        self.data_cur["tests"] = self.data
+        output_file = self.file_path
+        file = open(output_file, "w")
+        json.dump(self.data_cur, file, ensure_ascii=False, indent=4)
+        file.close()
+
+
+class SimulationDisPlayWidget(QWidget):
+    dataChanged = pyqtSignal(dict)
+    path_select = pyqtSignal(str)
+    def __init__(self):
+        super().__init__()
+        self.groupbox_1 = QGroupBox("Single case Simulation")	
+        self.groupbox_2 = QGroupBox("Simu level")	
+        self.groupbox_3 = QGroupBox("Block level ")		
+        self.groupbox_4 = QGroupBox("Corner choose ")	
+        self.groupbox_5 = QGroupBox("mtm choose ")	
+
+        self.layout1 = QVBoxLayout()
+        self.layout2 = QVBoxLayout()
+        self.layout = QVBoxLayout()
+        self.line_edits = {}
+
+        #choose dumpwave or not
+        self.fsdb = QCheckBox("need fsdb")
+        self.fsdb.setChecked(False)
+        self.try_all_hosts = QCheckBox("try_all_hosts")
+        self.try_all_hosts.setChecked(False)
+        self.gui = QCheckBox("gui")
+        self.gui.setChecked(False)
+		
+        #
+        self.seed_sim = QCheckBox("seed")
+        self.seed_sim.setChecked(False)  
+        self.seed_line = QLineEdit()
+        #
+        self.folder_sim = QCheckBox("use_define folder")
+        self.folder_sim.setChecked(False)  
+        self.folder_line = QLineEdit()
+
+        #self.seed_sim.setChecked(False)  
+		
+        #choose rtl, gate, pls
+        self.sim_level = QLabel()
+        self.sim_level.setText("simulation level") 
+        self.rtl_button = QRadioButton("rtl")
+        self.rtl_button.setChecked(True) 
+        self.fpga_button = QRadioButton("fpga")
+        self.fpga_button.setChecked(False) 		
+        self.gate_button = QRadioButton("gate")
+        self.gate_button.setChecked(False) 
+        self.post_button = QRadioButton("post")
+        self.post_button.setChecked(False)  
+        #choose corner typ, bst, wst
+        self.corner_level = QLabel()
+        self.corner_level.setText("post corner") 
+        self.typ_button = QRadioButton("typ")
+        self.typ_button.setChecked(False) 
+        self.bst_button = QRadioButton("bst")
+        self.bst_button.setChecked(False) 
+        self.wst_button = QRadioButton("wst")
+        self.wst_button.setChecked(False)  
+
+        #choose mtm  min,max,typ
+        self.mtm_level = QLabel()
+        self.mtm_level.setText("post mtm") 
+        self.m_typ_button = QRadioButton("typ")
+        self.m_typ_button.setChecked(False) 
+        self.m_min_button = QRadioButton("min")
+        self.m_min_button.setChecked(False) 
+        self.m_max_button = QRadioButton("max")
+        self.m_max_button.setChecked(False)
+
+
+        
+        #choose block
+        self.block_level = QCheckBox("block case")
+        self.block_level.setChecked(False)
+        #self.sim_level.setText("n level") 
+        self.pe_button = QRadioButton("mx2")
+        self.pe_button.setChecked(False) 
+        self.other_button = QRadioButton("other")
+        self.other_button.setChecked(False) 
+
+
+        self.gate_sim = QCheckBox("gate")
+        self.gate_sim.setChecked(False) 
+        #choose rtl, gate, pls
+        self.post_sim = QCheckBox("post")
+        self.post_sim.setChecked(False)  
+        
+     
+        self.save_button = QPushButton("仿真")
+        self.save_button.clicked.connect(self.simulate_clicked)
+        
+        self.display_data()
+        
+    def display_data(self, data=None):
+        #self.clear_layout()
+
+
+        self.layout.addWidget(self.fsdb)
+        self.layout.addWidget(self.try_all_hosts)
+        self.layout.addWidget(self.gui)		
+        line_layout = QHBoxLayout()
+        folder_layout = QHBoxLayout()
+        layout_gate = QHBoxLayout()	
+        block_layout = QHBoxLayout()
+        corner_layout = QHBoxLayout()
+        mtm_layout=QHBoxLayout()
+
+        line_layout.addWidget(self.seed_sim)
+        line_layout.addWidget(self.seed_line)
+        self.layout.addLayout(line_layout)
+
+        folder_layout.addWidget(self.folder_sim)
+        folder_layout.addWidget(self.folder_line)
+#        self.layout.addLayout(folder_layout)
+
+        layout_gate.addWidget(self.sim_level)
+        layout_gate.addWidget(self.rtl_button)
+        layout_gate.addWidget(self.fpga_button)
+        layout_gate.addWidget(self.gate_button)
+        layout_gate.addWidget(self.post_button)
+        self.groupbox_2.setLayout(layout_gate)
+        #self.layout.addLayout(layout_gate)
+
+
+        block_layout.addWidget(self.block_level)
+        block_layout.addWidget(self.pe_button)
+        block_layout.addWidget(self.other_button)
+        self.groupbox_3.setLayout(block_layout)	
+        #self.layout.addLayout(block_layout)
+        corner_layout.addWidget(self.corner_level)
+        corner_layout.addWidget(self.typ_button)		
+        corner_layout.addWidget(self.bst_button)
+        corner_layout.addWidget(self.wst_button)
+        self.groupbox_4.setLayout(corner_layout)
+
+
+        mtm_layout.addWidget(self.mtm_level)
+        mtm_layout.addWidget(self.m_typ_button)		
+        mtm_layout.addWidget(self.m_min_button)
+        mtm_layout.addWidget(self.m_max_button)
+        self.groupbox_5.setLayout(mtm_layout)
+
+
+        if data is not None:
+            #print("There is 162行：" + data)
+            self.case_name = data
+        button_layout = QHBoxLayout()
+
+        self.layout.addLayout(button_layout)
+        self.groupbox_1.setLayout(self.layout)
+        #self.layout1.addWidget(self.groupbox_1)
+        self.layout1.addWidget(self.groupbox_2)
+        self.layout1.addWidget(self.groupbox_3)
+        self.layout1.addWidget(self.groupbox_4)
+        self.layout1.addWidget(self.groupbox_5)
+        self.layout1.addWidget(self.groupbox_1)		
+        button_layout.addWidget(self.save_button)
+		
+        self.setLayout(self.layout1)
+
+    def clear_layout(self):
+        while self.layout.count():
+            item = self.layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+
+
+    def save_clicked(self):
+        data = {}
+ 
+
+    def simulate_clicked(self):
+        # Add your simulate action here
+        #msim_cmd = "konsole --title \"" + self.case_name +"\""+ " -e bash -c 'msim -uvm -c " + self.case_name
+        is_rtl  = True
+        window_name = ""
+        today = datetime.now()
+        folder_name = today.strftime('%Y_%m_%d_%H_%M_%S')
+
+        if self.typ_button.isChecked():
+            folder_name += "_typ"	
+            window_name += " corner = typ"
+        if self.bst_button.isChecked():
+            folder_name += "_bst"	
+            window_name += " corner = bst"
+        if self.wst_button.isChecked():
+            folder_name += "_wst"	
+            window_name += " corner = wst"
+
+        if self.m_typ_button.isChecked():
+            folder_name += "_typ"	
+            window_name += " mtm = typ"          
+        if self.m_min_button.isChecked():
+            folder_name += "_min"	
+            window_name += " mtm = min"          
+        if self.m_max_button.isChecked():
+            folder_name += "_max"	
+            window_name += " mtm = max"        
+        
+        
+        if self.gate_button.isChecked():
+            window_name += " level = gate"
+            folder_name += "_gate"
+            is_rtl  = False
+        if self.post_button.isChecked():
+            window_name += " level = post"
+            folder_name += "_post"
+            is_rtl  = False
+
+        if self.fpga_button.isChecked():
+            folder_name += "_fpga"	
+            is_rtl  = False
+            window_name += " level = fpga"
+
+        if is_rtl is True:
+           folder_name  += "_RTL"
+
+        folder_name_p  = self.case_name + "_" + folder_name
+		
+        msim_cmd = "xterm -e bash -c 'echo -ne \"\\e]2;" + "Single case simulation:" + self.case_name + window_name +"\\a\";" + "msim -uvm -c " + self.case_name + " -tag " + folder_name
+        if self.fsdb.isChecked():
+            msim_cmd += " -fsdb"
+        if self.try_all_hosts.isChecked():
+            msim_cmd += " -try_all_host 1 "
+        if self.gui.isChecked():
+            msim_cmd += " -gui"
+
+        if self.seed_sim.isChecked():
+            msim_cmd += " -seed " + self.seed_line.text()
+        if self.folder_sim.isChecked():
+            msim_cmd += " -folder " + self.folder_line.text()			
+        if self.gate_button.isChecked():
+            msim_cmd += " -l gate"
+        if self.post_button.isChecked():
+            msim_cmd += " -l post"
+        if self.fpga_button.isChecked():
+            msim_cmd += " -fpga "			
+        if self.typ_button.isChecked():
+            msim_cmd += " -corner typ"
+        if self.bst_button.isChecked():
+            msim_cmd += " -corner bst"
+        if self.wst_button.isChecked():
+            msim_cmd += " -corner wst"
+
+        if self.m_typ_button.isChecked():
+            msim_cmd += " -mtm typ"
+            print(msim_cmd)
+        if self.m_min_button.isChecked():
+            msim_cmd += " -mtm min"
+        if self.m_max_button.isChecked():
+            msim_cmd += " -mtm max"
+
+
+        if self.block_level.isChecked():
+            if self.pe_button.isChecked():
+                msim_cmd += " -block "
+            if self.other_button.isChecked():
+                msim_cmd += " -block other"
+
+
+        today = datetime.now()
+
+        
+        msim_cmd += "; exec bash ; echo -ne \"\\e]2;" + "Single case simulation:" + self.case_name + window_name +"\\a\" ' &"
+        print("Simulate clicked")
+        sc = "xterm -e bash -c 'ls ; exec bash' &  "
+
+        os.system(msim_cmd)
+        self.path_select.emit(folder_name_p)
+
+
+class DataDisplayWidget(QWidget):
+    dataChanged = pyqtSignal(dict)
+    path_select = pyqtSignal(str)
+    def __init__(self):
+        super().__init__()
+
+        self.layout = QFormLayout()
+        self.setLayout(self.layout)
+
+        self.line_edits = {}
+        self.save_button = QPushButton("保存")
+        self.save_button.clicked.connect(self.save_clicked)
+    def display_data(self, data):
+        self.clear_layout()
+
+        for key, value in data.items():
+  
+            key_label = QLabel(key)
+            value_line_edit = QLineEdit(value)
+            self.line_edits[key] = value_line_edit
+            self.layout.addRow(key_label, value_line_edit)
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(self.save_button)
+
+        self.layout.addRow(button_layout)
+
+    def clear_layout(self):
+        while self.layout.count():
+            item = self.layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+
+
+    def save_clicked(self):
+        data = {}
+        for key, value in self.line_edits.items():
+
+            if isinstance(value, list):
+                for radio_button in value:
+                    if radio_button.isChecked():
+                        data[key] = radio_button.text()
+                        break
+            else:
+
+                data[key] = value.text()
+        self.dataChanged.emit(data)
+
+    def simulate_clicked(self):
+        # Add your simulate action here
+        print("Simulate clicked")
+
+
+class RegressionDisPlayWidget(QWidget):
+    dataChanged = pyqtSignal(dict)
+    path_select = pyqtSignal(list)
+    def __init__(self, data):
+        super().__init__()
+        self.groupbox_1 = QGroupBox("Module Regression")
+        self.layout = QHBoxLayout()
+        self.layout1 = QHBoxLayout()
+        #self.setLayout(self.layout)
+        self.module_data = data
+        self.line_edits = {}
+        self.QcheckedList = []
+        self.HlayoutList = []
+        qhlayout = QHBoxLayout()
+        self.HlayoutList.append(qhlayout)       
+        for i in range(len(data)):
+
+            if i != 0 and i%3 == 0:
+                #print("create qhlayout is " + str(i))
+                qhlayout = QVBoxLayout()
+                self.HlayoutList.append(qhlayout)
+            Qcheck = QCheckBox(data[i]["name"])
+            Qcheck.setChecked(False)
+            self.QcheckedList.append(Qcheck)
+            self.HlayoutList[-1].addWidget(Qcheck)
+            #self.layout.addWidget(Qcheck)    
+        for i in range(len(self.HlayoutList)):
+            self.layout.addLayout(self.HlayoutList[i])
+
+        self.all_module  = QCheckBox("all")
+        self.all_module.setChecked(False)
+        self.layout.addWidget(self.all_module) 
+        #choose dumpwave or not
+        self.MX2_BLOCK = QCheckBox("MX2 BLOCK")
+        self.MX2_BLOCK.setChecked(False)
+        #choose rtl, gate, pls
+        self.gate_sim = QCheckBox("gate")
+        self.gate_sim.setChecked(False) 
+        #choose rtl, gate, pls
+        self.post_sim = QCheckBox("post")
+        self.post_sim.setChecked(False)  
+        
+
+        self.simulate_button = QPushButton("仿真")
+        self.simulate_button.clicked.connect(self.simulate_clicked)
+        
+        #self.display_data()
+        button_layout = QHBoxLayout()
+        #button_layout.addWidget(self.save_button)
+        button_layout.addWidget(self.MX2_BLOCK)
+        button_layout.addWidget(self.simulate_button)
+        self.layout.addLayout(button_layout)
+        self.groupbox_1.setLayout(self.layout)
+        self.layout1.addWidget(self.groupbox_1)
+        self.setLayout(self.layout1)
+
+
+
+    def clear_layout(self):
+        while self.layout.count():
+            item = self.layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+
+
+    def save_clicked(self):
+        data = {}
+ 
+
+    def simulate_clicked(self):
+        cmd_list = []
+        all_list = []
+        path_list = []
+        today = datetime.now()
+        folder_name = today.strftime('%Y_%m_%d_%H_%M_%S')
+
+        if self.MX2_BLOCK.isChecked():
+            need_fsdb = " -fsdb "
+        for i in range(len(self.QcheckedList)):
+            module_name = self.QcheckedList[i].text()
+            if self.QcheckedList[i].isChecked():
+                if self.MX2_BLOCK.isChecked():
+                    module_name += " -block "
+                    cmd = "xterm -e bash -c 'echo -ne \"\\e]2;" + "Module Regression:" + module_name +"\\a\";" + "msim -uvm -m " + module_name + " -tag " + folder_name + "; exec bash ' &"
+                    testcase_path = module_name +"_"+ folder_name
+                    path_list.append(testcase_path)
+                    cmd_list.append(cmd)
+                else:
+                    cmd = "xterm  -e bash -c 'echo -ne \"\\e]2;" + "Module Regression:" + module_name +"\\a\";" + "msim -uvm -m " + module_name + " -tag " + folder_name + "; exec bash ' &"
+                    testcase_path = module_name +"_"+ folder_name
+                    path_list.append(testcase_path)
+                    cmd_list.append(cmd)
+
+        if self.all_module.isChecked(): 
+            for i in range(len(self.module_data)):
+                mod_name = self.module_data[i]["name"]
+                cmd = "xterm  -e bash -c 'echo -ne \"\\e]2;" + "Module Regression:" + mod_name +"\\a\";" + "msim -uvm -m " + mod_name  + "; exec bash ' &"
+                all_list.append(cmd)
+                os.system(cmd)
+                testcase_path = mod_name +"_"+ folder_name
+                path_list.append(testcase_path)
+				
+
+        else:
+            for i in cmd_list:
+                #print(cmd_list)
+                os.system(i)
+        self.path_select.emit(path_list)
+
+        print("Simulate clicked")
+
+
+
+
+class SimulationResultWidget(QWidget):
+    dataSelected = pyqtSignal(dict)
+    #path_select = pyqtSignal(str)
+    def __init__(self, data=None, path=None):
+        super().__init__()
+        self.timer = QTimer()
+        self.timer1 = QTimer()
+        self.timer.setSingleShot(True)
+        self.timer1.setSingleShot(True)
+        main_layout = QHBoxLayout()
+        self.tableWidget = QTableWidget()
+        self.tableWidget.setColumnCount(4)
+        self.tableWidget.setRowCount(0)
+        horizonheader = ["No","Case","Case path","status"]
+        self.tableWidget.setHorizontalHeaderLabels(horizonheader)
+        main_layout.addWidget(self.tableWidget)
+        self.setLayout(main_layout)
+        self.tableWidget.itemClicked.connect(self.show_data)
+        #self.getcase_status()		
+        #self.getdirlist()
+
+    def getdirlist(self):
+        #self.timer.start(30000)        
+        time.sleep(10)
+        #self.timer.stop()
+        current_directory = os.getcwd()
+        self.folders = [folder for folder in os.listdir(current_directory) if os.path.isdir(os.path.join(current_directory, folder))]
+        #self.folders = [os.path.join(current_directory, folder) for folder in os.listdir(current_directory) if os.path.isdir(os.path.join(current_directory, folder))]
+        for folder in self.folders:
+            print(folder)
+
+
+    def read_document(self, file_path):
+        file_text = "This is result.txt result \n"
+        with open(file_path) as file_object:
+            file_path_lines = file_object.readlines()
+
+        for line in file_path_lines:
+            file_text += line  
+
+        return file_text              
+            
+    def show_data(self, Item = None):
+        if Item.column() is not 3:
+            return
+        else:
+            row  = Item.row()
+            path = self.tableWidget.item(row, 2).text()
+            print(path)
+            case_path = path + "/result.txt"
+            if os.path.exists(case_path):
+                page_content = self.read_document(case_path)
+                #page_content = "Case is running, not generate result.txt"
+            else:
+                page_content = "Case is running, not generate result.txt"
+			
+
+            new_window = QWidget(self, Qt.Window)
+            new_window.setWindowTitle("新页面")
+            new_window.setGeometry(200, 200, 500, 400)
+            layout = QVBoxLayout(new_window)
+
+            text_edit = QTextEdit(new_window)
+            text_edit.setPlainText(page_content)
+            text_edit.setReadOnly(True)
+            layout.addWidget(text_edit)
+
+            new_window.show()            
+
+
+
+    def insert_tabrow(self, table):
+        row_count  = self.tableWidget.rowCount()
+        self.tableWidget.setRowCount(row_count+1)
+        #self.tableWidget.insertRow(row_count)
+        self.tableWidget.setItem(row_count, 0, QTableWidgetItem(row_count+1))
+        self.tableWidget.setItem(row_count, 1, QTableWidgetItem(table[0]))
+        self.tableWidget.setItem(row_count, 2, QTableWidgetItem(table[1]))
+        self.tableWidget.setItem(row_count, 3, QTableWidgetItem("VIEW RESULT"))
+
+
+
+    def get_testname(self, info):
+
+        current_directory = os.getcwd()
+        testcase_folder = "uvm_scratch_" + info
+        testcase_folder_path = os.path.join(current_directory, testcase_folder)
+        #testcase_path = os.path.join(current_directory, info)
+        print("SimulationResultWidget get info :" + testcase_folder + " " + testcase_folder_path)
+        table_list = []
+        table_list.append(testcase_folder)
+        table_list.append(testcase_folder_path)
+        self.insert_tabrow(table_list)
+
+
+    def get_testname_R(self, info_list):
+
+        current_directory = os.getcwd()
+        for info in info_list:
+            testcase_folder = "uvm_scratch_" + info 
+            testcase_folder_path = os.path.join(current_directory, testcase_folder)
+        #testcase_path = os.path.join(current_directory, info)
+            print("SimulationResultWidget get info :" + testcase_folder + " " + testcase_folder_path)
+            table_list = []
+            table_list.append(testcase_folder)
+            table_list.append(testcase_folder_path)
+            self.insert_tabrow(table_list)
+
+
+if __name__ == "__main__":
+
+
+
+    def insert_path(str1):
+        print("There is insert path print " + str1)
+    app = QApplication([])
+    widget = MyWidget()
+    widget1 = MyWidget()    
+    widget2 = MyWidget() 
+    path_list = []
+
+    tab_widget = QTabWidget()
+    tab_widget_main = QTabWidget()
+
+    main_widget = QWidget()
+    layout = QVBoxLayout()
+    layout1 = QVBoxLayout()
+
+    json_dir = r"json/"
+    #json_list = 
+    file_path = glob.glob('../verify/uvm/test/json/*.json')
+    file_data = []
+    for row_num, file in enumerate(file_path):
+        print(file)
+        with open(file,'r') as load_f:
+            load_dict = json.load(load_f)
+            file_data.append(load_dict)
+            load_f.close()
+    tab_widget1 = QWidget()
+    tab_widget1.setLayout(layout1)
+    tab_widget_main.addTab(tab_widget1, "Run Case") 
+    tab_widget2 = SimulationResultWidget()
+
+    tab_widget_main.addTab(tab_widget2, "Simulation Result") 
+    tab_widget3 = QWidget()
+
+    tab_widget_main.addTab(tab_widget3, "Summary") 
+
+
+    if len(file_path) > 0:
+        num_tabs = len(file_path)
+        print("num_tabs is " + str(num_tabs))
+        for i in range(num_tabs):
+            current_file = file_data[i]["name"]
+
+            page_name = current_file
+            page_name2 = current_file 
+            page_name2 = MyWidget(file_data[i], file_path[i])
+            page_name2.sim_widget.path_select.connect(tab_widget2.get_testname)
+            tab_widget.addTab(page_name2, page_name)
+
+
+    regression_widget = RegressionDisPlayWidget(file_data)
+    regression_widget.path_select.connect(tab_widget2.get_testname_R)
+    layout1.addWidget(regression_widget)	
+    layout1.addWidget(tab_widget)
+
+
+    layout.addWidget(tab_widget_main)
+
+    main_widget.setLayout(layout)
+
+    
+    
+    main_widget.setLayout(layout)
+    main_widget.setWindowTitle('MSIM_GUI')
+    main_widget.show()
+
+    app.exec_()
+

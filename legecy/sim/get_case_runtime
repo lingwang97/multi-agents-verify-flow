@@ -1,0 +1,208 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
+#Descreibe:get sim running time
+
+import re
+import os
+import sys
+import csv
+#import calendar
+import datetime
+
+debug =False
+
+def get_month_num(month_input):   
+    months = {
+        "Jan": 1,
+        "Feb": 2,
+        "Mar": 3,
+        "Apr": 4,
+        "May": 5,
+        "Jun": 6,
+        "Jul": 7,
+        "Aug": 8,
+        "Sep": 9,
+        "Oct": 10,
+        "Nov": 11,
+        "Dec": 12
+    }
+    if month_input in months:
+        result=months[month_input]
+    else:
+        print("get key month error")
+
+    return result
+
+
+def get_info_list(file_name):
+    result=[]
+    with  open(file_name,mode="r") as f:
+        content =f.read()
+        case=re.findall(case_patterrn,content)
+        stime=re.findall(start_time_pattern,content)
+        etime=re.findall(end_time_pattern,content)
+        flag=re.findall(maotai_pattern,content)  
+        
+        print("currrent file from:",file_name)
+        print("start time:",stime,"endtime:",etime,end=" ") 
+ 
+        if(case[0]!=None):
+            case_str=case[0]
+            if("/" in case_str):
+                if("REALCORE" in case_str):
+                    case_str=case_str.split("/")[1]
+                    case_str=case_str[13:]
+                    case_str=case_str+"[realcore]"
+                else:
+                    case_str=case_str.split("/")[1]
+                    case_str=case_str[13:]
+            else:
+                case_str=case_str[12:]
+
+            result.append(case_str)
+            
+            if(etime!=[]):             
+                st_day=int(stime[0].split()[1])
+                st_hour=int(stime[0].split()[2].split(":")[0])
+                st_mins=int(stime[0].split()[2].split(":")[1])
+                st_month=stime[0].split()[0]
+                st_year=int(stime[0].split()[3])
+
+                end_day=int(etime[0].split()[1])
+                end_hour=int(etime[0].split()[2].split(":")[0])
+                end_mins=int(etime[0].split()[2].split(":")[1])
+                end_month=etime[0].split()[0]
+                end_year=int(etime[0].split()[3])
+
+                start_time=datetime.datetime(st_year,get_month_num(st_month),st_day,st_hour,st_mins)
+                end_time=datetime.datetime(end_year,get_month_num(end_month),end_day,end_hour,end_mins)
+
+                actual_time=int((end_time-start_time).total_seconds()/60)
+                print("actuall time:",actual_time," Mins")
+ 
+                if(debug==True):         
+                    print("after parsed:stmonth: ",st_month,"st year: ",st_year)
+                    print("after parsed:endmonth: ",end_month,"end year: ",end_year)
+                    print("after start time parsed:day:hour:mins  ==> ",st_day,":",st_hour,":",st_mins)
+                    print("after endtime parsed:day:hour:mins  ==> ",end_day,":",end_hour,":",end_mins)
+                    print("after time transformed:",actual_time," Mins")
+
+                result.append(actual_time)
+                if(flag!=[]):
+                    result.append("passed")
+                else:
+                    result.append("failed") 
+            else:
+                result.append(0)
+                result.append("running")
+        else:
+            result=[]
+
+
+    return result
+
+
+if(len(sys.argv)>1):
+    dir_name=sys.argv[1]
+  
+    print("===>Notice:Current simulation time does not include VCS compile time<===")
+    print("===>Notice:Current simulation time does not include VCS compile time<===")
+    print("===>Notice:Current simulation time does not include VCS compile time<===")
+    print("==>get case time from: "+dir_name)
+    print()
+else:
+    dir_name=os.getcwd()
+
+    print("===>Notice:Current simulation time does not include VCS compile time<===")
+    print("===>Notice:Current simulation time does not include VCS compile time<===")
+    print("===>Notice:Current simulation time does not include VCS compile time<===")
+    print("==>get case time from current all dir: : "+dir_name)
+    print()
+
+case_patterrn="uvm_.*?_test"
+start_time_pattern="[A-Z][a-z][a-z]\s[0-9][0-9]\s[0-9][0-9]:[0-9][0-9]\s202."
+end_time_pattern="[A-Z][a-z][a-z]\s[0-9][0-9]\s[0-9][0-9]:[0-9][0-9]:[0-9][0-9]\s202."
+maotai_pattern="MaoTai"
+
+
+case_lst=[]
+final_list=[]  #name  min  max
+name_list=[] 
+min_list=[] 
+max_list=[]  
+status_list=[]
+
+if("," in dir_name):
+    dirlst=dir_name.split(",")
+    for dirname in dirlst:
+        for dirpath, dirnames, filenames in os.walk(dirname):
+            for filename in filenames:
+                #if (filename.endswith("sim.log")):
+                if (filename=="sim.log"):
+                    #print(os.path.join(dirpath, filename))
+                    tmplst=get_info_list(os.path.join(dirpath, filename))
+                    if(debug):
+                        print("info list: ",tmplst)
+                    case_lst.append(tmplst)
+else:
+    for dirpath, dirnames, filenames in os.walk(dir_name):
+        for filename in filenames:
+            #if (filename.endswith("sim.log")):
+            if (filename=="sim.log"):
+                #print(os.path.join(dirpath, filename))
+                tmplst=get_info_list(os.path.join(dirpath, filename))
+                if(debug):
+                    print("info list: ",tmplst)
+                case_lst.append(tmplst)
+
+if(case_lst==[]):
+    print("==========================================DONE=============================================")
+    print("==Warning !!!can't find simulation time,please check current path or whether sim finished==")
+    print("==========================================DONE=============================================")
+else:
+    #print(case_lst)
+    for lst in case_lst:
+        if(lst[0] in name_list):
+            index=name_list.index(lst[0])
+            if(lst[1]<min_list[index]):
+                min_list[index]=lst[1]
+            elif(lst[1]>max_list[index]):
+                max_list[index]=lst[1]
+            else:
+                pass
+            if(lst[2]=="running"):
+                status_list[index]="still has iterative case running,please check whether hang"
+            elif(lst[2]=="failed"):
+                status_list[index]="still has iterative case failed,please check simulatin result"
+                            
+        else:
+            name_list.append(lst[0])
+            min_list.append(lst[1])
+            max_list.append(lst[1])
+            status_list.append(lst[2])
+
+    # print("current case nums:",len(name_list))
+    # for i in range(len(name_list)):
+    #     print(name_list[i]+"\t\t\t\t\t\t\t"+str(round(min_list[i],ndigits=2))+"~"+str(round(max_list[i],ndigits=2))+" Mins")
+
+    print("==========================================DONE=============================================")
+    print("====all case runtime will be saved in "+os.getcwd()+"/case_runtime_table.csv===========")
+    print("==========================================DONE=============================================")
+
+    for index in range(len(status_list)):
+        if(status_list[index]=="passed"):
+            status_list[index]="all iterative rounds passed"
+        elif(status_list[index]=="failed"):
+            status_list[index]="all iterative rounds failed,please check simulatin result"
+        elif(status_list[index]=="running"):
+            status_list[index]="all iterative rounds running,please check whether hang"
+
+    for i in range(len(name_list)):
+        final_list.append([name_list[i],min_list[i],max_list[i],status_list[i]])
+
+    final_list=sorted(final_list,key=(lambda x:x[0]))
+    with open("case_runtime_table.csv","w") as file:
+        writer = csv.writer(file)
+        writer.writerow(["case name","Min runtime/mins","Max runtime/mins","status"])
+        writer.writerows(final_list)

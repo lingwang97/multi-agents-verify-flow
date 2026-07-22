@@ -1,0 +1,102 @@
+#!/bin/usr/python3
+
+import os
+import glob
+import re
+import sys
+def search_file_regex(file_path, pattern):
+    file_showed=False
+    line_num=0
+    err_num=0
+    with open(file_path, 'r') as file:
+        content = file.readlines()
+        for line in content:
+            if err_num > 10:
+                break
+            if pattern in line:
+                err_num+=1
+                if file_showed==False:
+                    print("#"*20+" In ", "\033[32m"+file_path+"\033[0m")
+                    file_showed=True
+                print("\033[31m"+str(line_num)+"\033[0m",":",line[:-1])
+            line_num+=1
+    if err_num>0:
+        line = []
+        with open(file_path, 'r') as f:
+            line = f.read()
+        # print(line)
+        pattern = r"random_seed=\d*"
+        seed_match = re.findall(pattern, line)
+        # print(seed_match)
+        seed_match = seed_match[0]
+        seed_str=seed_match[seed_match.index('=')+1:]
+
+        pattern = r"sim_[a-z, 0-9, _]*iter"
+        test_match = re.findall(pattern, line)
+        # print(test_match)
+        if len(test_match) > 0:
+            test_match=test_match[0]
+            test_str = test_match[len('sim_'):test_match.index('test')+4]
+
+            cmd_str = "msim -c " + test_str + " -uvm -seed " + seed_str
+            print("Same Seed Cmd:  ", "\033[31m"+cmd_str+"\033[0m")
+
+        print('\n')
+
+if __name__ == '__main__':
+    base_dir = os.getcwd()
+    print(base_dir)
+
+    files = [os.path.join(base_dir, file) for file in os.listdir(base_dir)]
+    uvm_dirs = []
+    if len(sys.argv) > 1:
+        print("="*20,"\033[33m"+"Searching Mod"+"\033[0m", sys.argv[1],"="*20)
+        for file in files:
+            if ("uvm_scratch_"+sys.argv[1]) in file or ("uvm_scratch_" in file and sys.argv[1]=='all'):
+                if os.path.isdir(file):
+                    uvm_dirs.append(file)
+    else:
+        print("\033[31mPlease Input the Module Marker, Exiting...\033[0m")
+        exit()
+
+    if len(uvm_dirs) == 0:
+        print(sys.argv[1], " Not Found")
+        exit()
+    sims = []
+    #print("uvm_dirs:",uvm_dirs)
+    for dir in uvm_dirs:
+        res_text = os.path.join(dir,'result.txt')
+        if os.path.exists(res_text):
+            
+            with open(res_text, 'r') as file:
+                content = file.readlines()
+                err_showed=False
+                for line in content:
+                    if 'FAIL' in line or 'compile' in line:
+                        if err_showed == False:
+                            err_showed=True
+                            print('%'*20, "Result in ", "\033[33m"+res_text+"\033[0m", '%'*20)
+                        print(line[:-1])
+                if err_showed==True:
+                    print('\n')
+        if sys.argv[1] != 'all':
+            files = [os.path.join(dir, file) for file in os.listdir(dir)]
+            for file in files:
+                sim_log = os.path.join(file, 'sim.log')
+                if os.path.exists(sim_log):
+                    sims.append(sim_log)
+
+    if len(sys.argv) == 2:
+        if sys.argv[1] != 'all':
+            for sim in sims:
+                search_file_regex(sim, "UVM_ERROR ..")
+                search_file_regex(sim, "UVM_ERROR /eda/")
+
+
+    if len(sys.argv) > 2:
+        if sys.argv[1] != 'all' and sys.argv[2] != 'nolog':
+            for sim in sims:
+                search_file_regex(sim, "UVM_ERROR ..")
+    
+    print("$"*40, "Show End", "$"*40)
+

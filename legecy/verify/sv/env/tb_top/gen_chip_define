@@ -1,0 +1,205 @@
+#!/opt/anaconda3/bin/python
+
+########################################################################
+##  Author: xuhaiyang
+##  This scrypt is to generate gls_slice_chip_define.sv for gls
+##  Usage: at path: verify/sv/env/tb_top, enter gen_chip_define
+#########################################################################
+
+
+import re
+import json
+import gzip
+import glob
+#########################################################################
+##  step 1: generate define macro json 
+#########################################################################
+def calculator(expression):
+    def evaluate_expression(expression):
+        try:
+            expression = re.sub("\d+'h", "0x", expression)
+            expression = re.sub("\d+'d", "", expression)
+            expression = re.sub("\d+'o", "0o", expression)
+            expression = re.sub("\d+'b", "0b", expression)
+            #print(expression)
+			
+            return eval(expression)
+        except Exception as e:
+            return "Calculate Error：" + str(e)
+
+    try:
+        result = evaluate_expression(expression)
+        return str(result)
+    except Exception as e:
+        return "Calculate Error：" + str(e)
+
+macro_define_all = {}
+def generate_define_json(file_path):
+    with open(file_path) as file_object:
+        list_line = file_object.readlines()
+
+    for file_stdcell_line in list_line:
+        macro_define = {}
+        file_stdcell_line_strip = file_stdcell_line.strip()
+     
+        pat0 = "\s*`define\s*(\w*)\s*(.*)\s*" #null para
+        pat1 = "\s*`define\s*(\w*)\(\s*(\w*)\s*\)\s*(.*)\s*" #one para
+        pat2 = "\s*`define\s*(\w*)\(\s*(\w*)\s*,\s*(\w*)\s*\)\s*(.*)\s*\w*" #two para
+         #print(re.match(pat0,"`define  JLS  tb_top.C[0].btnode.btc.sys_ctrl.jls"))
+        #list00 = 
+        list0 = re.match(pat0, file_stdcell_line_strip)
+        list1 = re.match(pat1, file_stdcell_line_strip)
+        list2 = re.match(pat2, file_stdcell_line_strip)
+        if list0 is not None:
+            define_name  = list0.group(1)
+            define_text = list0.group(2)
+            #print()
+            macro_define['name'] = define_name
+            macro_define['level'] = "zero"		
+            macro_define['text'] = define_text
+            #macro_define['level'] = "zero"
+            macro_define_all[define_name] = macro_define
+        if list1 is not None:
+            define_name  = list1.group(1)
+            define_para1 = list1.group(2)
+            define_text = list1.group(3)
+            macro_define['name'] = define_name
+            macro_define['level'] = "one"
+            macro_define['para1'] = define_para1
+            macro_define['text'] = define_text
+            #macro_define['level'] = "zero"
+            macro_define_all[define_name] = macro_define
+    		
+        if list2 is not None:
+            define_name  = list2.group(1)
+            define_para1 = list2.group(2)
+            define_para2 = list2.group(3)
+            define_text = list2.group(4)
+            macro_define['name'] = define_name
+            macro_define['level'] = "two"
+            macro_define['para1'] = define_para1
+            macro_define['para2'] = define_para2
+            macro_define['text'] = define_text
+            #macro_define['level'] = "zero"
+            macro_define_all[define_name] = macro_define
+    
+
+
+
+
+
+file_path = "gls_uvm_define_interface.list"
+with open(file_path) as file_object:
+    file_path_lines = file_object.readlines()
+
+for file_path_line in file_path_lines:
+    file_path_line_strip = file_path_line.strip()
+    generate_define_json(file_path_line_strip)
+#    generate_module_json(file_stdcell_line.strip())
+
+
+
+#########################################################################
+##  step 2: replace macro in interface 
+#########################################################################
+
+macro_name_list = macro_define_all.keys()
+string1 = "(`RO_W2R_PROD_DLY_CNT + `RO_MARGIN_CNT)"
+#string2 = re.search('(`\w*)', string1)
+string2 = re.findall('(`\w*)', string1)
+string3 = re.search('(`\w*)', string1)
+
+patt_defi = "`\w*"
+patt_num = "'h|'d|\+|\-|\*"
+    
+def calu_define():
+    patt_defi = "`\w*"
+    patt_num = "'h|'d|\+|\-|\*"
+
+    for key in macro_define_all.keys():
+        key_text = macro_define_all[key]['text']
+        list0 = re.findall(patt_defi, key_text)
+        if len(list0) > 0:
+            flag = True
+            flag_timeout = 0
+            while (flag == True):
+                flag_timeout = flag_timeout + 1
+                #list0 = re.findall(patt_defi, key_text)			
+                for para_key in list0:
+                    para_key_s = para_key[1:]
+                    try:
+                        if(macro_define_all[para_key_s]['level'] == "zero"):
+                            patt_t = "`" + para_key_s
+                            macro_define_all[key]['text'] = re.sub(patt_t, macro_define_all[para_key_s]['text'], macro_define_all[key]['text'])
+                        #macro_define_all[para_key_s]
+                    except Exception as e:
+                        print("There is not found define " + para_key_s)
+                        #print(str(e))
+                list00 = re.findall(patt_defi, macro_define_all[key]['text'])					
+                if len(list00) == 0:
+                    flag = False
+                if flag_timeout > 10:
+                    flag = False
+
+for i in range(10):
+    calu_define()
+
+patt_num_t = "\+|\-|\*"
+for key in macro_define_all.keys():
+    key_text = macro_define_all[key]['text']
+    list000 = re.findall(patt_num_t, key_text)
+#    if len(list000) >0 : 
+#        #print("begin to do calculate " + macro_define_all[key]['text'])
+#        macro_define_all[key]['text'] = calculator(str(macro_define_all[key]['text']))
+    macro_define_all[key]['text'] = calculator(str(macro_define_all[key]['text']))
+
+
+
+reg_list = ""
+pattern_slice = "SLICE(\d+)_(\w*)"
+for key in macro_define_all.keys():
+    list0 = re.match(pattern_slice, key)
+    if list0 is not None:
+        reg_list += "`define GLS_" + key + "  "+ macro_define_all[key]["text"]  +"\n"
+    if key == "DESIGN_CORE_NUM":
+        reg_list += "`define GLS_" + key + "  "+ macro_define_all[key]["text"] +"\n"
+        last_core_num = int(macro_define_all[key]["text"]) -1
+        reg_list += "`define GLS_LAST_CORE " + str(last_core_num) +"\n"
+    #if key == "TINY_CORE_NUM":
+    #    reg_list += "`define GLS_" + key + "  " + macro_define_all[key]["text"] + "\n"
+    #    macro_define_all[key]['text'] = re.sub("\d+'d", "", macro_define_all[key]['text'])
+    #    last_tiny_core = last_core_num + int(macro_define_all[key]["text"])
+    #    reg_list += "`define GLS_LAST_TINY_CORE " + str(last_tiny_core) + "\n"
+            
+#generate GLS_SLICE0_MAX_LONG_MX2CORE_L and GLS_SLICE0_MAX_LONG_MX2CORE_R
+slice0_lw_end = int(macro_define_all["SLICE0_LW_CORE_END"]["text"])
+slice0_rw_end = int(macro_define_all["SLICE0_RW_CORE_END"]["text"])
+if(slice0_lw_end > slice0_rw_end):
+    str1 = "`define GLS_SLICE0_MAX_LONG_MX2CORE_L " + str(slice0_lw_end-1)
+    str2 = "`define GLS_SLICE0_MAX_LONG_MX2CORE_R " + str(slice0_lw_end)
+    reg_list += str1 + "\n"
+    reg_list += str2 + "\n"
+else:
+    str1 = "`define GLS_SLICE0_MAX_LONG_MX2CORE_L " + str(slice0_lw_end-1)
+    str2 = "`define GLS_SLICE0_MAX_LONG_MX2CORE_R " + str(slice0_lw_end+1)
+    reg_list += str1 + "\n"
+    reg_list += str2 + "\n"
+    
+
+
+
+reg_list_file = "gls_slice_chip_define.sv"
+ral_sv          = open(reg_list_file, 'w')
+ral_sv.write(reg_list)
+ral_sv.close()
+
+print("Generate gls_slice_chip_define.sv done, please check it !!\n")
+#output_file = "define_test1.json"
+#file = open(output_file, "w")
+#json.dump(macro_define_all, file, ensure_ascii=False, indent=4)
+#file.close()
+
+
+    
+
+

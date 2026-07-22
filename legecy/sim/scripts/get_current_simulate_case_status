@@ -1,0 +1,78 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
+#Descreibe:get all case's simulate status under the current path.
+
+
+import os
+import argparse
+
+
+print("=============================================================================")
+print("=========optional arg: --all:display all uvm test state=======================")
+print("=========optional arg: --fail:display failed uvm tests========================")
+print("=============================================================================")
+print("\n")
+
+
+parser = argparse.ArgumentParser(description="get all case's simulate status under the current path.")
+parser.add_argument('--all',action='store_true', default=True,help="display all uvm test state")
+parser.add_argument('--fail',action='store_true', default=False,help="display failed uvm tests")
+
+args = parser.parse_args()
+
+current =os.getcwd()
+dir_list= os.listdir(current)
+
+
+all_uvm_cases=[]
+for i in dir_list:
+    if(i.startswith('uvm_scratch_')):
+        all_uvm_cases.append(i)
+
+all_uvm_cases.sort()
+print("total "+str(len(all_uvm_cases))+" test cases:\n")
+
+result_strings=""
+for case in all_uvm_cases:
+    result_path=os.path.join(current,case,"result.txt")
+    
+    if(os.path.isfile(result_path)):
+        result_strings=case
+        with  open(result_path,mode='r') as f:
+            res_lines=f.readlines()
+            res_lines.sort()
+            for line in res_lines:
+                if (line.startswith("pass rate")==False):          
+                    iter_pos=line.split("_")[-1]
+                    #print("iter_pos:"+iter_pos)
+                    if(iter_pos.startswith("error")):
+
+                        if(args.fail==True):    
+                            result_strings="display_off"          
+                        else:
+                            result_strings=case+"\t"+"compile_error"                        
+                    else:
+                        iter_pos=iter_pos.split()[0]
+                    
+                        state=line.split()[1]
+                        if(args.fail==True):
+                            if(state=="PASS"):
+                                result_strings="display_off"  
+                            else:
+                                result_strings=result_strings+"\t"+iter_pos+":"+state
+                                #print(case+"\t\t\t"+state)
+                        else:
+                            #print(case+"\t\t\t"+state)
+                            result_strings=result_strings+"\t"+iter_pos+":"+state
+                            
+        if(result_strings=="display_off"):
+            pass
+        else:
+            print(result_strings)
+
+    else:
+        if(args.fail==False):
+            print(case+"\trunning or aborted ...")
+        else:
+            pass

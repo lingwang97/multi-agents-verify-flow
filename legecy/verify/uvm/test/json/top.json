@@ -1,0 +1,19 @@
+{
+    "name":"top",
+    "COMMON_VCS_MACRO_OPT":"+STUB_OTP+STUB_FAKE_PLL_FREQ=500",
+    "tests":
+    {
+		"":
+		{
+			"stage1":"",
+			"stage2":"",
+			"smoke":"",
+			"full":"",
+			"codecoverage":"",
+			"iteration":"1",
+			"UVM_TESTNAME":"",
+			"VCS_MACRO_OPT":"",
+			"VCS_PLUSARGS_OPT":""
+		}
+    }
+}

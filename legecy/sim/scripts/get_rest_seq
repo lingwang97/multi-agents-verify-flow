@@ -1,0 +1,139 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
+#Descreibe:get rest sequences when start regression
+
+
+import os
+import re
+case_run_info_file = "run_info.txt"
+run_info = open(case_run_info_file, 'w')
+
+current =os.getcwd()
+dir_list= os.listdir(current)
+
+all_seq=[]
+for i in dir_list:
+    if(i.startswith('FAKECORE_sim_') or i .startswith("REALCORE_sim_")):
+        all_seq.append(i)
+case_num = len(all_seq)
+
+if(all_seq==[]):
+    raise Exception("all_seq is none,failed to get sequence, please check and try again")
+
+if(os.path.isfile('result.txt')):
+    with  open('result.txt') as f:
+        res_lines=f.readlines()
+        f.close()
+else:
+    raise Exception("please make sure you are in Regression Result Directory")
+       
+rest_seq=[]
+cmpr_seq=[]
+fail_seq=[]
+pat_fail = ".*FAIL.*"
+pat_compile = ".*compile_error.*"
+fail_num = 0
+compile_num = 0
+for line in res_lines:
+    match_fail = re.match(pat_fail, line)
+    if match_fail is not None:
+        fail_num = fail_num +1
+        #fail_seq.append(line.split()[0])
+        fake_vld_line='FAKECORE_sim_'+line.split()[0]+'_RTL'
+        real_vld_line='REALCORE_sim_'+line.split()[0]+'_RTL'
+        if( fake_vld_line in all_seq):
+            fail_seq.append(fake_vld_line)
+        if( real_vld_line in all_seq):
+            fail_seq.append(fake_vld_line)
+
+    match_compile = re.match(pat_compile, line)
+    if match_compile is not None:
+        compile_num = compile_num +1
+        #cmpr_seq.append(line.split()[0])
+        fake_vld_line='FAKECORE_sim_'+line.split()[0]+'_RTL'
+        real_vld_line='REALCORE_sim_'+line.split()[0]+'_RTL'
+        if( fake_vld_line in all_seq):
+            cmpr_seq.append(fake_vld_line)
+        if( real_vld_line in all_seq):
+            cmpr_seq.append(fake_vld_line)
+
+    fake_vld_line='FAKECORE_sim_'+line.split()[0]+'_RTL'
+    real_vld_line='REALCORE_sim_'+line.split()[0]+'_RTL'
+    if( fake_vld_line in all_seq):
+        all_seq.remove(fake_vld_line)
+    if( real_vld_line in all_seq):
+        all_seq.remove(real_vld_line)
+
+
+rest_seq=all_seq
+running_num = len(rest_seq)
+pass_num = case_num - compile_num - fail_num - running_num
+
+print("\n")
+print("==================================================================================================")
+print("============================================CASE_RUN_INFO=========================================")
+print("==================================================================================================")
+print("The all_case_num: {}, pass_num: \033[32;1m{}\033[0m, compile_error_num: \033[31;1m{}\033[0m, fail_case_num =  \033[31;1m{}\033[0m, running_case_num: \033[33;1m{}\033[0m".format(case_num,pass_num,compile_num,fail_num,running_num))
+#print("For detailed information, please refer to run_info.txt.")
+print("==================================================================================================")
+print("\n")
+
+#run_info.write("==================================================================================================\n")
+#run_info.write("============================================CASE_RUN_INFO=========================================\n")
+#run_info.write("==================================================================================================\n")
+#run_info.write("The all_case_num: {}, pass_num: {},compile_error_num: {}, fail_case_num: {}, running_case_num: {}\n".format(case_num,pass_num, compile_num,fail_num,running_num))
+#run_info.write("==================================================================================================\n")
+#run_info.write("\n")
+#run_info.write("========================================COMPILE_ERROR_CASE========================================\n")
+#if(cmpr_seq !=[]):
+#    for i in cmpr_seq:
+#        run_info.write(i)
+#        run_info.write("\n")
+#run_info.write("\n")
+#run_info.write("============================================FAIL_CASE=============================================\n")
+#if(fail_seq !=[]):
+#    for i in fail_seq:
+#        run_info.write(i)
+#        run_info.write("\n")
+#
+#run_info.write("\n")
+#run_info.write("===========================================RUNNING_CASE===========================================\n")
+#if(rest_seq!=[]):
+#    #print("Still rest "+ str(len(rest_seq)) +" seqs:")
+#    for i in rest_seq:
+#        #print(i)
+#        run_info.write(i)
+#        run_info.write("\n")
+#else:
+#    print("=========Wow! ALL seqs have done! let's sing together========================")
+#run_info.write("\n")
+#run_info.write("!!! Please check the cases of compile_error and fail, and check if the running case has been hung !!!\n")
+
+#print("==================================================================================================")
+#print("============================================CASE_RUN_INFO=========================================")
+#print("==================================================================================================")
+#print("The all_case_num: {}, pass_num: {},compile_error_num: {}, fail_case_num: {}, running_case_num: {}".format(case_num,pass_num, compile_num,fail_num,running_num))
+#print("==================================================================================================")
+#print("\n")
+print("========================================COMPILE_ERROR_CASE========================================")
+if(cmpr_seq !=[]):
+    for i in cmpr_seq:
+        print(i)
+print("\n")
+print("============================================FAIL_CASE=============================================")
+if(fail_seq !=[]):
+    for i in fail_seq:
+        print(i)
+
+print("\n")
+print("===========================================RUNNING_CASE===========================================")
+if(rest_seq!=[]):
+    #print("Still rest "+ str(len(rest_seq)) +" seqs:")
+    for i in rest_seq:
+        #print(i)
+        print(i)
+else:
+    print("=========Wow! ALL seqs have done! let's sing together========================")
+print("\n")
+print("!!! Please check the cases of compile_error and fail, and check if the running case has been hung !!!\n")

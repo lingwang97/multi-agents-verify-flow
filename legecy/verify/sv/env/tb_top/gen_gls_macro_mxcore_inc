@@ -1,0 +1,8 @@
+# use verdi -> tools -> vcs app toolbox ->  get module hierarchy to generate getModHier.log  
+echo '`define HDLREF_AllSpeedCore_assign_base(OPT,VIF,SRC,MSB,LSB)\' > gls_macro_mxcore_inc.sv
+egrep 'speed_core$' getModHier.log | sed 's/\(tb_top.*\).G_\([0-9]\+\)__/```OPT(VIF[\2],`C0_SPEED_CORE_LH``\2```SPEED_CORE_RH``/' | sed 's/speed_core/.SRC,MSB,LSB)\\/' >> gls_macro_mxcore_inc.sv
+echo '' >> gls_macro_mxcore_inc.sv
+echo '`define HDLREF_AllChSliceClkGen_assign_base(OPT,VIF,SRC,MSB,LSB)\' >> gls_macro_mxcore_inc.sv
+egrep 'mx2_clkgen$' getModHier.log | sed 's/\(tb_top.*\)_WRAPPER_\([0-9]\+\)__/```OPT(VIF[\2],\1_WRAPPER```ChClkGenL``\2```ChClkGenR``/' | sed 's/_mx2_clkgen/_mx2_clkgen.``SRC,MSB,LSB)\\/' >> gls_macro_mxcore_inc.sv
+echo '' >> gls_macro_mxcore_inc.sv
+

@@ -1,0 +1,41 @@
+class spd_cfg extends spd_base_cfg;
+
+   // Registration
+   /////////////////////////////////////////////////////////
+   `uvm_object_utils(spd_cfg)
+
+   ///////////////////////////////////////////////////////
+   // Function To "new" The Class
+   ///////////////////////////////////////////////////////
+   function new(string name="spd_cfg");
+
+      super.new(name);
+
+      ///////////////////////////////////////////////////////
+      // Assign to actual real variables in post_randomize()
+      ///////////////////////////////////////////////////////
+       post_randomize();
+
+   endfunction : new
+
+  function void pre_randomize();
+      super.pre_randomize();
+   endfunction : pre_randomize
+
+
+   /////////////////////////////////////////////////////
+   // Function To Run After Randomization
+   // Get Real Numbers From Randomized Values
+   /////////////////////////////////////////////////////
+   function void post_randomize();
+      super.post_randomize();
+   endfunction : post_randomize
+
+  /////////////////////////////////////
+   // Constraints
+   /////////////////////////////////////
+
+endclass: spd_cfg
+
+
+

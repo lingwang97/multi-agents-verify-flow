@@ -1,0 +1,38 @@
+{
+	"UVM_VCS_MACRO_OPT": "+UVM_NO_DEPRECATED",
+	"GLOBAL_VCS_MACOR_OPT": "+CHIP_NUM=1+USE_RAL_MODEL+RTL_SIM+SIM_RAMDOM",
+	"REAL_CORE_OPT":"+RTL_SPEED_SIM+REAL_CORE",
+	"modules":
+	{
+		"cpft_fpga":"json/cpft_fpga.json",
+		"cpft":"json/cpft.json",
+		"cpm":"json/cpm.json",
+		"dfx":"json/dfx.json",
+		"efuse":"json/efuse.json",
+		"fpga":"json/fpga.json",
+		"ft":"json/ft.json",
+		"self_top":"json/self_top.json",
+		"io":"json/io.json",
+		"jls":"json/jls.json",
+		"mc":"json/mc.json",
+		"mx2_block":"json/mx2_block.json",
+		"mx2":"json/mx2.json",
+		"mx2_block_negative":"json/mx2_block_negative.json",
+		"pvt":"json/pvt.json",
+		"reg":"json/reg.json",
+		"ro":"json/ro.json",
+		"rst":"json/rst.json",
+		"#selfclk":"json/selfclk.json",
+		"#selfclk_stage":"json/selfclk_stage.json",
+		"spd_smp":"json/spd_smp.json",
+		"spd_ada":"json/spd_ada.json",
+		"spd_gbp":"json/spd_gbp.json",
+		"spd_lfb":"json/spd_lfb.json",
+		"uart":"json/uart.json",
+		"uart_vip":"json/uart_vip.json",
+		"work":"json/work.json",
+		"#jamlink":"json/jamlink.json",
+		"#top":"json/top.json",
+		"#type":"json/type.json"
+	}
+}
