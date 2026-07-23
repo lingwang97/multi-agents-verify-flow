@@ -18,13 +18,13 @@
       "name": "jls",
       "has_interface": true,
       "has_config": true,
-      "has_tb_top": true,
+      "has_tb_top": false,
       "is_active": true,
-      "enable_adapter": false,
-      "adapter_type": "jamlink"
+      "enable_adapter": true,
+      "adapter_type": "apb"
     },
     {
-      "name": "cpft",
+      "name": "ro",
       "has_interface": true,
       "has_config": true,
       "has_tb_top": false,
@@ -36,7 +36,7 @@
       "name": "uart",
       "has_interface": true,
       "has_config": true,
-      "has_tb_top": true,
+      "has_tb_top": false,
       "is_active": true,
       "enable_adapter": true,
       "adapter_type": "uart"

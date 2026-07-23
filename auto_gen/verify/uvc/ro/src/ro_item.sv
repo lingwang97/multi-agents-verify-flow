@@ -1,17 +1,17 @@
-class cpft_item extends uvm_object;
+class ro_item extends uvm_object;
 
   // used for messaging purposes between components (MON2SCB,Etc..)
-  string report_id = "cpft_item";
+  string report_id = "ro_item";
 
   int card_sel;
 
   // registering the properties of this object
-  `uvm_object_utils_begin(cpft_item)
+  `uvm_object_utils_begin(ro_item)
     `uvm_field_int(card_sel, UVM_ALL_ON)
   `uvm_object_utils_end
 
   // constructor
-  function new(string name="cpft_item");
+  function new(string name="ro_item");
     super.new(name);
     card_sel = 0;
   endfunction : new
@@ -19,7 +19,7 @@ class cpft_item extends uvm_object;
   // prints this class properties,used when error is encountered
   virtual function void do_print (uvm_printer printer);
     super.do_print(printer);
-    printer.print_object("CPFT_ITEM:", this);
+    printer.print_object("RO_ITEM:", this);
   endfunction
 
-endclass : cpft_item
+endclass : ro_item

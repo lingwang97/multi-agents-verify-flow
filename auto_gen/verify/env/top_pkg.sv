@@ -13,7 +13,7 @@ package top_pkg;
   //import all module pkg
   import reg_pkg::*;
   import jls_pkg::*;
-  import cpft_pkg::*;
+  import ro_pkg::*;
   import uart_pkg::*;
   import efuse_pkg::*;
 
@@ -31,7 +31,7 @@ package top_pkg;
   `include "base_test.sv"
   `include "reg_test.sv"
   `include "jls_test.sv"
-  `include "cpft_test.sv"
+  `include "ro_test.sv"
   `include "uart_test.sv"
   `include "efuse_test.sv"
 

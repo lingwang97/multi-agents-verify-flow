@@ -6,7 +6,7 @@
     {  
         "reg":"case/reg.json",
         "jls":"case/jls.json",
-        "cpft":"case/cpft.json",
+        "ro":"case/ro.json",
         "uart":"case/uart.json",
         "efuse":"case/efuse.json"
 	}

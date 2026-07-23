@@ -1,10 +1,10 @@
-class cpft_cfg extends cpft_base_cfg;
+class ro_cfg extends ro_base_cfg;
 
   // Registration
   /////////////////////////////////////////////////////////
-  `uvm_object_utils(cpft_cfg)
+  `uvm_object_utils(ro_cfg)
 
-  function new(string name="cpft_cfg");
+  function new(string name="ro_cfg");
     super.new(name);
 
     ///////////////////////////////////////////////////////
@@ -16,7 +16,7 @@ class cpft_cfg extends cpft_base_cfg;
 
   function void pre_randomize();
     super.pre_randomize();
-     this.constr_cpft_ctrl1.constraint_mode(1);
+     this.constr_ro_ctrl1.constraint_mode(1);
   endfunction : pre_randomize
 
 
@@ -31,12 +31,12 @@ class cpft_cfg extends cpft_base_cfg;
   /////////////////////////////////////
   // Constraints
   /////////////////////////////////////
-  constraint constr_cpft_ctrl1;
+  constraint constr_ro_ctrl1;
 
-endclass: cpft_cfg
+endclass: ro_cfg
 
-constraint cpft_cfg::constr_cpft_ctrl1
+constraint ro_cfg::constr_ro_ctrl1
   {
-    cpft_ctrl1 inside {[4'ha:4'hf]};
+    ro_ctrl1 inside {[4'ha:4'hf]};
   }
 

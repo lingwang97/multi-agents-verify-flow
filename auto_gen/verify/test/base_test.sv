@@ -17,7 +17,7 @@ class base_test extends uvm_test;
     virtual interface top_if top_vif;
     virtual interface reg_if reg_vif;
     virtual interface jls_if jls_vif;
-    virtual interface cpft_if cpft_vif;
+    virtual interface ro_if ro_vif;
     virtual interface uart_if uart_vif;
     virtual interface efuse_if efuse_vif;
     // Other virtual interface declarations
@@ -27,21 +27,21 @@ class base_test extends uvm_test;
     // Config declarations
     reg_pkg::reg_base_cfg reg_cfg_h;
     jls_pkg::jls_base_cfg jls_cfg_h;
-    cpft_pkg::cpft_base_cfg cpft_cfg_h;
+    ro_pkg::ro_base_cfg ro_cfg_h;
     uart_pkg::uart_base_cfg uart_cfg_h;
     efuse_pkg::efuse_base_cfg efuse_cfg_h;
 
     // randomize declarations
     extern virtual function void reg_cfg_randomize();
     extern virtual function void jls_cfg_randomize();
-    extern virtual function void cpft_cfg_randomize();
+    extern virtual function void ro_cfg_randomize();
     extern virtual function void uart_cfg_randomize();
     extern virtual function void efuse_cfg_randomize();
 
     // cfg override declarations
     extern virtual function void set_reg_cfg_type(input string reg_cfg_override, bit replace=1);
     extern virtual function void set_jls_cfg_type(input string jls_cfg_override, bit replace=1);
-    extern virtual function void set_cpft_cfg_type(input string cpft_cfg_override, bit replace=1);
+    extern virtual function void set_ro_cfg_type(input string ro_cfg_override, bit replace=1);
     extern virtual function void set_uart_cfg_type(input string uart_cfg_override, bit replace=1);
     extern virtual function void set_efuse_cfg_type(input string efuse_cfg_override, bit replace=1);
     
@@ -97,7 +97,7 @@ class base_test extends uvm_test;
         `uvm_info(get_type_name(),"****** Creating All base_cfg class ******",UVM_LOW);   
         reg_cfg_h = reg_pkg::reg_base_cfg::type_id::create("reg_cfg_h", this);
         jls_cfg_h = jls_pkg::jls_base_cfg::type_id::create("jls_cfg_h", this);
-        cpft_cfg_h = cpft_pkg::cpft_base_cfg::type_id::create("cpft_cfg_h", this);
+        ro_cfg_h = ro_pkg::ro_base_cfg::type_id::create("ro_cfg_h", this);
         uart_cfg_h = uart_pkg::uart_base_cfg::type_id::create("uart_cfg_h", this);
         efuse_cfg_h = efuse_pkg::efuse_base_cfg::type_id::create("efuse_cfg_h", this);
         
@@ -105,7 +105,7 @@ class base_test extends uvm_test;
         `uvm_info(get_type_name(),"****** Setting All base_cfg class ******",UVM_LOW);
         uvm_config_db #(reg_pkg::reg_base_cfg)::set(uvm_root::get(),"*", "reg_cfg", reg_cfg_h);
         uvm_config_db #(jls_pkg::jls_base_cfg)::set(uvm_root::get(),"*", "jls_cfg", jls_cfg_h);
-        uvm_config_db #(cpft_pkg::cpft_base_cfg)::set(uvm_root::get(),"*", "cpft_cfg", cpft_cfg_h);
+        uvm_config_db #(ro_pkg::ro_base_cfg)::set(uvm_root::get(),"*", "ro_cfg", ro_cfg_h);
         uvm_config_db #(uart_pkg::uart_base_cfg)::set(uvm_root::get(),"*", "uart_cfg", uart_cfg_h);
         uvm_config_db #(efuse_pkg::efuse_base_cfg)::set(uvm_root::get(),"*", "efuse_cfg", efuse_cfg_h);
 
@@ -123,8 +123,8 @@ class base_test extends uvm_test;
             `uvm_error("REG_VIF:ERROR", "VIF reg_vif is missing from config_db")
         if (!uvm_config_db #(virtual interface jls_if)::get(this, "", "jls_vif", jls_vif))
             `uvm_error("JLS_VIF:ERROR", "VIF jls_vif is missing from config_db")
-        if (!uvm_config_db #(virtual interface cpft_if)::get(this, "", "cpft_vif", cpft_vif))
-            `uvm_error("CPFT_VIF:ERROR", "VIF cpft_vif is missing from config_db")
+        if (!uvm_config_db #(virtual interface ro_if)::get(this, "", "ro_vif", ro_vif))
+            `uvm_error("RO_VIF:ERROR", "VIF ro_vif is missing from config_db")
         if (!uvm_config_db #(virtual interface uart_if)::get(this, "", "uart_vif", uart_vif))
             `uvm_error("UART_VIF:ERROR", "VIF uart_vif is missing from config_db")
         if (!uvm_config_db #(virtual interface efuse_if)::get(this, "", "efuse_vif", efuse_vif))
@@ -151,7 +151,7 @@ class base_test extends uvm_test;
         // randomize all module base cfg
         reg_cfg_randomize();
         jls_cfg_randomize();
-        cpft_cfg_randomize();
+        ro_cfg_randomize();
         uart_cfg_randomize();
         efuse_cfg_randomize();
 
@@ -308,11 +308,11 @@ function void base_test::jls_cfg_randomize();
         `uvm_fatal(get_type_name(),"jls_cfg_h randomization failed")
 endfunction
 
-function void base_test::cpft_cfg_randomize();
-    if(cpft_cfg_h.randomize())
-        `uvm_info(get_type_name(),cpft_cfg_h.sprint(),UVM_MEDIUM)
+function void base_test::ro_cfg_randomize();
+    if(ro_cfg_h.randomize())
+        `uvm_info(get_type_name(),ro_cfg_h.sprint(),UVM_MEDIUM)
     else
-        `uvm_fatal(get_type_name(),"cpft_cfg_h randomization failed")
+        `uvm_fatal(get_type_name(),"ro_cfg_h randomization failed")
 endfunction
 
 function void base_test::uart_cfg_randomize();
@@ -341,8 +341,8 @@ function void base_test::set_jls_cfg_type(input string jls_cfg_override, bit rep
     set_type_override("jls_base_cfg", jls_cfg_override, replace);
 endfunction
 
-function void base_test::set_cpft_cfg_type(input string cpft_cfg_override, bit replace=1);
-    set_type_override("cpft_base_cfg", cpft_cfg_override, replace);
+function void base_test::set_ro_cfg_type(input string ro_cfg_override, bit replace=1);
+    set_type_override("ro_base_cfg", ro_cfg_override, replace);
 endfunction
 
 function void base_test::set_uart_cfg_type(input string uart_cfg_override, bit replace=1);

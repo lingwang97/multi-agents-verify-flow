@@ -20,7 +20,7 @@ import base_uvc_pkg::*;
 `include "uart_coverage.sv"
 `include "uart_agent.sv"
 `include "uart_env.sv"
-`include "uart_reg2uart_adapter.sv"
+
 
 
 endpackage : uart_pkg

@@ -1,24 +1,24 @@
-class cpft_driver extends uvm_driver#(cpft_sequence_item);
+class ro_driver extends uvm_driver#(ro_sequence_item);
 
-  uvm_analysis_port #(cpft_sequence_item) ap;
+  uvm_analysis_port #(ro_sequence_item) ap;
 
-  `uvm_component_utils(cpft_driver);
+  `uvm_component_utils(ro_driver);
 
-  virtual cpft_if vif;
-  cpft_base_cfg m_cfg;
+  virtual ro_if vif;
+  ro_base_cfg m_cfg;
   
-  function new(string name="cpft_driver" , uvm_component parent=null);
+  function new(string name="ro_driver" , uvm_component parent=null);
     super.new(name , parent);
     ap = new("ap", this);
   endfunction
   
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
-    if(!uvm_config_db#(virtual cpft_if)::get(this , "" , "cpft_vif" ,vif))
+    if(!uvm_config_db#(virtual ro_if)::get(this , "" , "ro_vif" ,vif))
       `uvm_fatal(get_full_name(), "Virtual interface handle missing")
 
-    if (!uvm_config_db #(cpft_base_cfg)::get(this, "", "cpft_config", m_cfg) )
-      `uvm_info("CONFIG_LOAD", "Cannot get configuration cpft_config from uvm_config_db. Have you set it?", UVM_MEDIUM)
+    if (!uvm_config_db #(ro_base_cfg)::get(this, "", "ro_config", m_cfg) )
+      `uvm_info("CONFIG_LOAD", "Cannot get configuration ro_config from uvm_config_db. Have you set it?", UVM_MEDIUM)
   endfunction
   
   task main_phase(uvm_phase phase);
@@ -35,9 +35,9 @@ class cpft_driver extends uvm_driver#(cpft_sequence_item);
     end
   endtask
   
-  virtual task do_drive(cpft_sequence_item req, cpft_sequence_item rsp);
+  virtual task do_drive(ro_sequence_item req, ro_sequence_item rsp);
 
-    `uvm_info(get_full_name(), "Driving transaction in cpft_driver...", UVM_MEDIUM)
+    `uvm_info(get_full_name(), "Driving transaction in ro_driver...", UVM_MEDIUM)
     // begin your drv logic here.
 
     @(posedge vif.clk);

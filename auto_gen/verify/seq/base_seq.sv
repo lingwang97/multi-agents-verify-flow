@@ -11,7 +11,7 @@ class base_seq extends uvm_sequence;
     virtual interface top_if top_vif;
     virtual interface reg_if reg_vif;
     virtual interface jls_if jls_vif;
-    virtual interface cpft_if cpft_vif;
+    virtual interface ro_if ro_vif;
     virtual interface uart_if uart_vif;
     virtual interface efuse_if efuse_vif;
 
@@ -20,7 +20,7 @@ class base_seq extends uvm_sequence;
     // Config declarations
     reg_pkg::reg_base_cfg reg_cfg_h;
     jls_pkg::jls_base_cfg jls_cfg_h;
-    cpft_pkg::cpft_base_cfg cpft_cfg_h;
+    ro_pkg::ro_base_cfg ro_cfg_h;
     uart_pkg::uart_base_cfg uart_cfg_h;
     efuse_pkg::efuse_base_cfg efuse_cfg_h;
 
@@ -55,8 +55,8 @@ class base_seq extends uvm_sequence;
             `uvm_error("REG_VIF:ERROR", "VIF reg_vif is missing from config_db")
         if (!uvm_config_db #(virtual interface jls_if)::get(m_sequencer, "", "jls_vif", jls_vif))
             `uvm_error("JLS_VIF:ERROR", "VIF jls_vif is missing from config_db")
-        if (!uvm_config_db #(virtual interface cpft_if)::get(m_sequencer, "", "cpft_vif", cpft_vif))
-            `uvm_error("CPFT_VIF:ERROR", "VIF cpft_vif is missing from config_db")
+        if (!uvm_config_db #(virtual interface ro_if)::get(m_sequencer, "", "ro_vif", ro_vif))
+            `uvm_error("RO_VIF:ERROR", "VIF ro_vif is missing from config_db")
         if (!uvm_config_db #(virtual interface uart_if)::get(m_sequencer, "", "uart_vif", uart_vif))
             `uvm_error("UART_VIF:ERROR", "VIF uart_vif is missing from config_db")
         if (!uvm_config_db #(virtual interface efuse_if)::get(m_sequencer, "", "efuse_vif", efuse_vif))
@@ -72,9 +72,9 @@ class base_seq extends uvm_sequence;
             `uvm_warning("JLS_CFG:WARNING", "CFG jls_cfg is missing from config_db,using default")
             jls_cfg_h = new();
         end
-        if (!uvm_config_db #(cpft_pkg::cpft_base_cfg)::get(m_sequencer, "", "cpft_cfg", cpft_cfg_h))begin
-            `uvm_warning("CPFT_CFG:WARNING", "CFG cpft_cfg is missing from config_db,using default")
-            cpft_cfg_h = new();
+        if (!uvm_config_db #(ro_pkg::ro_base_cfg)::get(m_sequencer, "", "ro_cfg", ro_cfg_h))begin
+            `uvm_warning("RO_CFG:WARNING", "CFG ro_cfg is missing from config_db,using default")
+            ro_cfg_h = new();
         end
         if (!uvm_config_db #(uart_pkg::uart_base_cfg)::get(m_sequencer, "", "uart_cfg", uart_cfg_h))begin
             `uvm_warning("UART_CFG:WARNING", "CFG uart_cfg is missing from config_db,using default")
@@ -122,7 +122,7 @@ class base_seq extends uvm_sequence;
 // inlcude each module comm task and functions
 `include "comm_reg_methods.sv"
 `include "comm_jls_methods.sv"
-`include "comm_cpft_methods.sv"
+`include "comm_ro_methods.sv"
 `include "comm_uart_methods.sv"
 `include "comm_efuse_methods.sv"
 

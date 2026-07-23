@@ -1,19 +1,19 @@
-class cpft_base_cfg extends uvm_object;
+class ro_base_cfg extends uvm_object;
 
-  rand bit [3:0] cpft_ctrl1;
-  rand bit [3:0] cpft_ctrl2;
+  rand bit [3:0] ro_ctrl1;
+  rand bit [3:0] ro_ctrl2;
 
   // Registration
   /////////////////////////////////////////////////////////  
-  `uvm_object_utils_begin(cpft_base_cfg)
-    `uvm_field_int(cpft_ctrl1, UVM_ALL_ON + UVM_HEX)
-    `uvm_field_int(cpft_ctrl2, UVM_ALL_ON + UVM_HEX)
+  `uvm_object_utils_begin(ro_base_cfg)
+    `uvm_field_int(ro_ctrl1, UVM_ALL_ON + UVM_HEX)
+    `uvm_field_int(ro_ctrl2, UVM_ALL_ON + UVM_HEX)
   `uvm_object_utils_end
 
    ///////////////////////////////////////////////////////
    // Function To "new" The Class
    ///////////////////////////////////////////////////////
-  function new(string name="cpft_base_cfg");
+  function new(string name="ro_base_cfg");
     super.new(name);
 
     ///////////////////////////////////////////////////////
@@ -24,8 +24,8 @@ class cpft_base_cfg extends uvm_object;
 
   function void pre_randomize();
     super.pre_randomize();
-    this.constr_base_cpft_ctrl1.constraint_mode(1);
-    this.constr_base_cpft_ctrl2.constraint_mode(1);
+    this.constr_base_ro_ctrl1.constraint_mode(1);
+    this.constr_base_ro_ctrl2.constraint_mode(1);
   endfunction : pre_randomize
 
 
@@ -41,17 +41,17 @@ class cpft_base_cfg extends uvm_object;
   /////////////////////////////////////
   // Constraints
   /////////////////////////////////////
-  constraint constr_base_cpft_ctrl1;
-  constraint constr_base_cpft_ctrl2;
+  constraint constr_base_ro_ctrl1;
+  constraint constr_base_ro_ctrl2;
 
-endclass: cpft_base_cfg
+endclass: ro_base_cfg
 
-constraint cpft_base_cfg::constr_base_cpft_ctrl1 
+constraint ro_base_cfg::constr_base_ro_ctrl1 
   {
-    cpft_ctrl1 inside {[4'h1:4'hf]};
+    ro_ctrl1 inside {[4'h1:4'hf]};
   }
 
-constraint cpft_base_cfg::constr_base_cpft_ctrl2 
+constraint ro_base_cfg::constr_base_ro_ctrl2 
   {
-    cpft_ctrl2 inside {[4'h1:4'hf]};
+    ro_ctrl2 inside {[4'h1:4'hf]};
   }
