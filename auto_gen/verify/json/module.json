@@ -1,0 +1,13 @@
+{
+	"UVM_VCS_MACRO_OPT": "+UVM_NO_DEPRECATED",
+	"GLOBAL_VCS_MACOR_OPT": "+USE_RAL_MODEL+SIM_RAMDOM+UVM_ERR_QUIT_COUNT=100",
+	"REAL_CORE_OPT":"",
+	"modules":
+    {  
+        "reg":"case/reg.json",
+        "jls":"case/jls.json",
+        "cpft":"case/cpft.json",
+        "uart":"case/uart.json",
+        "efuse":"case/efuse.json"
+	}
+}

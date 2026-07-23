@@ -182,6 +182,10 @@ class {name}_block_base_seq extends uvm_sequence;
 
 endclass: {name}_block_base_seq
 
+/*  ====================================================================================  */
+//  All {name} block sequence classes must inherit from the base class {name}_block_base_seq
+/*  ====================================================================================  */
+
 '''
 
 
