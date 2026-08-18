@@ -11,7 +11,7 @@ class jls_monitor extends base_monitor;
 
   extern task monitor_trans();
   extern task collect_coverage();
-
+  extern function print_monitor_status();
   function new(string name="jls_monitor" , uvm_component parent=null);
     super.new(name , parent);
     jls_monitor_main_ap = new("jls_monitor_main_ap", this);
@@ -33,6 +33,7 @@ class jls_monitor extends base_monitor;
 
   task run_phase(uvm_phase phase);
     super.run_phase(phase);
+    print_monitor_status();
     fork
       monitor_trans();
       collect_coverage();
@@ -41,7 +42,7 @@ class jls_monitor extends base_monitor;
 
 
 endclass : jls_monitor
-
+  
   // Sample vif data , trans to scoreboard or other component
   task jls_monitor::monitor_trans();
     forever begin
@@ -59,7 +60,26 @@ endclass : jls_monitor
       @(posedge jls_vif.clk);
       req.card_sel  = jls_vif.card_sel ;
       req.jls_ctrl  = jls_vif.jls_ctrl ;
-      frame_collected_port.write(req);  
+      if(cov_enable)begin
+		    frame_collected_port.write(req);  
+	    end 
     end
   endtask
+
+  // Print monitor status of cov_enable & checks_enable
+  function jls_monitor::print_monitor_status();
+		`uvm_info(get_type_name(), $sformatf("jls_monitor status as following:"), UVM_MEDIUM)
+		if(checks_enable)begin
+			`uvm_info(get_type_name(), $sformatf("jls_monitor check switch ON"), UVM_MEDIUM)
+		end
+		else begin
+			`uvm_info(get_type_name(), $sformatf("jls_monitor check switch OFF"), UVM_MEDIUM)
+		end
+		if(cov_enable)begin
+			`uvm_info(get_type_name(), $sformatf("jls_monitor collect coverages switch ON"), UVM_MEDIUM)
+		end
+		else begin
+			`uvm_info(get_type_name(), $sformatf("jls_monitor collect coverages switch OFF"), UVM_MEDIUM)
+		end
+  endfunction
 

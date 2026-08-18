@@ -1,12 +1,10 @@
-class uart_env extends uvm_env;
+class uart_env extends base_env;
 
   `uvm_component_utils(uart_env)
 
   uart_agent      uart_agent_h;
   uart_sequencer  vseqr_h;
   uart_coverage   uart_coverage_h;
-
-  uvm_active_passive_enum drv_is_active=UVM_PASSIVE;//UVM_ACTIVE
 
   function new(string name = "uart_env" , uvm_component parent = null);
     super.new(name , parent);

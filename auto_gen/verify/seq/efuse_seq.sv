@@ -28,8 +28,8 @@ class efuse_base_seq extends base_seq;
     endtask
 
     task post_body();
-        super.post_body();
         `uvm_info(get_type_name(), "Ending efuse_base_seq ", UVM_MEDIUM);
+        super.post_body();
     endtask
 
 endclass
@@ -38,3 +38,29 @@ endclass
 /*  ====================================================================================  */
 //  All efuse sequence classes must inherit from the base class efuse_base_seq
 /*  ====================================================================================  */
+
+class efuse_smoke_seq extends efuse_base_seq;
+    `uvm_object_utils(efuse_smoke_seq)
+
+    function new(string name="efuse_smoke_seq");
+        super.new(name);
+    endfunction : new
+
+    task pre_body();
+            super.pre_body();
+    endtask
+
+    task body();
+        super.body(); 
+        `uvm_info(get_type_name(), "efuse_smoke_seq start", UVM_MEDIUM);
+    
+        `uvm_info(get_type_name(), "efuse_smoke_seq end", UVM_MEDIUM);
+
+    endtask
+
+    task post_body();
+        super.post_body();
+    endtask
+
+endclass
+

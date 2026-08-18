@@ -10,7 +10,7 @@
 # --------------------------------------------------------------------------------------------------
 #    Version    Date   		    Author      Comment
 # --------------------------------------------------------------------------------------------------
-#    1.0		2026.07.17		Mr Wang 	Initial version
+#    1.0		2026.06.15		Mr Wang 	Initial version
 #
 # --------------------------------------------------------------------------------------------------
 #
@@ -244,6 +244,10 @@ else
 	fgp_para = -fgp=num_threads:2
 endif
 
+ifeq ($(fpg_verbose),1)
+	# generate fgp runtime report and other options
+	fgp_para += -fgp=diag:ruse -fgp=auto_affinity:allowHyperThreadCpu -fgp=schedpli 
+endif
 
 #-------------------------------------------------------------------------
 #  Checking timing-check switch
@@ -313,6 +317,7 @@ endif
 ifeq ($(fsdb),1)
 	dump_vcs += +define+DUMP_FSDB
 	fsdb_force = +fsdb+force
+	dump_simv += +UVM_VERDI_TRACE=COMPWAVE+HIER+RALWAVE +fsdbfile+novas.fsdb 
 	ifeq ($(lib),1)
 		dump_vcs += -debug_access+all -debug_region=cell+lib
 	else
@@ -549,8 +554,8 @@ cmpr:
 sim:
 	make simv_echo; make covsim; echo current SEED is $(SEED);
 covsim:
-	simv +vcs+lic+wait -ucli -l sim.log +ntb_stop_on_constraint_solver_error=1 -assert quiet+report +UVM_VERDI_TRACE=COMPWAVE+HIER+RALWAVE \
-	+fsdbfile+novas.fsdb $(fsdb_force) $(uvm_para)  $(pll_custom_cfg) $(gui_option) +ntb_random_seed=$(SEED) $(dump_simv) $(cm_para) $(fgp_para) \
+	simv +vcs+lic+wait -ucli -l sim.log +ntb_stop_on_constraint_solver_error=1 -assert quiet+report \
+	$(dump_simv) $(fsdb_force) $(uvm_para) $(gui_option) +ntb_random_seed=$(SEED) $(cm_para) $(fgp_para) \
 	$(simv_opt) $(vip_sim_para)$(xprop_sim) $(init_reg_cfg) $(dpo_sim_para)
 show:
 	dve -vpd simv.vpd -full64 &
@@ -587,8 +592,8 @@ com_var = vcs $(VCS_MACRO_OPT) -timescale=1ns/10ps  +v2k -sverilog $(fgp_compile
 	$(vip_comp_para) \
 	-top tb_top
 
-simv_var = simv +vcs+lic+wait -ucli -l sim.log +ntb_stop_on_constraint_solver_error=1 -assert quiet+report +UVM_VERDI_TRACE=COMPWAVE+HIER+RALWAVE \
-	+fsdbfile+novas.fsdb $(fsdb_force) $(uvm_para)  $(pll_custom_cfg) $(gui_option) +ntb_random_seed=$(SEED) $(dump_simv) $(cm_para) $(fgp_para) \
+simv_var = simv +vcs+lic+wait -ucli -l sim.log +ntb_stop_on_constraint_solver_error=1 -assert quiet+report \
+	$(dump_simv) $(fsdb_force) $(uvm_para) $(gui_option) +ntb_random_seed=$(SEED) $(cm_para) $(fgp_para) \
 	$(simv_opt) $(vip_sim_para)$(xprop_sim) $(init_reg_cfg) $(dpo_sim_para)
 
 com_echo:

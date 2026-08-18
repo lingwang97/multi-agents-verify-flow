@@ -46,25 +46,13 @@ class base_test extends uvm_test;
     extern virtual function void set_efuse_cfg_type(input string efuse_cfg_override, bit replace=1);
     
     // global check setting function
-    extern virtual function void set_enable(input string   array_name,
-                                            input string   index_name,
-                                            input on_off_t enable,
-                                            input string event_bind="DEFAULT");
-    extern virtual function void set_mon_checks_enable( input string   name,
-                                      		            input on_off_t enable,
-                                                        input string   event_bind="DEFAULT");
-    extern virtual function void set_sb_checks_enable(input string   name,
-                                    	              input on_off_t enable,
-                                                      input string   event_bind="DEFAULT");
-    extern virtual function void set_if_checks_enable(input string   name,
-                                                      input on_off_t enable,
-                                                      input string   event_bind="DEFAULT");
-    extern virtual function void set_mon_cov_enable(input string   name,
-                                                    input on_off_t enable,
-                                                    input string   event_bind="DEFAULT");
-    extern virtual function void set_if_cov_enable(input string   name,
-                                                   input on_off_t enable,
-                                                   input string   event_bind="DEFAULT");
+    extern virtual function void set_enable_flag_debug();
+    extern virtual function void set_enable(input string   array_name,input string   index_name,input on_off_t enable,input string event_bind="DEFAULT");
+    extern virtual function void set_mon_checks_enable( input string   name, input on_off_t enable,input string   event_bind="DEFAULT");
+    extern virtual function void set_sb_checks_enable(input string   name, input on_off_t enable,input string   event_bind="DEFAULT");
+    extern virtual function void set_if_checks_enable(input string   name, input on_off_t enable,input string   event_bind="DEFAULT");
+    extern virtual function void set_mon_cov_enable(input string   name, input on_off_t enable,input string   event_bind="DEFAULT");
+    extern virtual function void set_if_cov_enable(input string   name, input on_off_t enable,input string   event_bind="DEFAULT");
 
     // ******************************************************************* 
     // *******User's Function and Task Declarations: *********************
@@ -170,8 +158,8 @@ class base_test extends uvm_test;
         //setting your rst operation here
         begin
             phase.raise_objection(this);
-            print_project();
-            uvm_hdl_deposit("tb_top.RO",1);
+            //print_project();                      //need to be updated
+            //uvm_hdl_deposit("tb_top.RST",1);
             `uvm_info(get_type_name(),"tb reset triggered...",UVM_MEDIUM);
             phase.drop_objection(this);
         end
@@ -211,7 +199,7 @@ class base_test extends uvm_test;
         //setting your reg init cfg and warming up cfg here
         begin
           phase.raise_objection(this);       
-          uvm_hdl_deposit("tb_top.RO",0);
+          //uvm_hdl_deposit("tb_top.RST",0);   //need to be updated
           `uvm_info(get_type_name(),"release tb reset...",UVM_MEDIUM);
           #1000ns;
           phase.drop_objection(this);
@@ -358,6 +346,27 @@ endfunction
 
 
 // global check setting function
+
+function void base_test::set_enable_flag_debug();
+        string   name;   
+        foreach(MON_CHECKS_ENABLE[name]) begin
+            `uvm_info(report_id,$sformatf("MON_CHECKS_ENABLE[%s]=%b",name,MON_CHECKS_ENABLE[name]),UVM_LOW)
+        end
+        foreach(MON_COVERAGE_ENABLE[name]) begin
+            `uvm_info(report_id,$sformatf("MON_COVERAGE_ENABLE[%s]=%b",name,MON_COVERAGE_ENABLE[name]),UVM_LOW)
+        end
+        foreach(SB_CHECKS_ENABLE[name]) begin
+            `uvm_info(report_id,$sformatf("SB_CHECKS_ENABLE[%s]=%b",name,SB_CHECKS_ENABLE[name]),UVM_LOW)
+        end
+        foreach(IF_CHECKS_ENABLE[name]) begin
+            `uvm_info(report_id,$sformatf("IF_CHECKS_ENABLE[%s]=%b",name,IF_CHECKS_ENABLE[name]),UVM_LOW)
+        end
+        foreach(IF_COVERAGE_ENABLE[name]) begin
+            `uvm_info(report_id,$sformatf("IF_COVERAGE_ENABLE[%s]=%b",name,IF_COVERAGE_ENABLE[name]),UVM_LOW)
+        end
+endfunction
+
+
 function void base_test::set_enable(input string   array_name,
                          input string   index_name,
                          input on_off_t enable,
@@ -449,64 +458,38 @@ function void base_test::set_enable(input string   array_name,
     end // if (event_bind == "DEFAULT")
 endfunction: set_enable
 
-function void base_test::set_mon_checks_enable(input string   name,
-                                      input on_off_t enable,
-                                      input string   event_bind="DEFAULT");
+function void base_test::set_mon_checks_enable(input string   name,input on_off_t enable,input string   event_bind="DEFAULT");
 
         `uvm_info(get_full_name(),$psprintf("setting mon check for %s",name),UVM_LOW)
-        set_enable(.array_name("MON_CHECKS_ENABLE"),
-                    .index_name(name),
-                    .enable(enable),
-                    .event_bind(event_bind)
-                    );
+        set_enable(.array_name("MON_CHECKS_ENABLE"),.index_name(name),.enable(enable),.event_bind(event_bind));
 endfunction: set_mon_checks_enable    
 
-function void base_test::set_sb_checks_enable(input string   name,
-                                    input on_off_t enable,
-                                    input string   event_bind="DEFAULT");
+function void base_test::set_sb_checks_enable(input string   name,input on_off_t enable,input string   event_bind="DEFAULT");
 
         `uvm_info(get_full_name(),$psprintf("setting sb check for %s",name),UVM_LOW)
-        set_enable(.array_name("SB_CHECKS_ENABLE"),
-                .index_name(name),
-                .enable(enable),
-                .event_bind(event_bind)
-                );
+        set_enable(.array_name("SB_CHECKS_ENABLE"),.index_name(name),.enable(enable),.event_bind(event_bind) );
+
 endfunction: set_sb_checks_enable
 
-function void base_test::set_if_checks_enable(input string   name,
-                                    input on_off_t enable,
-                                    input string   event_bind="DEFAULT");
+function void base_test::set_if_checks_enable(input string   name,input on_off_t enable,input string   event_bind="DEFAULT");
 
         `uvm_info(get_full_name(),$psprintf("setting if check for %s",name),UVM_LOW)
-        set_enable(.array_name("IF_CHECKS_ENABLE"),
-                .index_name(name),
-                .enable(enable),
-                .event_bind(event_bind)
-                );
+        set_enable(.array_name("IF_CHECKS_ENABLE"),.index_name(name),.enable(enable),.event_bind(event_bind));
+
 endfunction: set_if_checks_enable
 
-function void base_test::set_mon_cov_enable(input string   name,
-                                    input on_off_t enable,
-                                    input string   event_bind="DEFAULT");
+function void base_test::set_mon_cov_enable(input string   name,input on_off_t enable,input string   event_bind="DEFAULT");
 
         `uvm_info(get_full_name(),$psprintf("setting mon cov for %s",name),UVM_LOW)
-        set_enable(.array_name("MON_COV_ENABLE"),
-                .index_name(name),
-                .enable(enable),
-                .event_bind(event_bind)
-                );
+        set_enable(.array_name("MON_COVERAGE_ENABLE"),.index_name(name),.enable(enable),.event_bind(event_bind));
+
 endfunction: set_mon_cov_enable
 
-function void base_test::set_if_cov_enable(input string   name,
-                                    input on_off_t enable,
-                                    input string   event_bind="DEFAULT");
+function void base_test::set_if_cov_enable(input string   name,input on_off_t enable,input string   event_bind="DEFAULT");
 
         `uvm_info(get_full_name(),$psprintf("setting if cov for %s",name),UVM_LOW)
-        set_enable(.array_name("IF_COV_ENABLE"),
-                .index_name(name),
-                .enable(enable),
-                .event_bind(event_bind)
-                );
+        set_enable(.array_name("IF_COVERAGE_ENABLE"),.index_name(name),.enable(enable),.event_bind(event_bind));
+
 endfunction: set_if_cov_enable
 
 

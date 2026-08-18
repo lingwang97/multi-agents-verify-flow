@@ -47,7 +47,7 @@ class base_scoreboard extends uvm_scoreboard;
     forever begin
         @(SB_CHECKS_ENABLE[name_h] ) begin
           checks_enable = SB_CHECKS_ENABLE[name_h];
-          `uvm_info(report_id,$sformatf("Setting %s.checks_enable = %b ",name_h,checks_enable),UVM_HIGH);
+          `uvm_info(report_id,$sformatf("Setting %s.checks_enable = %b ",name_h,checks_enable),UVM_MEDIUM);
         end
     end
   endtask: sb_update_checks_enable

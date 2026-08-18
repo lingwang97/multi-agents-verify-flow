@@ -20,7 +20,7 @@ import base_uvc_pkg::*;
 `include "jls_coverage.sv"
 `include "jls_agent.sv"
 `include "jls_env.sv"
-
+`include "jls_reg2apb_adapter.sv"
 
 
 endpackage : jls_pkg

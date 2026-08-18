@@ -28,8 +28,8 @@ class sys_init_seq extends base_seq;
     endtask
 
     task post_body();
-        super.post_body();
         `uvm_info(get_type_name(), "Ending sys_init_seq ", UVM_MEDIUM);
+        super.post_body();
     endtask
 
 endclass

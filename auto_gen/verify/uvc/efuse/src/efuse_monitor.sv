@@ -11,7 +11,7 @@ class efuse_monitor extends base_monitor;
 
   extern task monitor_trans();
   extern task collect_coverage();
-
+  extern function print_monitor_status();
   function new(string name="efuse_monitor" , uvm_component parent=null);
     super.new(name , parent);
     efuse_monitor_main_ap = new("efuse_monitor_main_ap", this);
@@ -33,6 +33,7 @@ class efuse_monitor extends base_monitor;
 
   task run_phase(uvm_phase phase);
     super.run_phase(phase);
+    print_monitor_status();
     fork
       monitor_trans();
       collect_coverage();
@@ -41,7 +42,7 @@ class efuse_monitor extends base_monitor;
 
 
 endclass : efuse_monitor
-
+  
   // Sample vif data , trans to scoreboard or other component
   task efuse_monitor::monitor_trans();
     forever begin
@@ -59,7 +60,26 @@ endclass : efuse_monitor
       @(posedge efuse_vif.clk);
       req.card_sel  = efuse_vif.card_sel ;
       req.efuse_ctrl  = efuse_vif.efuse_ctrl ;
-      frame_collected_port.write(req);  
+      if(cov_enable)begin
+		    frame_collected_port.write(req);  
+	    end 
     end
   endtask
+
+  // Print monitor status of cov_enable & checks_enable
+  function efuse_monitor::print_monitor_status();
+		`uvm_info(get_type_name(), $sformatf("efuse_monitor status as following:"), UVM_MEDIUM)
+		if(checks_enable)begin
+			`uvm_info(get_type_name(), $sformatf("efuse_monitor check switch ON"), UVM_MEDIUM)
+		end
+		else begin
+			`uvm_info(get_type_name(), $sformatf("efuse_monitor check switch OFF"), UVM_MEDIUM)
+		end
+		if(cov_enable)begin
+			`uvm_info(get_type_name(), $sformatf("efuse_monitor collect coverages switch ON"), UVM_MEDIUM)
+		end
+		else begin
+			`uvm_info(get_type_name(), $sformatf("efuse_monitor collect coverages switch OFF"), UVM_MEDIUM)
+		end
+  endfunction
 

@@ -49,15 +49,14 @@ OPTS_LSF_CORES="1"
 OPTS_LSFSIG=""
 OPTS_TAG=""
 OPTS_TRY_ALL_HOST=0
+OPTS_FGP_VERBOSE="FALSE"
 
 currentPwd=`pwd`
 wsim_dir_path=$(dirname $(realpath $0))
 database_path="$wsim_dir_path/../.."
 me=`basename $0`
 
-##This dict is used to get the testname from uvm/test/test.list all defined test names there
-declare -A dict
-export dict
+
 
 trap "interrupt_pclean" SIGINT
 
@@ -229,12 +228,16 @@ wait_file_timeout() {
  
         if [[ $comp_status == "FAIL" ]]; then
             echo "COMPILE FAIL,Simulatin Failed!!!"
+            echo "$testname			compile_error" >> ${sim_dir}/result.txt
+            cd $wsim_dir_path
             exit 1
         elif [[ $comp_status == "SDF_ERROR" ]]; then
             echo "SDF ERROR,Simulatin Failed!!!"
+            echo "$testname			compile_error" >> ${sim_dir}/result.txt
+            cd $wsim_dir_path
             exit 1
-        else
-            echo "waiting vcs compile ..."
+        # else
+        #     echo "waiting vcs compile ..."
         fi
 
         sleep $interval
@@ -262,7 +265,6 @@ function buildUvmCase()
     local projectfile_name
     local project
     local initregfile_name
-    local mx2_block_initregfile_name
     local coverfile_name
     local xprog_name
 
@@ -284,15 +286,7 @@ function buildUvmCase()
 
     projectfile_name=$wsim_dir_path/project_name
     project=`cat $projectfile_name`
-
-    if [[ "$make_define" =~ "+VIP" ]]; then
-      initregfile_name=$database_path/verify/sv/case/template/vip_initreg/Makefile.initreg.cfg
-    elif [[ ("$make_define" =~ "+MDL_MX2" ) ]]; then
-      mx2_block_initregfile_name=$database_path/verify/sv/case/template/mx2.init_config
-    else
-      initregfile_name=$database_path/verify/tb_top/config/specify.cfg
-      mx2_block_initregfile_name=$database_path/verify/sv/case/template/mx2.reg_config
-    fi
+    initregfile_name=$database_path/verify/tb_top/config/specify.cfg
 
     make_option=""
 
@@ -381,6 +375,10 @@ function buildUvmCase()
     if [[ "$make_define" =~ "+VIP" ]]; then
 	    make_option+=" case_block=uart_vip"
     fi
+    
+    if [ $OPTS_FGP_VERBOSE == "TRUE" ]; then
+	    make_option+=" fpg_verbose=1"
+    fi
 
     host_pre=$(env | grep "^HOST=" | head -n 1 | cut -d '-' -f 1)
     if [[ $host_pre == *"sinh1"* ]]; then
@@ -399,6 +397,7 @@ function buildUvmCase()
 	    OPTS_LSF_CORES="40"
     fi
 
+
     cd $sim_dir
     if [ $simrun == "FALSE" ]; then
         comp_dir="comp_"$testname
@@ -410,7 +409,6 @@ function buildUvmCase()
         cp $makefile_name ./Makefile
         cp $projectfile_name ./
         cp $initregfile_name ./Makefile.initreg.cfg
-        cp $mx2_block_initregfile_name ./mx2.reg_config
         cp $coverfile_name ./Makefile.coverage.cfg
         cp $digit_async_name ./digit_ip_async.lst
         cp $cklatch_nospecify_name ./cklatch_nospecify.cfg
@@ -423,7 +421,6 @@ function buildUvmCase()
         if [[ -n $OPTS_MODULE || -n $OPTS_REGRESSION_MODE ]]; then
             if [[ $make_define = *"REAL_CORE"* ]]; then
                 scene="REALCORE_"
-                OPTS_LSF_CORES="2"
             else
                 scene="FAKECORE_"
             fi
@@ -436,7 +433,6 @@ function buildUvmCase()
         cp $tclfile_name  ./
         cp $rtdbgfile_name ./
         cp $initregfile_name ./Makefile.initreg.cfg
-        cp $mx2_block_initregfile_name ./mx2.reg_config
         cp $coverfile_name ./Makefile.coverage.cfg
         ln -s ../$comp_dir/simv ./simv
         ln -s ../$comp_dir/csrc ./csrc
@@ -647,12 +643,12 @@ function buildUvmCase()
         # if [ $OPTS_DUMPFSDB == "FALSE" ] ; then
         #     rm -rf ../simv.daidir/*.so
         # fi
-        if [[ ! -f sim.log ]]; then
-            log 1 " sim.log is not generated, please check make command is working or not"
-            echo "$folder			compile_error" >> ${sim_dir}/result.txt
-            cd $wsim_dir_path
-            break
-        fi
+        # if [[ ! -f sim.log ]]; then
+        #    log 1 " sim.log is not generated, please check make command is working or not"
+        #    echo "$folder			compile_error" >> ${sim_dir}/result.txt
+        #    cd $wsim_dir_path
+        #    break
+        # fi
 
         print_result $folder $testname  | tee -a sim.log | tee -a $simlog_dir
         #go back to dir
@@ -972,6 +968,9 @@ while [ $# -gt 0 ]; do
 	-verbose)
 	    shift
 	    OPTS_UVM_VERBOSITY="$1"
+	    ;;
+	-fgp_verbose)
+	    OPTS_FGP_VERBOSE="TRUE"
 	    ;;
 	-corner)
 	    shift

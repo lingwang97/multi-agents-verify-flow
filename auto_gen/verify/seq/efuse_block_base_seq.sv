@@ -49,13 +49,13 @@ class efuse_block_base_seq extends uvm_sequence;
     endtask
 
     virtual task body();
-        super.body();
+        // super.body();
         `uvm_info(get_type_name(), "Starting efuse_block_base_seq", UVM_MEDIUM)
 
     endtask
 
     virtual task post_body();
-        super.post_body();
+        // super.post_body();
         `uvm_info(get_type_name(), "efuse_block_base_seq end", UVM_MEDIUM)
 
     endtask
@@ -70,4 +70,30 @@ endclass: efuse_block_base_seq
 /*  ====================================================================================  */
 //  All efuse block sequence classes must inherit from the base class efuse_block_base_seq
 /*  ====================================================================================  */
+
+class efuse_smoke_block_seq extends efuse_block_base_seq;
+    `uvm_object_utils(efuse_smoke_block_seq)
+
+    function new(string name="efuse_smoke_block_seq");
+        super.new(name);
+    endfunction : new
+
+    task pre_body();
+            super.pre_body();
+    endtask
+
+    task body();
+        super.body(); 
+        `uvm_info(get_type_name(), "efuse_smoke_block_seq start", UVM_MEDIUM);
+    
+        `uvm_info(get_type_name(), "efuse_smoke_block_seq end", UVM_MEDIUM);
+
+    endtask
+
+    task post_body();
+        super.post_body();
+    endtask
+
+endclass
+
 

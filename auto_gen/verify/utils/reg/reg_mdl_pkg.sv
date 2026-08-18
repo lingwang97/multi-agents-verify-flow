@@ -7,5 +7,5 @@ import uvm_pkg::*;
 `include "uvm_btc_field.sv"
 `include "uvm_btc_reg.sv"
 `include "uvm_btc_block.sv"
-`include "uvm_reg_macros.svh"
+`include "uvm_reg_macros.sv"
 endpackage : reg_mdl_pkg

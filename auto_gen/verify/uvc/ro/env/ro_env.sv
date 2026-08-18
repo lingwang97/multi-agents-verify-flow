@@ -1,12 +1,10 @@
-class ro_env extends uvm_env;
+class ro_env extends base_env;
 
   `uvm_component_utils(ro_env)
 
   ro_agent      ro_agent_h;
   ro_sequencer  vseqr_h;
   ro_coverage   ro_coverage_h;
-
-  uvm_active_passive_enum drv_is_active=UVM_PASSIVE;//UVM_ACTIVE
 
   function new(string name = "ro_env" , uvm_component parent = null);
     super.new(name , parent);

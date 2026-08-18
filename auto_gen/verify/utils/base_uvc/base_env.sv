@@ -1,4 +1,3 @@
-
 class base_env extends uvm_env;
 
     string              report_id = "base_env";   // Report Id String For Messaging
@@ -6,6 +5,8 @@ class base_env extends uvm_env;
     bit                 intf_tb_reset        = 0; // Reset Cov or Sv Checks
     bit                 intf_checks_enable   = 1; // Enable SVA Checks
     bit                 intf_coverage_enable = 1; // Enable SVA Coverage
+
+    uvm_active_passive_enum drv_is_active=UVM_PASSIVE;//UVM_ACTIVE
 
     ////////////////////////////////////////////////////
     // Register
@@ -53,7 +54,7 @@ class base_env extends uvm_env;
       // this method should also call super.start_of_simulation to preserve any function 
       // introduced here.
       super.end_of_elaboration_phase( phase );
-      `uvm_info(report_id, "end_of_elaboration() END",UVM_MEDIUM);
+      `uvm_info(report_id, "end_of_elaboration() END",UVM_HIGH);
     endfunction : end_of_elaboration_phase
 
     ////////////////////////////////////////////////////

@@ -9,7 +9,7 @@
 # Usage:
 #       1.python gen_uvm_env.py --gcfg
 #       2.python gen_uvm_env.py -c <config_file.json> --guvc
-#       3.python gen_uvm_env.py -c <config_file.json> --guvc --overwrite
+#       3.python gen_uvm_env.py --guvc -c <config_file.json> --overwrite
 # Author: Mr Wang
 ################################################################################
 
@@ -62,7 +62,7 @@ class {name}_seq extends uvm_sequence;
 
     virtual task pre_body();
         super.pre_body();
-
+        `uvm_info(get_type_name(), "Starting {name}_seq", UVM_MEDIUM)
         if (!uvm_config_db #({env_name}_env)::get(m_sequencer, "", "{env_name}_env", {env_name}_env_h))
             `uvm_error("{env_name_upper}_ENV:ERROR", "Env {env_name}_env is missing from config_db")
 {vif_get}
@@ -79,13 +79,13 @@ class {name}_seq extends uvm_sequence;
     endtask
 
     virtual task body();
-        super.body();
-        `uvm_info(get_type_name(), "Starting {name}_seq", UVM_MEDIUM)
+        //super.body();
+
 
     endtask
 
     virtual task post_body();
-        super.post_body();
+        //super.post_body();
         `uvm_info(get_type_name(), "{name}_seq end", UVM_MEDIUM)
 
     endtask
@@ -164,13 +164,13 @@ class {name}_block_base_seq extends uvm_sequence;
     endtask
 
     virtual task body();
-        super.body();
+        // super.body();
         `uvm_info(get_type_name(), "Starting {name}_block_base_seq", UVM_MEDIUM)
 
     endtask
 
     virtual task post_body();
-        super.post_body();
+        // super.post_body();
         `uvm_info(get_type_name(), "{name}_block_base_seq end", UVM_MEDIUM)
 
     endtask
@@ -185,6 +185,32 @@ endclass: {name}_block_base_seq
 /*  ====================================================================================  */
 //  All {name} block sequence classes must inherit from the base class {name}_block_base_seq
 /*  ====================================================================================  */
+
+class {name}_smoke_block_seq extends {name}_block_base_seq;
+    `uvm_object_utils({name}_smoke_block_seq)
+
+    function new(string name="{name}_smoke_block_seq");
+        super.new(name);
+    endfunction : new
+
+    task pre_body();
+            super.pre_body();
+    endtask
+
+    task body();
+        super.body(); 
+        `uvm_info(get_type_name(), "{name}_smoke_block_seq start", UVM_MEDIUM);
+    
+        `uvm_info(get_type_name(), "{name}_smoke_block_seq end", UVM_MEDIUM);
+
+    endtask
+
+    task post_body();
+        super.post_body();
+    endtask
+
+endclass
+
 
 '''
 
@@ -229,8 +255,8 @@ class {name}_seq extends base_seq;
     endtask
 
     task post_body();
-        super.post_body();
         `uvm_info(get_type_name(), "Ending {name}_seq ", UVM_MEDIUM);
+        super.post_body();
     endtask
 
 endclass
@@ -269,8 +295,8 @@ class {name}_base_seq extends base_seq;
     endtask
 
     task post_body();
-        super.post_body();
         `uvm_info(get_type_name(), "Ending {name}_base_seq ", UVM_MEDIUM);
+        super.post_body();
     endtask
 
 endclass
@@ -279,6 +305,32 @@ endclass
 /*  ====================================================================================  */
 //  All {name} sequence classes must inherit from the base class {name}_base_seq
 /*  ====================================================================================  */
+
+class {name}_smoke_seq extends {name}_base_seq;
+    `uvm_object_utils({name}_smoke_seq)
+
+    function new(string name="{name}_smoke_seq");
+        super.new(name);
+    endfunction : new
+
+    task pre_body();
+            super.pre_body();
+    endtask
+
+    task body();
+        super.body(); 
+        `uvm_info(get_type_name(), "{name}_smoke_seq start", UVM_MEDIUM);
+    
+        `uvm_info(get_type_name(), "{name}_smoke_seq end", UVM_MEDIUM);
+
+    endtask
+
+    task post_body();
+        super.post_body();
+    endtask
+
+endclass
+
 '''
 
 def get_module_base_seq_template():
@@ -292,9 +344,7 @@ def get_module_base_seq_template():
 
 
 def get_module_test_template():
-    return '''`ifndef __{name_upper}_TEST_SV_
-`define __{name_upper}_TEST_SV_
-
+    return '''
 class {name}_base_test extends base_test;
 
     string report_id = "{name}_base_test";
@@ -319,8 +369,47 @@ class {name}_base_test extends base_test;
 
 endclass : {name}_base_test
 
+class {name}_smoke_test extends {name}_base_test;
 
-`endif  //`ifndef __{name_upper}_TEST_SV_
+    string report_id = "{name}_smoke_test"; 
+    // automation macro
+    `uvm_component_utils_begin({name}_smoke_test)
+    `uvm_component_utils_end
+
+    // constructor
+    function new(string name = "{name}_smoke_test",uvm_component parent);
+        super.new(name,parent);
+    endfunction : new
+
+    virtual function void build_phase(uvm_phase phase);
+        begin
+            super.build_phase(phase);
+        end
+    endfunction: build_phase
+
+    virtual function void start_of_simulation_phase(uvm_phase phase);
+        super.start_of_simulation_phase(phase);
+        //eg.        
+        //set_if_checks_enable(.name("{name}_if"),.enable(OFF));
+        //set_if_cov_enable(.name("{name}_if"),.enable(OFF));
+        //set_mon_checks_enable(.name("{name}_monitor_h"),.enable(OFF));
+        //set_mon_cov_enable(.name("{name}_monitor_h"),.enable(OFF));
+        //set_sb_checks_enable(.name("{name}_scoreboard_h"),.enable(OFF));
+
+    endfunction: start_of_simulation_phase
+
+    task main_phase(uvm_phase phase);
+ 
+        {name}_smoke_seq   seq;
+        phase.raise_objection(this);
+        seq = {name}_smoke_seq::type_id::create("{name}_smoke_seq");
+        seq.start(vseqr_h.{name}_seqr_h);
+        phase.drop_objection(this);
+
+    endtask
+    
+endclass : {name}_smoke_test
+
 '''
 
 
@@ -356,25 +445,13 @@ class {name}_test extends uvm_test;
 {cfg_override_declarations}
     
     // global check setting function
-    extern virtual function void set_enable(input string   array_name,
-                                            input string   index_name,
-                                            input on_off_t enable,
-                                            input string event_bind="DEFAULT");
-    extern virtual function void set_mon_checks_enable( input string   name,
-                                      		            input on_off_t enable,
-                                                        input string   event_bind="DEFAULT");
-    extern virtual function void set_sb_checks_enable(input string   name,
-                                    	              input on_off_t enable,
-                                                      input string   event_bind="DEFAULT");
-    extern virtual function void set_if_checks_enable(input string   name,
-                                                      input on_off_t enable,
-                                                      input string   event_bind="DEFAULT");
-    extern virtual function void set_mon_cov_enable(input string   name,
-                                                    input on_off_t enable,
-                                                    input string   event_bind="DEFAULT");
-    extern virtual function void set_if_cov_enable(input string   name,
-                                                   input on_off_t enable,
-                                                   input string   event_bind="DEFAULT");
+    extern virtual function void set_enable_flag_debug();
+    extern virtual function void set_enable(input string   array_name,input string   index_name,input on_off_t enable,input string event_bind="DEFAULT");
+    extern virtual function void set_mon_checks_enable( input string   name, input on_off_t enable,input string   event_bind="DEFAULT");
+    extern virtual function void set_sb_checks_enable(input string   name, input on_off_t enable,input string   event_bind="DEFAULT");
+    extern virtual function void set_if_checks_enable(input string   name, input on_off_t enable,input string   event_bind="DEFAULT");
+    extern virtual function void set_mon_cov_enable(input string   name, input on_off_t enable,input string   event_bind="DEFAULT");
+    extern virtual function void set_if_cov_enable(input string   name, input on_off_t enable,input string   event_bind="DEFAULT");
 
     // ******************************************************************* 
     // *******User's Function and Task Declarations: *********************
@@ -457,8 +534,8 @@ class {name}_test extends uvm_test;
         //setting your rst operation here
         begin
             phase.raise_objection(this);
-            print_project();
-            uvm_hdl_deposit("tb_top.RO",1);
+            //print_project();                      //need to be updated
+            //uvm_hdl_deposit("tb_top.RST",1);
             `uvm_info(get_type_name(),"tb reset triggered...",UVM_MEDIUM);
             phase.drop_objection(this);
         end
@@ -498,7 +575,7 @@ class {name}_test extends uvm_test;
         //setting your reg init cfg and warming up cfg here
         begin
           phase.raise_objection(this);       
-          uvm_hdl_deposit("tb_top.RO",0);
+          //uvm_hdl_deposit("tb_top.RST",0);   //need to be updated
           `uvm_info(get_type_name(),"release tb reset...",UVM_MEDIUM);
           #1000ns;
           phase.drop_objection(this);
@@ -592,6 +669,27 @@ endclass : {name}_test
 
 
 // global check setting function
+
+function void {name}_test::set_enable_flag_debug();
+        string   name;   
+        foreach(MON_CHECKS_ENABLE[name]) begin
+            `uvm_info(report_id,$sformatf("MON_CHECKS_ENABLE[%s]=%b",name,MON_CHECKS_ENABLE[name]),UVM_LOW)
+        end
+        foreach(MON_COVERAGE_ENABLE[name]) begin
+            `uvm_info(report_id,$sformatf("MON_COVERAGE_ENABLE[%s]=%b",name,MON_COVERAGE_ENABLE[name]),UVM_LOW)
+        end
+        foreach(SB_CHECKS_ENABLE[name]) begin
+            `uvm_info(report_id,$sformatf("SB_CHECKS_ENABLE[%s]=%b",name,SB_CHECKS_ENABLE[name]),UVM_LOW)
+        end
+        foreach(IF_CHECKS_ENABLE[name]) begin
+            `uvm_info(report_id,$sformatf("IF_CHECKS_ENABLE[%s]=%b",name,IF_CHECKS_ENABLE[name]),UVM_LOW)
+        end
+        foreach(IF_COVERAGE_ENABLE[name]) begin
+            `uvm_info(report_id,$sformatf("IF_COVERAGE_ENABLE[%s]=%b",name,IF_COVERAGE_ENABLE[name]),UVM_LOW)
+        end
+endfunction
+
+
 function void {name}_test::set_enable(input string   array_name,
                          input string   index_name,
                          input on_off_t enable,
@@ -683,64 +781,38 @@ function void {name}_test::set_enable(input string   array_name,
     end // if (event_bind == "DEFAULT")
 endfunction: set_enable
 
-function void {name}_test::set_mon_checks_enable(input string   name,
-                                      input on_off_t enable,
-                                      input string   event_bind="DEFAULT");
+function void {name}_test::set_mon_checks_enable(input string   name,input on_off_t enable,input string   event_bind="DEFAULT");
 
         `uvm_info(get_full_name(),$psprintf("setting mon check for %s",name),UVM_LOW)
-        set_enable(.array_name("MON_CHECKS_ENABLE"),
-                    .index_name(name),
-                    .enable(enable),
-                    .event_bind(event_bind)
-                    );
+        set_enable(.array_name("MON_CHECKS_ENABLE"),.index_name(name),.enable(enable),.event_bind(event_bind));
 endfunction: set_mon_checks_enable    
 
-function void {name}_test::set_sb_checks_enable(input string   name,
-                                    input on_off_t enable,
-                                    input string   event_bind="DEFAULT");
+function void {name}_test::set_sb_checks_enable(input string   name,input on_off_t enable,input string   event_bind="DEFAULT");
 
         `uvm_info(get_full_name(),$psprintf("setting sb check for %s",name),UVM_LOW)
-        set_enable(.array_name("SB_CHECKS_ENABLE"),
-                .index_name(name),
-                .enable(enable),
-                .event_bind(event_bind)
-                );
+        set_enable(.array_name("SB_CHECKS_ENABLE"),.index_name(name),.enable(enable),.event_bind(event_bind) );
+
 endfunction: set_sb_checks_enable
 
-function void {name}_test::set_if_checks_enable(input string   name,
-                                    input on_off_t enable,
-                                    input string   event_bind="DEFAULT");
+function void {name}_test::set_if_checks_enable(input string   name,input on_off_t enable,input string   event_bind="DEFAULT");
 
         `uvm_info(get_full_name(),$psprintf("setting if check for %s",name),UVM_LOW)
-        set_enable(.array_name("IF_CHECKS_ENABLE"),
-                .index_name(name),
-                .enable(enable),
-                .event_bind(event_bind)
-                );
+        set_enable(.array_name("IF_CHECKS_ENABLE"),.index_name(name),.enable(enable),.event_bind(event_bind));
+
 endfunction: set_if_checks_enable
 
-function void {name}_test::set_mon_cov_enable(input string   name,
-                                    input on_off_t enable,
-                                    input string   event_bind="DEFAULT");
+function void {name}_test::set_mon_cov_enable(input string   name,input on_off_t enable,input string   event_bind="DEFAULT");
 
         `uvm_info(get_full_name(),$psprintf("setting mon cov for %s",name),UVM_LOW)
-        set_enable(.array_name("MON_COV_ENABLE"),
-                .index_name(name),
-                .enable(enable),
-                .event_bind(event_bind)
-                );
+        set_enable(.array_name("MON_COVERAGE_ENABLE"),.index_name(name),.enable(enable),.event_bind(event_bind));
+
 endfunction: set_mon_cov_enable
 
-function void {name}_test::set_if_cov_enable(input string   name,
-                                    input on_off_t enable,
-                                    input string   event_bind="DEFAULT");
+function void {name}_test::set_if_cov_enable(input string   name,input on_off_t enable,input string   event_bind="DEFAULT");
 
         `uvm_info(get_full_name(),$psprintf("setting if cov for %s",name),UVM_LOW)
-        set_enable(.array_name("IF_COV_ENABLE"),
-                .index_name(name),
-                .enable(enable),
-                .event_bind(event_bind)
-                );
+        set_enable(.array_name("IF_COVERAGE_ENABLE"),.index_name(name),.enable(enable),.event_bind(event_bind));
+
 endfunction: set_if_cov_enable
 
 
@@ -775,7 +847,7 @@ endfunction
 
 def get_block_base_test_template():
     return '''import "DPI-C" function int wallclock();
-
+import global_pkg::*;
 class {name}_block_base_test extends uvm_test;
 
     int unsigned start_time_int;
@@ -800,6 +872,13 @@ class {name}_block_base_test extends uvm_test;
     // cfg override declarations
     extern virtual function void set_{name}_cfg_type(input string {name}_cfg_override, bit replace=1);
 
+    // global check setting function
+    extern virtual function void set_enable(input string   array_name,input string   index_name,input on_off_t enable,input string event_bind="DEFAULT");
+    extern virtual function void set_mon_checks_enable( input string   name, input on_off_t enable,input string   event_bind="DEFAULT");
+    extern virtual function void set_sb_checks_enable(input string   name, input on_off_t enable,input string   event_bind="DEFAULT");
+    extern virtual function void set_if_checks_enable(input string   name, input on_off_t enable,input string   event_bind="DEFAULT");
+    extern virtual function void set_mon_cov_enable(input string   name, input on_off_t enable,input string   event_bind="DEFAULT");
+    extern virtual function void set_if_cov_enable(input string   name, input on_off_t enable,input string   event_bind="DEFAULT");
     // ******************************************************************* 
     // *******User's Function and Task Declarations: *********************
     // *******************************************************************
@@ -892,7 +971,7 @@ class {name}_block_base_test extends uvm_test;
         //setting your rst operation here
         begin
             phase.raise_objection(this);
-            //uvm_hdl_deposit("tb_top.RO",1);
+            //uvm_hdl_deposit("tb_top.RST",1);
             `uvm_info(get_type_name(),"tb reset triggered...",UVM_MEDIUM);
             phase.drop_objection(this);
         end
@@ -932,7 +1011,7 @@ class {name}_block_base_test extends uvm_test;
         //setting your reg init cfg and warming up cfg here
         begin
           phase.raise_objection(this);       
-          uvm_hdl_deposit("tb_top.RO",0);
+          //uvm_hdl_deposit("tb_top.RST",0);   //need to be updated
           `uvm_info(get_type_name(),"release tb reset...",UVM_MEDIUM);
           #1000ns;
           phase.drop_objection(this);
@@ -1034,6 +1113,133 @@ endfunction
 // User's other cfg override function
 
 
+// global check setting function
+function void {name}_block_base_test::set_enable(input string   array_name,
+                         input string   index_name,
+                         input on_off_t enable,
+                         input string event_bind="DEFAULT");
+
+    string   name;   
+    if(event_bind == "DEFAULT")begin
+        case (array_name)
+            "MON_CHECKS_ENABLE":
+                if ( MON_CHECKS_ENABLE.exists(index_name) ) begin
+                    MON_CHECKS_ENABLE[index_name] = (enable==ON);
+                    `uvm_info(report_id,$sformatf("Setting MON_CHECKS_ENABLE[%s] = %b\\n",
+                                                    index_name, MON_CHECKS_ENABLE[index_name]),UVM_MEDIUM)
+                end else begin
+                    //List valid names 
+                    `uvm_info(report_id,"List of legal assoc array strings:",UVM_LOW);
+                    if ( MON_CHECKS_ENABLE.first(name) ) begin
+                        do begin
+                            `uvm_info(report_id,$sformatf("    MON_CHECKS_ENABLE[%s]",name),UVM_LOW)
+                        end
+                        while (MON_CHECKS_ENABLE.next(name));
+                    end
+                end // else: !if( MON_CHECKS_ENABLE.exists(index_name) )
+            "SB_CHECKS_ENABLE":
+                if ( SB_CHECKS_ENABLE.exists(index_name) ) begin
+                    SB_CHECKS_ENABLE[index_name] = (enable==ON);
+                    `uvm_info(report_id,$sformatf("Setting SB_CHECKS_ENABLE[%s] = %b\\n",
+                                                    index_name, SB_CHECKS_ENABLE[index_name]),UVM_MEDIUM)
+                end else begin
+                    //List valid names 
+                    `uvm_info(report_id,"List of legal assoc array strings:",UVM_LOW);
+                    if ( SB_CHECKS_ENABLE.first(name) ) begin
+                        do begin
+                            `uvm_info(report_id,$sformatf("    SB_CHECKS_ENABLE[%s]",name),UVM_LOW)
+                        end
+                        while (SB_CHECKS_ENABLE.next(name));
+                    end
+                end // else: !if( SB_CHECKS_ENABLE.exists(index_name) ) 
+            "MON_COVERAGE_ENABLE":
+                if ( MON_COVERAGE_ENABLE.exists(index_name) ) begin
+                    MON_COVERAGE_ENABLE[index_name] = (enable==ON);
+                    `uvm_info(report_id,$sformatf("Setting MON_COVERAGE_ENABLE[%s] = %b\\n",
+                                                    index_name, MON_COVERAGE_ENABLE[index_name]),UVM_MEDIUM)
+                end else begin
+                    //List valid names 
+                    `uvm_info(report_id,"List of legal assoc array strings:",UVM_LOW);
+                    if ( MON_COVERAGE_ENABLE.first(name) ) begin
+                        do begin
+                            `uvm_info(report_id,$sformatf("    MON_COVERAGE_ENABLE[%s]",name),UVM_LOW)
+                        end
+                        while (MON_COVERAGE_ENABLE.next(name));
+                    end
+                end // else: !if( MON_COVERAGE_ENABLE.exists(index_name) )
+                
+            "IF_CHECKS_ENABLE":
+                if ( IF_CHECKS_ENABLE.exists(index_name) ) begin
+                    IF_CHECKS_ENABLE[index_name] = (enable==ON);
+                    `uvm_info(report_id,$sformatf("Setting IF_CHECKS_ENABLE[%s] = %b\\n",
+                                                    index_name, IF_CHECKS_ENABLE[index_name]),UVM_MEDIUM)
+                end else begin
+                    //List valid names 
+                        `uvm_info(report_id,"List of legal assoc array strings:",UVM_LOW);
+                    if ( IF_CHECKS_ENABLE.first(name) ) begin
+                        do begin
+                            `uvm_info(report_id,$sformatf("    IF_CHECKS_ENABLE[%s]",name),UVM_LOW)
+                        end
+                        while (IF_CHECKS_ENABLE.next(name));
+                    end
+                end // else: !if( IF_CHECKS_ENABLE.exists(index_name) )
+                
+            "IF_COVERAGE_ENABLE":
+                if ( IF_COVERAGE_ENABLE.exists(index_name) ) begin
+                    IF_COVERAGE_ENABLE[index_name] = (enable==ON);
+                    `uvm_info(report_id,$sformatf("Setting IF_COVERAGE_ENABLE[%s] = %b\\n",
+                                                    index_name, IF_COVERAGE_ENABLE[index_name]),UVM_MEDIUM)
+                end else begin
+                    //List valid names 
+                    `uvm_info(report_id,"List of legal assoc array strings:",UVM_LOW);
+                    if ( IF_COVERAGE_ENABLE.first(name) ) begin
+                        do begin
+                            `uvm_info(report_id,$sformatf("    IF_COVERAGE_ENABLE[%s]",name),UVM_LOW)
+                        end
+                        while (IF_COVERAGE_ENABLE.next(name));
+                    end
+                end // else: !if( IF_COVERAGE_ENABLE.exists(index_name) )
+            
+        endcase // (array_name)
+    
+    end // if (event_bind == "DEFAULT")
+endfunction: set_enable
+
+function void {name}_block_base_test::set_mon_checks_enable(input string   name,input on_off_t enable,input string   event_bind="DEFAULT");
+
+        `uvm_info(get_full_name(),$psprintf("setting mon check for %s",name),UVM_LOW)
+        set_enable(.array_name("MON_CHECKS_ENABLE"),.index_name(name),.enable(enable),.event_bind(event_bind));
+endfunction: set_mon_checks_enable    
+
+function void {name}_block_base_test::set_sb_checks_enable(input string   name,input on_off_t enable,input string   event_bind="DEFAULT");
+
+        `uvm_info(get_full_name(),$psprintf("setting sb check for %s",name),UVM_LOW)
+        set_enable(.array_name("SB_CHECKS_ENABLE"),.index_name(name),.enable(enable),.event_bind(event_bind) );
+
+endfunction: set_sb_checks_enable
+
+function void {name}_block_base_test::set_if_checks_enable(input string   name,input on_off_t enable,input string   event_bind="DEFAULT");
+
+        `uvm_info(get_full_name(),$psprintf("setting if check for %s",name),UVM_LOW)
+        set_enable(.array_name("IF_CHECKS_ENABLE"),.index_name(name),.enable(enable),.event_bind(event_bind));
+
+endfunction: set_if_checks_enable
+
+function void {name}_block_base_test::set_mon_cov_enable(input string   name,input on_off_t enable,input string   event_bind="DEFAULT");
+
+        `uvm_info(get_full_name(),$psprintf("setting mon cov for %s",name),UVM_LOW)
+        set_enable(.array_name("MON_COVERAGE_ENABLE"),.index_name(name),.enable(enable),.event_bind(event_bind));
+
+endfunction: set_mon_cov_enable
+
+function void {name}_block_base_test::set_if_cov_enable(input string   name,input on_off_t enable,input string   event_bind="DEFAULT");
+
+        `uvm_info(get_full_name(),$psprintf("setting if cov for %s",name),UVM_LOW)
+        set_enable(.array_name("IF_COVERAGE_ENABLE"),.index_name(name),.enable(enable),.event_bind(event_bind));
+
+endfunction: set_if_cov_enable
+
+
 // *************************************************************
 // *******function and task defination: ************************
 // *************************************************************
@@ -1041,6 +1247,47 @@ endfunction
 /*  ====================================================================================  */
 //  All {name} block test classes must inherit from the base class {name}_block_base_test
 /*  ====================================================================================  */
+
+class {name}_smoke_block_test extends {name}_block_base_test;
+
+    string report_id = "{name}_smoke_block_test"; 
+    // automation macro
+    `uvm_component_utils_begin({name}_smoke_block_test)
+    `uvm_component_utils_end
+
+    // constructor
+    function new(string name = "{name}_smoke_block_test",uvm_component parent);
+        super.new(name,parent);
+    endfunction : new
+
+    virtual function void build_phase(uvm_phase phase);
+        begin
+            super.build_phase(phase);
+        end
+    endfunction: build_phase
+
+    virtual function void start_of_simulation_phase(uvm_phase phase);
+        super.start_of_simulation_phase(phase);
+        //eg.
+        //set_if_checks_enable(.name("{name}_if"),.enable(OFF));
+        //set_if_cov_enable(.name("{name}_if"),.enable(OFF));
+        //set_mon_checks_enable(.name("{name}_monitor_h"),.enable(OFF));
+        //set_mon_cov_enable(.name("{name}_monitor_h"),.enable(OFF));
+        //set_sb_checks_enable(.name("{name}_scoreboard_h"),.enable(OFF));
+
+    endfunction: start_of_simulation_phase
+
+    task main_phase(uvm_phase phase);
+ 
+        {name}_smoke_block_seq   seq;
+        phase.raise_objection(this);
+        seq = {name}_smoke_block_seq::type_id::create("{name}_smoke_block_seq");
+        seq.start({name}_env_h.vseqr_h);
+        phase.drop_objection(this);
+
+    endtask
+    
+endclass : {name}_smoke_block_test
 
 
 
@@ -1292,8 +1539,8 @@ def get_tif_template():
   //import reg_addr::*;      //USE YOUR REG DEFINE PKG IF YOU HAS ONE
   string report_id = "{name}_if";
     
-  logic checks_enable;      //always@(*) checks_enable    = IF_CHECKS_ENABLE["{name}_if"];
-  logic coverage_enable;    //always@(*) coverage_enable  = IF_COVERAGE_ENABLE["{name}_if"];
+  logic checks_enable;      
+  logic coverage_enable;    
   logic rst;
   logic clk;
   logic card_sel;
@@ -1302,8 +1549,13 @@ def get_tif_template():
   initial begin
       IF_CHECKS_ENABLE["{name}_if"] = 1'b1;     //initially on
       IF_COVERAGE_ENABLE["{name}_if"] = 1'b1;   //initially on
+      checks_enable   = 1'b1;                   //initially on
+      coverage_enable = 1'b1;                   //initially on
   end
 
+  //Real-time update of the flag signal in specific test scenarios
+  always@(IF_CHECKS_ENABLE["{name}_if"]) checks_enable = IF_CHECKS_ENABLE["{name}_if"];
+  always@(IF_COVERAGE_ENABLE["{name}_if"]) coverage_enable = IF_COVERAGE_ENABLE["{name}_if"];
   //add common interface signal here
 
  `include "{name}_if_pc.sv" //maybe need to update
@@ -1869,12 +2121,16 @@ def generate_tb_top(config, output_dir):
     ## generate tb_top
     #
     tb_top_ls=[]
+    adapter_ls=[]
     tb_top_ls.append(pid)
     for module in modules:
         has_tb_top = module['has_tb_top']
+        enable_adapter = module['enable_adapter']
         module_name = module['name'].lower()
         if(has_tb_top):
             tb_top_ls.append(module_name)
+        if(enable_adapter):
+            adapter_ls.append(module_name)
 
 
     ## generate components
@@ -1987,6 +2243,8 @@ def generate_tb_top(config, output_dir):
             f.write(content)
         print(f"Generated: {filepath}")
 
+    #update pkg
+    for tls in adapter_ls:
         print(f"begin to update pkg for mudule "+tls)
         new_pkg=[]
         adapter_type=""
@@ -2512,7 +2770,7 @@ def generate_base_test(config, output_dir):
     for module in modules:
         module_name = module['name'].lower()
         module_name_upper=module_name.upper()
-        content = mtemplate.format(name=module_name,name_upper=module_name_upper)
+        content = mtemplate.format(name=module_name)
         
         filepath = os.path.join(test_dir, f'{module_name}_test.sv')
         with open(filepath, 'w', encoding='utf-8') as f:

@@ -49,7 +49,7 @@ class base_monitor extends uvm_monitor;
     forever begin
         @(MON_CHECKS_ENABLE[name_h] ) begin
           checks_enable = MON_CHECKS_ENABLE[name_h];
-          `uvm_info(report_id,$sformatf("Setting %s.checks_enable = %b ",name_h,checks_enable),UVM_HIGH);
+          `uvm_info(report_id,$sformatf("Setting %s.checks_enable = %b ",name_h,checks_enable),UVM_MEDIUM);
         end
     end
   endtask: update_checks_enable
@@ -61,7 +61,7 @@ class base_monitor extends uvm_monitor;
     forever begin
         @(MON_COVERAGE_ENABLE[name_h]) begin
           cov_enable = MON_COVERAGE_ENABLE[name_h];
-          `uvm_info(report_id,$sformatf("Setting %s.coverage_enable = %b",name_h,cov_enable),UVM_HIGH);
+          `uvm_info(report_id,$sformatf("Setting %s.coverage_enable = %b",name_h,cov_enable),UVM_MEDIUM);
         end
     end
   endtask: update_cov_enable

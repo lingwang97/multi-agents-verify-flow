@@ -1,5 +1,5 @@
 import "DPI-C" function int wallclock();
-
+import global_pkg::*;
 class efuse_block_base_test extends uvm_test;
 
     int unsigned start_time_int;
@@ -24,6 +24,13 @@ class efuse_block_base_test extends uvm_test;
     // cfg override declarations
     extern virtual function void set_efuse_cfg_type(input string efuse_cfg_override, bit replace=1);
 
+    // global check setting function
+    extern virtual function void set_enable(input string   array_name,input string   index_name,input on_off_t enable,input string event_bind="DEFAULT");
+    extern virtual function void set_mon_checks_enable( input string   name, input on_off_t enable,input string   event_bind="DEFAULT");
+    extern virtual function void set_sb_checks_enable(input string   name, input on_off_t enable,input string   event_bind="DEFAULT");
+    extern virtual function void set_if_checks_enable(input string   name, input on_off_t enable,input string   event_bind="DEFAULT");
+    extern virtual function void set_mon_cov_enable(input string   name, input on_off_t enable,input string   event_bind="DEFAULT");
+    extern virtual function void set_if_cov_enable(input string   name, input on_off_t enable,input string   event_bind="DEFAULT");
     // ******************************************************************* 
     // *******User's Function and Task Declarations: *********************
     // *******************************************************************
@@ -116,7 +123,7 @@ class efuse_block_base_test extends uvm_test;
         //setting your rst operation here
         begin
             phase.raise_objection(this);
-            //uvm_hdl_deposit("tb_top.RO",1);
+            //uvm_hdl_deposit("tb_top.RST",1);
             `uvm_info(get_type_name(),"tb reset triggered...",UVM_MEDIUM);
             phase.drop_objection(this);
         end
@@ -156,7 +163,7 @@ class efuse_block_base_test extends uvm_test;
         //setting your reg init cfg and warming up cfg here
         begin
           phase.raise_objection(this);       
-          uvm_hdl_deposit("tb_top.RO",0);
+          //uvm_hdl_deposit("tb_top.RST",0);   //need to be updated
           `uvm_info(get_type_name(),"release tb reset...",UVM_MEDIUM);
           #1000ns;
           phase.drop_objection(this);
@@ -258,6 +265,133 @@ endfunction
 // User's other cfg override function
 
 
+// global check setting function
+function void efuse_block_base_test::set_enable(input string   array_name,
+                         input string   index_name,
+                         input on_off_t enable,
+                         input string event_bind="DEFAULT");
+
+    string   name;   
+    if(event_bind == "DEFAULT")begin
+        case (array_name)
+            "MON_CHECKS_ENABLE":
+                if ( MON_CHECKS_ENABLE.exists(index_name) ) begin
+                    MON_CHECKS_ENABLE[index_name] = (enable==ON);
+                    `uvm_info(report_id,$sformatf("Setting MON_CHECKS_ENABLE[%s] = %b\n",
+                                                    index_name, MON_CHECKS_ENABLE[index_name]),UVM_MEDIUM)
+                end else begin
+                    //List valid names 
+                    `uvm_info(report_id,"List of legal assoc array strings:",UVM_LOW);
+                    if ( MON_CHECKS_ENABLE.first(name) ) begin
+                        do begin
+                            `uvm_info(report_id,$sformatf("    MON_CHECKS_ENABLE[%s]",name),UVM_LOW)
+                        end
+                        while (MON_CHECKS_ENABLE.next(name));
+                    end
+                end // else: !if( MON_CHECKS_ENABLE.exists(index_name) )
+            "SB_CHECKS_ENABLE":
+                if ( SB_CHECKS_ENABLE.exists(index_name) ) begin
+                    SB_CHECKS_ENABLE[index_name] = (enable==ON);
+                    `uvm_info(report_id,$sformatf("Setting SB_CHECKS_ENABLE[%s] = %b\n",
+                                                    index_name, SB_CHECKS_ENABLE[index_name]),UVM_MEDIUM)
+                end else begin
+                    //List valid names 
+                    `uvm_info(report_id,"List of legal assoc array strings:",UVM_LOW);
+                    if ( SB_CHECKS_ENABLE.first(name) ) begin
+                        do begin
+                            `uvm_info(report_id,$sformatf("    SB_CHECKS_ENABLE[%s]",name),UVM_LOW)
+                        end
+                        while (SB_CHECKS_ENABLE.next(name));
+                    end
+                end // else: !if( SB_CHECKS_ENABLE.exists(index_name) ) 
+            "MON_COVERAGE_ENABLE":
+                if ( MON_COVERAGE_ENABLE.exists(index_name) ) begin
+                    MON_COVERAGE_ENABLE[index_name] = (enable==ON);
+                    `uvm_info(report_id,$sformatf("Setting MON_COVERAGE_ENABLE[%s] = %b\n",
+                                                    index_name, MON_COVERAGE_ENABLE[index_name]),UVM_MEDIUM)
+                end else begin
+                    //List valid names 
+                    `uvm_info(report_id,"List of legal assoc array strings:",UVM_LOW);
+                    if ( MON_COVERAGE_ENABLE.first(name) ) begin
+                        do begin
+                            `uvm_info(report_id,$sformatf("    MON_COVERAGE_ENABLE[%s]",name),UVM_LOW)
+                        end
+                        while (MON_COVERAGE_ENABLE.next(name));
+                    end
+                end // else: !if( MON_COVERAGE_ENABLE.exists(index_name) )
+                
+            "IF_CHECKS_ENABLE":
+                if ( IF_CHECKS_ENABLE.exists(index_name) ) begin
+                    IF_CHECKS_ENABLE[index_name] = (enable==ON);
+                    `uvm_info(report_id,$sformatf("Setting IF_CHECKS_ENABLE[%s] = %b\n",
+                                                    index_name, IF_CHECKS_ENABLE[index_name]),UVM_MEDIUM)
+                end else begin
+                    //List valid names 
+                        `uvm_info(report_id,"List of legal assoc array strings:",UVM_LOW);
+                    if ( IF_CHECKS_ENABLE.first(name) ) begin
+                        do begin
+                            `uvm_info(report_id,$sformatf("    IF_CHECKS_ENABLE[%s]",name),UVM_LOW)
+                        end
+                        while (IF_CHECKS_ENABLE.next(name));
+                    end
+                end // else: !if( IF_CHECKS_ENABLE.exists(index_name) )
+                
+            "IF_COVERAGE_ENABLE":
+                if ( IF_COVERAGE_ENABLE.exists(index_name) ) begin
+                    IF_COVERAGE_ENABLE[index_name] = (enable==ON);
+                    `uvm_info(report_id,$sformatf("Setting IF_COVERAGE_ENABLE[%s] = %b\n",
+                                                    index_name, IF_COVERAGE_ENABLE[index_name]),UVM_MEDIUM)
+                end else begin
+                    //List valid names 
+                    `uvm_info(report_id,"List of legal assoc array strings:",UVM_LOW);
+                    if ( IF_COVERAGE_ENABLE.first(name) ) begin
+                        do begin
+                            `uvm_info(report_id,$sformatf("    IF_COVERAGE_ENABLE[%s]",name),UVM_LOW)
+                        end
+                        while (IF_COVERAGE_ENABLE.next(name));
+                    end
+                end // else: !if( IF_COVERAGE_ENABLE.exists(index_name) )
+            
+        endcase // (array_name)
+    
+    end // if (event_bind == "DEFAULT")
+endfunction: set_enable
+
+function void efuse_block_base_test::set_mon_checks_enable(input string   name,input on_off_t enable,input string   event_bind="DEFAULT");
+
+        `uvm_info(get_full_name(),$psprintf("setting mon check for %s",name),UVM_LOW)
+        set_enable(.array_name("MON_CHECKS_ENABLE"),.index_name(name),.enable(enable),.event_bind(event_bind));
+endfunction: set_mon_checks_enable    
+
+function void efuse_block_base_test::set_sb_checks_enable(input string   name,input on_off_t enable,input string   event_bind="DEFAULT");
+
+        `uvm_info(get_full_name(),$psprintf("setting sb check for %s",name),UVM_LOW)
+        set_enable(.array_name("SB_CHECKS_ENABLE"),.index_name(name),.enable(enable),.event_bind(event_bind) );
+
+endfunction: set_sb_checks_enable
+
+function void efuse_block_base_test::set_if_checks_enable(input string   name,input on_off_t enable,input string   event_bind="DEFAULT");
+
+        `uvm_info(get_full_name(),$psprintf("setting if check for %s",name),UVM_LOW)
+        set_enable(.array_name("IF_CHECKS_ENABLE"),.index_name(name),.enable(enable),.event_bind(event_bind));
+
+endfunction: set_if_checks_enable
+
+function void efuse_block_base_test::set_mon_cov_enable(input string   name,input on_off_t enable,input string   event_bind="DEFAULT");
+
+        `uvm_info(get_full_name(),$psprintf("setting mon cov for %s",name),UVM_LOW)
+        set_enable(.array_name("MON_COVERAGE_ENABLE"),.index_name(name),.enable(enable),.event_bind(event_bind));
+
+endfunction: set_mon_cov_enable
+
+function void efuse_block_base_test::set_if_cov_enable(input string   name,input on_off_t enable,input string   event_bind="DEFAULT");
+
+        `uvm_info(get_full_name(),$psprintf("setting if cov for %s",name),UVM_LOW)
+        set_enable(.array_name("IF_COVERAGE_ENABLE"),.index_name(name),.enable(enable),.event_bind(event_bind));
+
+endfunction: set_if_cov_enable
+
+
 // *************************************************************
 // *******function and task defination: ************************
 // *************************************************************
@@ -265,6 +399,47 @@ endfunction
 /*  ====================================================================================  */
 //  All efuse block test classes must inherit from the base class efuse_block_base_test
 /*  ====================================================================================  */
+
+class efuse_smoke_block_test extends efuse_block_base_test;
+
+    string report_id = "efuse_smoke_block_test"; 
+    // automation macro
+    `uvm_component_utils_begin(efuse_smoke_block_test)
+    `uvm_component_utils_end
+
+    // constructor
+    function new(string name = "efuse_smoke_block_test",uvm_component parent);
+        super.new(name,parent);
+    endfunction : new
+
+    virtual function void build_phase(uvm_phase phase);
+        begin
+            super.build_phase(phase);
+        end
+    endfunction: build_phase
+
+    virtual function void start_of_simulation_phase(uvm_phase phase);
+        super.start_of_simulation_phase(phase);
+        //eg.
+        //set_if_checks_enable(.name("efuse_if"),.enable(OFF));
+        //set_if_cov_enable(.name("efuse_if"),.enable(OFF));
+        //set_mon_checks_enable(.name("efuse_monitor_h"),.enable(OFF));
+        //set_mon_cov_enable(.name("efuse_monitor_h"),.enable(OFF));
+        //set_sb_checks_enable(.name("efuse_scoreboard_h"),.enable(OFF));
+
+    endfunction: start_of_simulation_phase
+
+    task main_phase(uvm_phase phase);
+ 
+        efuse_smoke_block_seq   seq;
+        phase.raise_objection(this);
+        seq = efuse_smoke_block_seq::type_id::create("efuse_smoke_block_seq");
+        seq.start(efuse_env_h.vseqr_h);
+        phase.drop_objection(this);
+
+    endtask
+    
+endclass : efuse_smoke_block_test
 
 
 

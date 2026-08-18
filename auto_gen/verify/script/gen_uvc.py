@@ -247,15 +247,14 @@ constraint {name}_cfg::constr_{name}_ctrl1
     if(!uvm_config_db#(virtual {name}_if)::get(this , "" , "{name}_vif" ,vif))
       `uvm_fatal(get_full_name(), "Virtual interface handle missing")
 
-    if (!uvm_config_db #({name}_base_cfg)::get(this, "", "{name}_config", m_cfg) )
-      `uvm_info("CONFIG_LOAD", "Cannot get configuration {name}_config from uvm_config_db. Have you set it?", UVM_MEDIUM)
+    if (!uvm_config_db #({name}_base_cfg)::get(this, "", "{name}_cfg", m_cfg) )
+      `uvm_info("CONFIG_LOAD", "Cannot get configuration {name}_cfg from uvm_config_db. Have you set it?", UVM_MEDIUM)
   endfunction
   
   task main_phase(uvm_phase phase);
     
-    forever
-    begin
-      wait(~vif.rst);
+    forever begin
+      wait(~vif.rst);   //could be updated
       reset_signals();
       seq_item_port.get_next_item(req);
       $cast(rsp,req.clone());
@@ -295,7 +294,7 @@ endclass
 
   extern task monitor_trans();
   extern task collect_coverage();
-
+  extern function print_monitor_status();
   function new(string name="{name}_monitor" , uvm_component parent=null);
     super.new(name , parent);
     {name}_monitor_main_ap = new("{name}_monitor_main_ap", this);
@@ -317,6 +316,7 @@ endclass
 
   task run_phase(uvm_phase phase);
     super.run_phase(phase);
+    print_monitor_status();
     fork
       monitor_trans();
       collect_coverage();
@@ -325,7 +325,7 @@ endclass
 
 
 endclass : {name}_monitor
-
+  
   // Sample vif data , trans to scoreboard or other component
   task {name}_monitor::monitor_trans();
     forever begin
@@ -343,14 +343,33 @@ endclass : {name}_monitor
       @(posedge {name}_vif.clk);
       req.card_sel  = {name}_vif.card_sel ;
       req.{name}_ctrl  = {name}_vif.{name}_ctrl ;
-      frame_collected_port.write(req);  
+      if(cov_enable)begin
+		    frame_collected_port.write(req);  
+	    end 
     end
   endtask
+
+  // Print monitor status of cov_enable & checks_enable
+  function {name}_monitor::print_monitor_status();
+		`uvm_info(get_type_name(), $sformatf("{name}_monitor status as following:"), UVM_MEDIUM)
+		if(checks_enable)begin
+			`uvm_info(get_type_name(), $sformatf("{name}_monitor check switch ON"), UVM_MEDIUM)
+		end
+		else begin
+			`uvm_info(get_type_name(), $sformatf("{name}_monitor check switch OFF"), UVM_MEDIUM)
+		end
+		if(cov_enable)begin
+			`uvm_info(get_type_name(), $sformatf("{name}_monitor collect coverages switch ON"), UVM_MEDIUM)
+		end
+		else begin
+			`uvm_info(get_type_name(), $sformatf("{name}_monitor collect coverages switch OFF"), UVM_MEDIUM)
+		end
+  endfunction
 
 ''',
         
         'scoreboard': '''`uvm_analysis_imp_decl(_main_{name}_monitor)
-class {name}_scoreboard extends uvm_scoreboard;
+class {name}_scoreboard extends base_scoreboard;
 
   `uvm_component_utils({name}_scoreboard);
   
@@ -379,6 +398,8 @@ class {name}_scoreboard extends uvm_scoreboard;
   virtual task main_phase(uvm_phase phase);
     `uvm_info(get_type_name(), $sformatf("{name}_scoreboard begin check"), UVM_MEDIUM)
     #1000ns;
+    if(checks_enable) `uvm_info(get_type_name(), $sformatf("begin to do scoreboard check"), UVM_MEDIUM)
+    else `uvm_info(get_type_name(), $sformatf("stop to do scoreboard check"), UVM_MEDIUM)
 
   endtask:main_phase
 
@@ -446,13 +467,13 @@ endclass
 endclass
 ''',
         
-        'agent': '''class {name}_agent extends uvm_agent;
+        'agent': '''class {name}_agent extends base_agent;
 
   `uvm_component_utils({name}_agent)
 
-  {name}_monitor      m_monitor;  
+  {name}_monitor      {name}_monitor_h;  
   {name}_sequencer    m_sequencer;
-  {name}_scoreboard   m_scoreboard;  
+  {name}_scoreboard   {name}_scoreboard_h;  
   {name}_driver       m_driver;    
   uvm_analysis_port#({name}_coverage_item) coverage_ap;
 
@@ -462,19 +483,19 @@ endclass
 
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
-    m_monitor = {name}_monitor::type_id::create("m_monitor", this);  
+    {name}_monitor_h = {name}_monitor::type_id::create("{name}_monitor_h", this);  
     if(is_active == UVM_ACTIVE)begin
       m_sequencer = {name}_sequencer::type_id::create("m_sequencer",this);
       m_driver = {name}_driver::type_id::create("m_driver", this);  
     end
-    m_scoreboard = {name}_scoreboard::type_id::create("m_scoreboard", this);  
+    {name}_scoreboard_h = {name}_scoreboard::type_id::create("{name}_scoreboard_h", this);  
     coverage_ap = new("coverage_ap",this);
   endfunction : build_phase
 
   virtual function void connect_phase(uvm_phase phase);
     super.connect_phase(phase);
-    m_monitor.frame_collected_port.connect(coverage_ap); 
-    m_monitor.{name}_monitor_main_ap.connect(m_scoreboard.{name}_scoreboard_main_ap);
+    {name}_monitor_h.frame_collected_port.connect(coverage_ap); 
+    {name}_monitor_h.{name}_monitor_main_ap.connect({name}_scoreboard_h.{name}_scoreboard_main_ap);
     if(is_active == UVM_ACTIVE)begin
       m_driver.seq_item_port.connect(m_sequencer.seq_item_export);
     end
@@ -483,15 +504,13 @@ endclass
 endclass : {name}_agent
 ''',
         
-        'env': '''class {name}_env extends uvm_env;
+        'env': '''class {name}_env extends base_env;
 
   `uvm_component_utils({name}_env)
 
   {name}_agent      {name}_agent_h;
   {name}_sequencer  vseqr_h;
   {name}_coverage   {name}_coverage_h;
-
-  uvm_active_passive_enum drv_is_active=UVM_PASSIVE;//UVM_ACTIVE
 
   function new(string name = "{name}_env" , uvm_component parent = null);
     super.new(name , parent);
@@ -522,8 +541,8 @@ endclass
   //import reg_addr::*;      //USE YOUR REG DEFINE PKG IF YOU HAS ONE
   string report_id = "{name}_if";
     
-  logic checks_enable;      //always@(*) checks_enable    = IF_CHECKS_ENABLE["{name}_if"];
-  logic coverage_enable;    //always@(*) coverage_enable  = IF_COVERAGE_ENABLE["{name}_if"];
+  logic checks_enable;      
+  logic coverage_enable;    
   logic rst;
   logic clk;
   logic card_sel;
@@ -532,7 +551,15 @@ endclass
   initial begin
       IF_CHECKS_ENABLE["{name}_if"] = 1'b1;     //initially on
       IF_COVERAGE_ENABLE["{name}_if"] = 1'b1;   //initially on
+      checks_enable   = 1'b1;                   //initially on
+      coverage_enable = 1'b1;                   //initially on
   end
+
+  //Real-time update of the flag signal in specific test scenarios
+  always@(IF_CHECKS_ENABLE["{name}_if"]) checks_enable = IF_CHECKS_ENABLE["{name}_if"];
+  always@(IF_COVERAGE_ENABLE["{name}_if"]) coverage_enable = IF_COVERAGE_ENABLE["{name}_if"];
+
+
 
   //add common interface signal here
 
@@ -662,6 +689,7 @@ def generate_uvc(name, output_dir,bus_type):
         with open(file_path, 'w', encoding='utf-8') as f:
             f.write(content)
         print(f"Generated: {file_path}")
+    
     print(f"\n{'='*60}")
     print(f"UVC '{name}' generated successfully!")
     print(f"Output directory: {output_dir}")

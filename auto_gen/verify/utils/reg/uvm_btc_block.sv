@@ -1,4 +1,3 @@
-
 class uvm_btc_block extends uvm_reg_block;
 	//`uvm_object_utils(efuse_type)
 

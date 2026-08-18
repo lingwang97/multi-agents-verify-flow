@@ -1,12 +1,10 @@
-class efuse_env extends uvm_env;
+class efuse_env extends base_env;
 
   `uvm_component_utils(efuse_env)
 
   efuse_agent      efuse_agent_h;
   efuse_sequencer  vseqr_h;
   efuse_coverage   efuse_coverage_h;
-
-  uvm_active_passive_enum drv_is_active=UVM_PASSIVE;//UVM_ACTIVE
 
   function new(string name = "efuse_env" , uvm_component parent = null);
     super.new(name , parent);

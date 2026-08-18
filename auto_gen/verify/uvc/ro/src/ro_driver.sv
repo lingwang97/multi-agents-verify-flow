@@ -17,15 +17,14 @@ class ro_driver extends uvm_driver#(ro_sequence_item);
     if(!uvm_config_db#(virtual ro_if)::get(this , "" , "ro_vif" ,vif))
       `uvm_fatal(get_full_name(), "Virtual interface handle missing")
 
-    if (!uvm_config_db #(ro_base_cfg)::get(this, "", "ro_config", m_cfg) )
-      `uvm_info("CONFIG_LOAD", "Cannot get configuration ro_config from uvm_config_db. Have you set it?", UVM_MEDIUM)
+    if (!uvm_config_db #(ro_base_cfg)::get(this, "", "ro_cfg", m_cfg) )
+      `uvm_info("CONFIG_LOAD", "Cannot get configuration ro_cfg from uvm_config_db. Have you set it?", UVM_MEDIUM)
   endfunction
   
   task main_phase(uvm_phase phase);
     
-    forever
-    begin
-      wait(~vif.rst);
+    forever begin
+      wait(~vif.rst);   //could be updated
       reset_signals();
       seq_item_port.get_next_item(req);
       $cast(rsp,req.clone());

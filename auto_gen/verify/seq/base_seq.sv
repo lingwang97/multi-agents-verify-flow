@@ -46,7 +46,7 @@ class base_seq extends uvm_sequence;
 
     virtual task pre_body();
         super.pre_body();
-
+        `uvm_info(get_type_name(), "Starting base_seq", UVM_MEDIUM)
         if (!uvm_config_db #(top_env)::get(m_sequencer, "", "top_env", top_env_h))
             `uvm_error("TOP_ENV:ERROR", "Env top_env is missing from config_db")
         if (!uvm_config_db #(virtual interface top_if)::get(m_sequencer, "", "top_vif", top_vif))
@@ -93,13 +93,13 @@ class base_seq extends uvm_sequence;
     endtask
 
     virtual task body();
-        super.body();
-        `uvm_info(get_type_name(), "Starting base_seq", UVM_MEDIUM)
+        //super.body();
+
 
     endtask
 
     virtual task post_body();
-        super.post_body();
+        //super.post_body();
         `uvm_info(get_type_name(), "base_seq end", UVM_MEDIUM)
 
     endtask

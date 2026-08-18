@@ -1,5 +1,5 @@
 `uvm_analysis_imp_decl(_main_efuse_monitor)
-class efuse_scoreboard extends uvm_scoreboard;
+class efuse_scoreboard extends base_scoreboard;
 
   `uvm_component_utils(efuse_scoreboard);
   
@@ -28,6 +28,8 @@ class efuse_scoreboard extends uvm_scoreboard;
   virtual task main_phase(uvm_phase phase);
     `uvm_info(get_type_name(), $sformatf("efuse_scoreboard begin check"), UVM_MEDIUM)
     #1000ns;
+    if(checks_enable) `uvm_info(get_type_name(), $sformatf("begin to do scoreboard check"), UVM_MEDIUM)
+    else `uvm_info(get_type_name(), $sformatf("stop to do scoreboard check"), UVM_MEDIUM)
 
   endtask:main_phase
 

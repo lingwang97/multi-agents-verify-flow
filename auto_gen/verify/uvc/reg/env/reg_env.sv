@@ -1,12 +1,10 @@
-class reg_env extends uvm_env;
+class reg_env extends base_env;
 
   `uvm_component_utils(reg_env)
 
   reg_agent      reg_agent_h;
   reg_sequencer  vseqr_h;
   reg_coverage   reg_coverage_h;
-
-  uvm_active_passive_enum drv_is_active=UVM_PASSIVE;//UVM_ACTIVE
 
   function new(string name = "reg_env" , uvm_component parent = null);
     super.new(name , parent);

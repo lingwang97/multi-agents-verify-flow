@@ -28,8 +28,8 @@ class exit_chk_seq extends base_seq;
     endtask
 
     task post_body();
-        super.post_body();
         `uvm_info(get_type_name(), "Ending exit_chk_seq ", UVM_MEDIUM);
+        super.post_body();
     endtask
 
 endclass

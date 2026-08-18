@@ -1,12 +1,10 @@
-class jls_env extends uvm_env;
+class jls_env extends base_env;
 
   `uvm_component_utils(jls_env)
 
   jls_agent      jls_agent_h;
   jls_sequencer  vseqr_h;
   jls_coverage   jls_coverage_h;
-
-  uvm_active_passive_enum drv_is_active=UVM_PASSIVE;//UVM_ACTIVE
 
   function new(string name = "jls_env" , uvm_component parent = null);
     super.new(name , parent);

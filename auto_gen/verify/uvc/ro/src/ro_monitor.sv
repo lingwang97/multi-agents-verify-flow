@@ -11,7 +11,7 @@ class ro_monitor extends base_monitor;
 
   extern task monitor_trans();
   extern task collect_coverage();
-
+  extern function print_monitor_status();
   function new(string name="ro_monitor" , uvm_component parent=null);
     super.new(name , parent);
     ro_monitor_main_ap = new("ro_monitor_main_ap", this);
@@ -33,6 +33,7 @@ class ro_monitor extends base_monitor;
 
   task run_phase(uvm_phase phase);
     super.run_phase(phase);
+    print_monitor_status();
     fork
       monitor_trans();
       collect_coverage();
@@ -41,7 +42,7 @@ class ro_monitor extends base_monitor;
 
 
 endclass : ro_monitor
-
+  
   // Sample vif data , trans to scoreboard or other component
   task ro_monitor::monitor_trans();
     forever begin
@@ -59,7 +60,26 @@ endclass : ro_monitor
       @(posedge ro_vif.clk);
       req.card_sel  = ro_vif.card_sel ;
       req.ro_ctrl  = ro_vif.ro_ctrl ;
-      frame_collected_port.write(req);  
+      if(cov_enable)begin
+		    frame_collected_port.write(req);  
+	    end 
     end
   endtask
+
+  // Print monitor status of cov_enable & checks_enable
+  function ro_monitor::print_monitor_status();
+		`uvm_info(get_type_name(), $sformatf("ro_monitor status as following:"), UVM_MEDIUM)
+		if(checks_enable)begin
+			`uvm_info(get_type_name(), $sformatf("ro_monitor check switch ON"), UVM_MEDIUM)
+		end
+		else begin
+			`uvm_info(get_type_name(), $sformatf("ro_monitor check switch OFF"), UVM_MEDIUM)
+		end
+		if(cov_enable)begin
+			`uvm_info(get_type_name(), $sformatf("ro_monitor collect coverages switch ON"), UVM_MEDIUM)
+		end
+		else begin
+			`uvm_info(get_type_name(), $sformatf("ro_monitor collect coverages switch OFF"), UVM_MEDIUM)
+		end
+  endfunction
 
