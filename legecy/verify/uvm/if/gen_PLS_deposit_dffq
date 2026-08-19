@@ -1,2 +1,0 @@
-# use verdi get module io to generate getModIo.log
-grep "Output: Q" getModIO.log -B 5 | grep "tb_top" | sed 's/Module: tb_top.C\[0\]\./`GLS_SET_DFF_ARRAY(/' | sed 's/ (.*)/)/' > gls_deposit_dffq_list.sv.new

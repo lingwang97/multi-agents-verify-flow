@@ -1,1 +1,0 @@
-save auto-gen reg model

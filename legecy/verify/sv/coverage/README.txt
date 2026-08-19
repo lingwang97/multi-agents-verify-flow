@@ -1,1 +1,0 @@
-This folder stores the exclude list for code coverage
