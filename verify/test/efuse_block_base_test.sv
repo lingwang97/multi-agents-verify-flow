@@ -396,9 +396,12 @@ endfunction: set_if_cov_enable
 // *******function and task defination: ************************
 // *************************************************************
 
+
 /*  ====================================================================================  */
 //  All efuse block test classes must inherit from the base class efuse_block_base_test
 /*  ====================================================================================  */
+
+
 
 class efuse_smoke_block_test extends efuse_block_base_test;
 

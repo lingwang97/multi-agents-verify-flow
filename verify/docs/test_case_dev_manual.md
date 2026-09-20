@@ -2,7 +2,7 @@
 
 ## 1. Purpose & audience
 
-This is a task-oriented guide for engineers writing a new test case in the `auto_gen/verify` UVM environment for the `soc` project. It is **not** a UVM tutorial — it assumes you know UVM basics and want to know specifically what to do *in this repo*. For the overall architecture (filelist layering, naming conventions, `wsim` flow), read `CLAUDE.md` at the root of this tree first; this manual only repeats what's needed inline.
+This is a task-oriented guide for engineers writing a new test case in the `verify` UVM environment for the `soc` project. It is **not** a UVM tutorial — it assumes you know UVM basics and want to know specifically what to do *in this repo*. For the overall architecture (filelist layering, naming conventions, `wsim` flow), read `CLAUDE.md` at the root of this tree first; this manual only repeats what's needed inline.
 
 **Automating §3/§4:** `.claude/skills/add-test-case/` scaffolds the mechanical parts of §3 and §4 (the `test/`/`seq/` classes and the JSON entry) in one step, following the exact naming and inheritance rules below. Run `python3 .claude/skills/add-test-case/add_test_case.py --help` — you'll still need to fill in real stimulus (§3.4-3.6) by hand.
 

@@ -1,11 +1,11 @@
 
-class uvm_btc_field extends uvm_reg_field;
+class uvm_base_field extends uvm_reg_field;
   string _reset_souce0 = "";
   string _reset_souce1 = "";
 
-   `uvm_object_utils(uvm_btc_field)
+   `uvm_object_utils(uvm_base_field)
 
-	function new(string name = "uvm_btc_field");
+	function new(string name = "uvm_base_field");
    		super.new(name);
 	endfunction: new
 
@@ -41,5 +41,6 @@ class uvm_btc_field extends uvm_reg_field;
     return this._reset_souce1;
   endfunction:get_reset_source1
   
-endclass: uvm_btc_field
+endclass: uvm_base_field
+
 

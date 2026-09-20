@@ -1244,9 +1244,12 @@ endfunction: set_if_cov_enable
 // *******function and task defination: ************************
 // *************************************************************
 
+
 /*  ====================================================================================  */
 //  All {name} block test classes must inherit from the base class {name}_block_base_test
 /*  ====================================================================================  */
+
+
 
 class {name}_smoke_block_test extends {name}_block_base_test;
 
@@ -1965,12 +1968,12 @@ def get_rtl_define():
 
 
 def get_top_f():
-    return '''+incdir+../../../../verify/tb_top/component
-+incdir+../../../../verify/tb_top/scripts
-+incdir+../../../../verify/tb_top/macro
+    return '''+incdir+../../../verify/tb_top/component
++incdir+../../../verify/tb_top/scripts
++incdir+../../../verify/tb_top/macro
 
-//../../../../verify/tb_top/component/TBD
-../../../../verify/tb_top/tb_top/tb_top_{pid}.sv
+//../../../verify/tb_top/component/TBD
+../../../verify/tb_top/tb_top/tb_top_{pid}.sv
 
 '''
 
@@ -2030,24 +2033,24 @@ def get_inclue_dir():
 
 // --------------DESIGN-RELATIVE Start-------------------- 
 // eg.
-// +incdir+../../../../hdl/file1/
-// +incdir+../../../../hdl/file2/
+// +incdir+../../../hdl/file1/
+// +incdir+../../../hdl/file2/
 
 // --------------DESIGN-RELATIVE End----------------------
 
 
 // --------------TB-RELATIVE Start----------------------
 
-+incdir+../../../../verify/ral
-+incdir+../../../../verify/env
-+incdir+../../../../verify/intf
-+incdir+../../../../verify/seq
-+incdir+../../../../verify/tb_top
-+incdir+../../../../verify/test
-+incdir+../../../../verify/utils/reg
-+incdir+../../../../verify/utils/base_uvc
-+incdir+../../../../verify/utils
-+incdir+../../../../verify/uvc
++incdir+../../../verify/ral
++incdir+../../../verify/env
++incdir+../../../verify/intf
++incdir+../../../verify/seq
++incdir+../../../verify/tb_top
++incdir+../../../verify/test
++incdir+../../../verify/utils/reg
++incdir+../../../verify/utils/base_uvc
++incdir+../../../verify/utils
++incdir+../../../verify/uvc
 
 // --------------TB-RELATIVE End------------------------
 
@@ -2059,11 +2062,11 @@ def get_glb_uvm_f():
 //----------------------------------------------------------------------------------------
 
 // --------------BASE FILE Start-------------------- 
-../../../../verify/utils/global_pkg.sv
-../../../../verify/utils/reg/reg_mdl_pkg.sv
-../../../../verify/ral/ral_reg_model.sv
+../../../verify/utils/global_pkg.sv
+../../../verify/utils/reg/reg_mdl_pkg.sv
+../../../verify/ral/ral_reg_model.sv
 
-../../../../verify/utils/base_uvc/base_uvc_pkg.sv
+../../../verify/utils/base_uvc/base_uvc_pkg.sv
 
 // --------------BASE FILE End----------------------
 
@@ -2074,8 +2077,8 @@ def get_glb_uvm_f():
 
 
 
--f ../../../../verify/tb_top/filelist/tb_top_{pid}.f
-../../../../verify/env/top_pkg.sv
+-f ../../../verify/tb_top/filelist/tb_top_{pid}.f
+../../../verify/env/top_pkg.sv
 
 
 '''
@@ -2086,21 +2089,21 @@ def get_blk_uvm_f():
 //----------------------------------------------------------------------------------------
 
 // --------------BASE FILE Start-------------------- 
-../../../../verify/utils/global_pkg.sv
-../../../../verify/utils/reg/reg_mdl_pkg.sv
-../../../../verify/ral/ral_reg_model.sv
+../../../verify/utils/global_pkg.sv
+../../../verify/utils/reg/reg_mdl_pkg.sv
+../../../verify/ral/ral_reg_model.sv
 
-../../../../verify/utils/base_uvc/base_uvc_pkg.sv
+../../../verify/utils/base_uvc/base_uvc_pkg.sv
 
 // --------------BASE FILE End----------------------
 
 
--f ../../../../verify/uvc/{module_name}/script/uvm.f
+-f ../../../verify/uvc/{module_name}/script/uvm.f
 
-../../../../verify/seq/{module_name}_block_base_seq.sv
-../../../../verify/test/{module_name}_block_base_test.sv
+../../../verify/seq/{module_name}_block_base_seq.sv
+../../../verify/test/{module_name}_block_base_test.sv
 
--f ../../../../verify/tb_top/filelist/tb_top_{module_name}.f
+-f ../../../verify/tb_top/filelist/tb_top_{module_name}.f
 
 
 '''
@@ -2161,7 +2164,7 @@ def generate_tb_top(config, output_dir):
 
         include_if.append(f"\t\t`include \"top_if_conn.sv\"")
         include_if_gpls.append(f"\t\t`include \"top_if_conn_gpls.sv\"")
-        module_uvm_f.append(f"../../../../verify/env/top_if.sv")
+        module_uvm_f.append(f"../../../verify/env/top_if.sv")
     
     for module in modules:
         module_name = module['name'].lower()
@@ -2173,7 +2176,7 @@ def generate_tb_top(config, output_dir):
 
         include_if.append(f"\t\t`include \"{module_name}_if_conn.sv\"")
         include_if_gpls.append(f"\t\t`include \"{module_name}_if_conn_gpls.sv\"")
-        module_uvm_f.append(f"-f ../../../../verify/uvc/{module_name}/script/uvm.f")
+        module_uvm_f.append(f"-f ../../../verify/uvc/{module_name}/script/uvm.f")
 
 
     ## generate  component file 
@@ -2300,7 +2303,7 @@ def generate_tb_top(config, output_dir):
 
     filepath = os.path.join(cfg_dir,  'coverage.cfg')
     with open(filepath, 'w', encoding='utf-8') as f:
-        f.write("#-tree tb_top.nn.xx  0")
+        f.write("+tree tb_top")
     print(f"Generated: {filepath}")
 
     filepath = os.path.join(cfg_dir,  'specify.cfg')
@@ -2504,17 +2507,6 @@ def generate_testjson(config, output_dir):
         mcontent=mjson_template.format(module_name=module_name,module_name_upper=module_name.upper())
         with open(os.path.join(module_dir,fname), 'w', encoding='utf-8') as f:
             f.write(mcontent)
-
-        
-def generate_sim(config, output_dir):
-    """generate if_conn """
-
-    modules = config.get('modules', [])  
-    if_dir = os.path.join(output_dir, 'sim')
-    if(not os.path.exists(if_dir)):
-        os.makedirs(if_dir)
-    else:
-        print(if_dir+" generation is skipped")
 
 
         
@@ -3007,9 +2999,7 @@ def main():
     print("Generating Interface Connect File...")
     generate_interface(config, output_dir)
 
-    print("Generating Simulation Dir and File...")
-    generate_sim(config, output_dir)
-  
+
     print("Generating Base Sequence...")
     generate_base_sequence(config, output_dir)
     

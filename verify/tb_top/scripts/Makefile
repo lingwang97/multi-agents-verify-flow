@@ -22,7 +22,7 @@
 project = `cat project_name`
 
 ifndef dataBasePath
-  dataBasePath=../../../..
+  dataBasePath=../../..
 endif
 
 ifndef VCS_MACRO_OPT
@@ -277,6 +277,7 @@ else
 	UVM_VERBOSITY = UVM_MEDIUM
 endif
 
+
 #-------------------------------------------------------------------------
 # Checking specify switch
 #-------------------------------------------------------------------------
@@ -292,12 +293,10 @@ endif
 #-------------------------------------------------------------------------
 ifeq ($(cm_switch),1)
 	ifneq ($(findstring $(level),gate post),)
-		cm_para =
 	else
-		cm_para = -cm line+cond+fsm+tgl+branch +define+FUNC_COV -cm_line contassign -cm_test $(testname) -cm_hier Makefile.coverage.cfg
+		cm_para_comp = -cm line+cond+fsm+tgl+branch -cm_line contassign -cm_name $(testname) -cm_hier Makefile.coverage.cfg 
+		cm_para_sim  = -cm line+cond+fsm+tgl+branch -cm_line contassign -cm_name $(if $(cm_name),$(cm_name),$(testname)) $(if $(cm_dir),-cm_dir $(cm_dir),) 
 	endif
-else
-	cm_para =
 endif
 
 #-------------------------------------------------------------------------
@@ -352,7 +351,7 @@ else
 	dump_vcs +=
 endif
 
-# add DUMP_CP_WAVEFORM is to enable cpft dump feature
+#add DUMP_CP_WAVEFORM is to enable cpft dump feature
 ifeq ($(cpdump),0)
 	dump_vcs +=
 else
@@ -488,7 +487,7 @@ endif
 # Step 2: Merging define_para , filelist_para and vcs options
 #######################################################################################################
 ifeq ($(block_env),)
-	list_para = $(dataBasePath)/verify/sim/project_name \
+	list_para = $(dataBasePath)/sim/project_name \
 		-f $(dataBasePath)/verify/tb_top/macro/rtl_define.f \
 		$(dataBasePath)/verify/tb_top/macro/tb_define.sv \
 		$(ip_list) \
@@ -500,7 +499,7 @@ ifeq ($(block_env),)
 		$(dataBasePath)/verify/utils/dpi_func.c
 else
 	#block setting
-	list_para = $(dataBasePath)/verify/sim/project_name \
+	list_para = $(dataBasePath)/sim/project_name \
 		-f $(dataBasePath)/verify/tb_top/macro/rtl_define.f \
 		$(dataBasePath)/verify/tb_top/macro/tb_define.sv \
 		$(ip_list) \
@@ -541,7 +540,7 @@ cmpr:
 	$(loop_opt) \
 	$(dump_vcs) \
 	$(compile_option) \
-	$(cm_para) \
+	$(cm_para_comp) \
 	$(vcs_para) \
 	$(define_para) \
 	$(timingcheck_para) \
@@ -555,7 +554,7 @@ sim:
 	make simv_echo; make covsim; echo current SEED is $(SEED);
 covsim:
 	simv +vcs+lic+wait -ucli -l sim.log +ntb_stop_on_constraint_solver_error=1 -assert quiet+report \
-	$(dump_simv) $(fsdb_force) $(uvm_para) $(gui_option) +ntb_random_seed=$(SEED) $(cm_para) $(fgp_para) \
+	$(dump_simv) $(fsdb_force) $(uvm_para) $(gui_option) +ntb_random_seed=$(SEED) $(cm_para_sim) $(fgp_para) \
 	$(simv_opt) $(vip_sim_para)$(xprop_sim) $(init_reg_cfg) $(dpo_sim_para)
 show:
 	dve -vpd simv.vpd -full64 &
@@ -582,7 +581,7 @@ com_var = vcs $(VCS_MACRO_OPT) -timescale=1ns/10ps  +v2k -sverilog $(fgp_compile
 	$(loop_opt) \
 	$(dump_vcs) \
 	$(compile_option) \
-	$(cm_para) \
+	$(cm_para_comp) \
 	$(vcs_para) \
 	$(define_para) \
 	$(timingcheck_para) \
@@ -593,7 +592,7 @@ com_var = vcs $(VCS_MACRO_OPT) -timescale=1ns/10ps  +v2k -sverilog $(fgp_compile
 	-top tb_top
 
 simv_var = simv +vcs+lic+wait -ucli -l sim.log +ntb_stop_on_constraint_solver_error=1 -assert quiet+report \
-	$(dump_simv) $(fsdb_force) $(uvm_para) $(gui_option) +ntb_random_seed=$(SEED) $(cm_para) $(fgp_para) \
+	$(dump_simv) $(fsdb_force) $(uvm_para) $(gui_option) +ntb_random_seed=$(SEED) $(cm_para_sim) $(fgp_para) \
 	$(simv_opt) $(vip_sim_para)$(xprop_sim) $(init_reg_cfg) $(dpo_sim_para)
 
 com_echo:

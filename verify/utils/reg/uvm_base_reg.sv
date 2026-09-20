@@ -1,13 +1,10 @@
 
-class uvm_btc_reg extends uvm_reg;
-	//`uvm_object_utils(uvm_btc_reg)
+class uvm_base_reg extends uvm_reg;
+	//`uvm_object_utils(uvm_base_reg)
 
-
-	function new(string name="uvm_btc_reg", int unsigned n_bits, int has_coverage);
+	function new(string name="uvm_base_reg", int unsigned n_bits, int has_coverage);
 		super.new(name, n_bits, has_coverage);
-		//super.new(name);
 	endfunction : new
-	//`uvm_object_utils(uvm_btc_reg)
 
 	virtual task wr(input uvm_reg_data_t value);
 		uvm_status_e       status;
@@ -42,5 +39,6 @@ class uvm_btc_reg extends uvm_reg;
 		this.update(status, UVM_FRONTDOOR);
 	endtask
 
-endclass : uvm_btc_reg
+endclass : uvm_base_reg
+
 

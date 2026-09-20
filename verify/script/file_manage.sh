@@ -27,8 +27,8 @@ copy() {
 
 echo "Deploying flow files (root: $root_dir)"
 copy "$script_dir/utils"                  "$root_dir/utils"
-copy "$script_dir/sflow/wsim"             "$root_dir/sim/wsim"
-copy "$script_dir/sflow/project_name"     "$root_dir/sim/project_name"
+copy "$script_dir/sflow/wsim"             "$root_dir/../sim/wsim"
+copy "$script_dir/sflow/project_name"     "$root_dir/../sim/project_name"
 copy "$script_dir/sflow/testjson2lst.py"  "$root_dir/tb_top/scripts/testjson2lst.py"
 copy "$script_dir/sflow/Makefile"         "$root_dir/tb_top/scripts/Makefile"
 copy "$script_dir/sflow/Makefile.rtdbg.tcl" "$root_dir/tb_top/scripts/Makefile.rtdbg.tcl"

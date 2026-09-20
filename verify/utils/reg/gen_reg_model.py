@@ -60,7 +60,7 @@ class Field(object):
         self.regslicename   = None
 
     def build_text(self):
-        field_build      = "\t\t" + self.name + " = uvm_btc_field::type_id::create(\"" + self.name + "\");\n"
+        field_build      = "\t\t" + self.name + " = uvm_base_field::type_id::create(\"" + self.name + "\");\n"
         field_build     += "\t\t" + self.name + ".configure(this, " + str(self.bitwidth) + ", " + str(self.bit_start) + ", \"" + self.virtual_type + "\"" + ", 0, " + self.reset_value +", " +str(self.has_reset)+ ", 1, 1);\n"
         field_build     += "\t\t" + "if(" + self.name + ".has_reset() == 1) begin\n"
         field_build     += "\t\t\t\t" + self.name + ".set_reset_source0(\"" + str(self.reset_source0) + "\");\n"
@@ -69,7 +69,7 @@ class Field(object):
         return field_build
     
     def rand_text(self):
-        field_rand       = "\trand uvm_btc_field " + self.name + ";"
+        field_rand       = "\trand uvm_base_field " + self.name + ";"
 
         return field_rand
 
@@ -180,7 +180,7 @@ class Register(object):
         reg_coverage_text = self.coverage_text()
         reg_sample_text  = self.sample_text()
 
-        reg_text     = 'class ' + self.name + " extends uvm_btc_reg;\n"
+        reg_text     = 'class ' + self.name + " extends uvm_base_reg;\n"
         reg_text    += "\t`uvm_object_utils(" + self.name + ")\n"
         #reg_text    += "\t`uvm_register(" + self.name + " ,uvm_reg_cbs)\n"
         reg_text    += reg_rand_text + "\n"
@@ -253,8 +253,8 @@ class Block(object):
     def new_text(self):
         new_text     = "\tfunction new(string name=\"" + self.name + "\");\n"
         new_text    += "\t\tsuper.new(name, UVM_CVR_ADDR_MAP);\n"
-        if block.cov_type == 'addr':		
-            new_text    += "\t\tadd_coverage(build_coverage(UVM_CVR_ADDR_MAP));\n"
+        if block.cov_type == 'addr':
+            new_text    += "\t\tadd_coverage(UVM_CVR_ADDR_MAP);\n"
             new_text    += "\t\tif(has_coverage(UVM_CVR_ADDR_MAP)) begin\n"
             new_text    += "\t\t\tcg_addr = new(\"cg_addr\");\n"
             new_text    += "\t\tend\n"
@@ -341,7 +341,7 @@ class Block(object):
         block_coverage_text = self.coverage_text()
         block_sample_text   = self.sample_text()
 
-        block_text       = 'class ' + self.name + " extends uvm_btc_block;\n"
+        block_text       = 'class ' + self.name + " extends uvm_base_block;\n"
         block_text      += "\t`uvm_object_utils(" + self.name + ")\n"
         block_text      += block_rand_text + "\n"
         block_text      += block_build_text + "\n"
@@ -355,7 +355,7 @@ class Block(object):
         return block_text
 
     def block_main_text(self):
-        block_main_text = "\nclass ral_gen_main extends uvm_btc_block;\n"
+        block_main_text = "\nclass ral_gen_main extends uvm_base_block;\n"
         for block in self.block_list:
             self.rst_fd_num += block.rst_fd_num
             block_main_text     += "\trand " + block.name + " " + block.name[:-5] + ";\n"
@@ -562,3 +562,11 @@ if __name__ == '__main__':
  
     ral_sv_t.write(ral_md)
     ral_sv_t.close()
+
+
+
+
+
+
+
+

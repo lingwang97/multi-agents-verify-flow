@@ -28,3 +28,4 @@ typedef struct packed{
   } UART_CMD;
 
 `endif   //`ifndef _GLOBAL_ENUM_SVH_
+

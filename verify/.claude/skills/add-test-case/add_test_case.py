@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Scaffold a new UVM leaf test case (test class + seq class + JSON entry)
-for the auto_gen/verify environment, following its inheritance and naming
+for the verify environment, following its inheritance and naming
 conventions. See SKILL.md in this directory for the full walkthrough.
 
 Usage:
@@ -23,8 +23,8 @@ import sys
 
 MODULES = ["reg", "jls", "ro", "uart", "efuse"]
 
-# This script lives at auto_gen/verify/.claude/skills/add-test-case/ -
-# walk up 3 levels to reach auto_gen/verify (the "verify root").
+# This script lives at verify/.claude/skills/add-test-case/ -
+# walk up 3 levels to reach verify (the "verify root").
 VERIFY_ROOT = os.path.normpath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
 )

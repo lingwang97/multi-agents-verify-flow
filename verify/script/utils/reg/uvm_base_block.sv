@@ -1,7 +1,7 @@
-class uvm_btc_block extends uvm_reg_block;
-	//`uvm_object_utils(efuse_type)
+class uvm_base_block extends uvm_reg_block;
+	//`uvm_object_utils(uvm_base_block)
 
-	function new(string name="uvm_btc_block", int has_coverage);
+	function new(string name="uvm_base_block", int has_coverage);
 		super.new(name, has_coverage);
 	endfunction : new
 
@@ -17,5 +17,5 @@ class uvm_btc_block extends uvm_reg_block;
 		this.update(status, UVM_FRONTDOOR);
 	endtask
 
-endclass : uvm_btc_block
+endclass : uvm_base_block
 

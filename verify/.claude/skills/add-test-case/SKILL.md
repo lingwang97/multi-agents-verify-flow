@@ -1,13 +1,13 @@
 ---
 name: add-test-case
-description: Scaffold a new UVM test case (test class + sequence class + JSON case entry) for a module in this auto_gen/verify environment. Use when asked to create, add, generate, or scaffold a test case, system-level or block-level, for reg/jls/ro/uart/efuse.
+description: Scaffold a new UVM test case (test class + sequence class + JSON case entry) for a module in this verify environment. Use when asked to create, add, generate, or scaffold a test case, system-level or block-level, for reg/jls/ro/uart/efuse.
 ---
 
 # Add Test Case
 
-Generates a new leaf test case for one module (`reg`, `jls`, `ro`, `uart`, `efuse`) in `auto_gen/verify`, synchronizing all three places a test case lives: the `test/` class, the `seq/` class, and the `json/case/<module>.json` entry — following this repo's inheritance rules and naming convention. Read `docs/test_case_dev_manual.md` first if you haven't worked in this tree before; this skill automates exactly the mechanical steps that manual describes in its §3/§4.
+Generates a new leaf test case for one module (`reg`, `jls`, `ro`, `uart`, `efuse`) in `verify`, synchronizing all three places a test case lives: the `test/` class, the `seq/` class, and the `json/case/<module>.json` entry — following this repo's inheritance rules and naming convention. Read `docs/test_case_dev_manual.md` first if you haven't worked in this tree before; this skill automates exactly the mechanical steps that manual describes in its §3/§4.
 
-Paths below are relative to `auto_gen/verify/` (the "verify root").
+Paths below are relative to `verify/` (the "verify root").
 
 ## Run this — the driver
 

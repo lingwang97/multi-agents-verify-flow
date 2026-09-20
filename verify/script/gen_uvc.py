@@ -599,10 +599,10 @@ endpackage : {name}_pkg
 `endif //`ifndef __{name_upper}_PKG__SV__
 ''',
              
-        'uvm_f': '''+incdir+../../../../verify/uvc/{name}/env
-+incdir+../../../../verify/uvc/{name}/src
-../../../../verify/uvc/{name}/env/{name}_pkg.sv
-../../../../verify/uvc/{name}/src/{name}_if.sv
+        'uvm_f': '''+incdir+../../../verify/uvc/{name}/env
++incdir+../../../verify/uvc/{name}/src
+../../../verify/uvc/{name}/env/{name}_pkg.sv
+../../../verify/uvc/{name}/src/{name}_if.sv
 ''',
         'adapter': '''class {name}_reg2{type}_adapter extends uvm_reg_adapter;
 

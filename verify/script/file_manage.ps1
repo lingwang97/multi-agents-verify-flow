@@ -27,8 +27,8 @@ function Copy-Item-Deploy {
 
 Write-Host "Deploying flow files (root: $rootDir)"
 Copy-Item-Deploy (Join-Path $scriptDir 'utils')                    (Join-Path $rootDir 'utils')
-Copy-Item-Deploy (Join-Path $scriptDir 'sflow\wsim')               (Join-Path $rootDir 'sim\wsim')
-Copy-Item-Deploy (Join-Path $scriptDir 'sflow\project_name')       (Join-Path $rootDir 'sim\project_name')
+Copy-Item-Deploy (Join-Path $scriptDir 'sflow\wsim')               (Join-Path $rootDir '..\sim\wsim')
+Copy-Item-Deploy (Join-Path $scriptDir 'sflow\project_name')       (Join-Path $rootDir '..\sim\project_name')
 Copy-Item-Deploy (Join-Path $scriptDir 'sflow\testjson2lst.py')    (Join-Path $rootDir 'tb_top\scripts\testjson2lst.py')
 Copy-Item-Deploy (Join-Path $scriptDir 'sflow\Makefile')           (Join-Path $rootDir 'tb_top\scripts\Makefile')
 Copy-Item-Deploy (Join-Path $scriptDir 'sflow\Makefile.rtdbg.tcl') (Join-Path $rootDir 'tb_top\scripts\Makefile.rtdbg.tcl')
