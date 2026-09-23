@@ -13,6 +13,8 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 root_dir="$(cd "$script_dir/.." && pwd)"   # verify/
 
 # copy <src> <dst>: ensure the destination's parent dir exists, then copy.
+# Dir -> existing dir syncs CONTENTS (cp -R src/. dst/); plain `cp -R src dst`
+# would re-nest the tree (utils/utils/) and never refresh existing files.
 copy() {
     src="$1"
     dst="$2"
@@ -21,13 +23,19 @@ copy() {
         exit 1
     fi
     mkdir -p "$(dirname "$dst")"
-    cp -R "$src" "$dst"
+    if [ -d "$src" ] && [ -d "$dst" ]; then
+        cp -R "$src"/. "$dst"/
+    else
+        cp -R "$src" "$dst"
+    fi
     echo "  $src -> $dst"
 }
 
 echo "Deploying flow files (root: $root_dir)"
 copy "$script_dir/utils"                  "$root_dir/utils"
 copy "$script_dir/sflow/wsim"             "$root_dir/../sim/wsim"
+copy "$script_dir/sflow/wsim_local"       "$root_dir/../sim/wsim_local"
+chmod +x "$root_dir/../sim/wsim" "$root_dir/../sim/wsim_local"
 copy "$script_dir/sflow/project_name"     "$root_dir/../sim/project_name"
 copy "$script_dir/sflow/testjson2lst.py"  "$root_dir/tb_top/scripts/testjson2lst.py"
 copy "$script_dir/sflow/Makefile"         "$root_dir/tb_top/scripts/Makefile"

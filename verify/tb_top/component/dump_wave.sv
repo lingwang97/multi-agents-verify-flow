@@ -2,6 +2,14 @@
 //======     Setting dump waveform     =========
 //==============================================
 
+`ifdef VERILATOR
+    initial begin
+        $display("\n[NOTE]\tStart Dump FST waveform (Verilator) at%t\n", $time);
+        $dumpfile("wave.fst");
+        $dumpvars(0, tb_top);
+    end
+`endif
+
 `ifdef DUMP_VPD
     initial begin
         $display("\n[NOTE]\tStart Dump VPD at%t\n", $time);

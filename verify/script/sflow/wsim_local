@@ -1,0 +1,306 @@
+#!/usr/bin/env bash
+## -----------------------------------------------------------------------------
+## wsim_local - local open-source simulation runner (Verilator + UVM-1.2, WSL)
+##
+## Scope : single-case bring-up / smoke / code-coverage runs on the local box.
+##         The Synopsys flow (./wsim: VCS + Verdi + LSF) stays the golden
+##         reference. covergroup-based functional coverage is NOT collected by
+##         Verilator (parsed only) - functional coverage still comes from VCS.
+##
+## Source of truth lives in script/sflow/wsim_local; deployed to sim/ by
+## script/file_manage.sh. Run from the repo-root sim/ directory:
+##
+##   ./wsim_local -c reg_smoke_test            # build + run one case (FST dump on)
+##   ./wsim_local -c reg_smoke_test -seed 1    # fixed base seed
+##   ./wsim_local -c reg_smoke_test -nowave    # disable waveform dump
+##   ./wsim_local -c reg_smoke_test -covrpt    # + verilator_coverage annotated report
+##
+## Environment (once, e.g. in ~/.bashrc):
+##   source ~/tools/oss-cad-suite/environment     # provides verilator/make
+##   export UVM_HOME=$HOME/tools/uvm-1.2          # default if unset
+##
+## Set WSIM_LOCAL_COV=none to regenerate the RAL without covergroups if the
+## Verilator build chokes on the generated covergroup code.
+## -----------------------------------------------------------------------------
+
+set -o pipefail
+
+VERSION=1.0
+OPTS_TESTCASE_NAME=""
+OPTS_SEED_VALUE=""
+OPTS_DUMPWAVE="TRUE"
+OPTS_COVRPT="FALSE"
+OPTS_COV_TYPE="${WSIM_LOCAL_COV:-addr}"
+
+currentPwd=$(pwd)
+wsim_dir_path=$(dirname $(realpath $0))
+database_path="$wsim_dir_path/.."
+me=$(basename $0)
+
+function usage() {
+    echo "USAGE: $0 [OPTION]"
+    echo "    -c  |--case + case_name   : Set case name (lookup in verify/json/case/*.json)"
+    echo "    -seed + seed_num          : Set the base random seed number (default: random)"
+    echo "    -nowave                   : Disable FST waveform dump"
+    echo "    -covrpt                   : Generate verilator_coverage annotated report (cov_report/)"
+    echo "    -h  |--help               : Show help information"
+    echo "    -v  |--version            : Show version information"
+    echo ""
+}
+
+function die() {
+    echo "****$me****'ERROR!!!'$1" >&2
+    exit 1
+}
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -h|-help)        usage; exit 0 ;;
+        -v|--version)    echo "version is $VERSION"; exit 0 ;;
+        -c|--case)       shift; OPTS_TESTCASE_NAME="$1" ;;
+        -seed|--seed)    shift; OPTS_SEED_VALUE="$1" ;;
+        -nowave)         OPTS_DUMPWAVE="FALSE" ;;
+        -covrpt)         OPTS_COVRPT="TRUE" ;;
+        *)               echo "invalid option: $1"; usage; exit 1 ;;
+    esac
+    shift
+done
+
+[ -n "$OPTS_TESTCASE_NAME" ] || { echo "missing -c <case>"; usage; exit 1; }
+command -v verilator >/dev/null || die "verilator not on PATH. source ~/tools/oss-cad-suite/environment first"
+command -v python3   >/dev/null || die "python3 not found"
+: "${UVM_HOME:=$HOME/tools/uvm-1.2}"
+[ -f "$UVM_HOME/src/uvm_pkg.sv" ] || die "UVM library not found at $UVM_HOME (export UVM_HOME=...)"
+
+sim_dir="$wsim_dir_path/uvm_scratch_local_${OPTS_TESTCASE_NAME}"
+test_full_name="$OPTS_TESTCASE_NAME"
+
+################################################################################
+# RalGen - mirrors wsim's RalGen: (re)generate verify/ral/ral_reg_model.sv from
+# hdl/common/reg_table/reg_table_reg_list.csv when missing or inputs are newer.
+################################################################################
+function RalGen() {
+    local csv_input="$database_path/hdl/common/reg_table/reg_table_reg_list.csv"
+    local reg_script="$database_path/verify/utils/reg/gen_reg_model.py"
+    local output="$database_path/verify/ral/ral_reg_model.sv"
+    [ -f "$csv_input" ]   || die "register table not found: $csv_input"
+    [ -f "$reg_script" ]  || die "reg model generator not found: $reg_script"
+    mkdir -p "$database_path/verify/ral"
+    if [ ! -f "$output" ] || [ "$csv_input" -nt "$output" ] || [ "$reg_script" -nt "$output" ]; then
+        echo "****$me****: generating RAL model ($OPTS_COV_TYPE coverage)"
+        # OSS CAD Suite bundles its own python3 without openpyxl; use system python for RalGen
+        local py3=python3
+        /usr/bin/python3 -c 'import openpyxl' 2>/dev/null && py3=/usr/bin/python3
+        "$py3" "$reg_script" -i "$csv_input" -cov "$OPTS_COV_TYPE" -o "$output" || die "RAL generation failed"
+    fi
+    [ -f "$output" ] || die "ral_reg_model.sv was not generated"
+}
+
+################################################################################
+# Case info from the JSON case database (same source of truth as ./wsim)
+# Sets: WL_MODULE WL_TESTNAME WL_ITER WL_DEFINES WL_PLUSARGS
+################################################################################
+function get_case_info() {
+    local info
+    info=$(python3 - "$1" "$database_path" <<'PYEOF'
+import json, os, sys
+
+case, root = sys.argv[1], sys.argv[2]
+mj_path = os.path.join(root, "verify", "json", "module.json")
+mj = json.load(open(mj_path, encoding="utf-8"))
+global_macros = [mj.get("UVM_VCS_MACRO_OPT", ""), mj.get("GLOBAL_VCS_MACOR_OPT", "")]
+
+found = None
+for mod, rel in mj["modules"].items():
+    cj = json.load(open(os.path.join(root, "verify", "json", rel), encoding="utf-8"))
+    entry = cj.get("tests", {}).get(case)
+    if entry is not None:
+        found = (mod, cj, entry)
+        break
+if found is None:
+    sys.exit("case %r not found in any verify/json/case/*.json" % case)
+mod, cj, entry = found
+
+defines = []
+for m in global_macros + [cj.get("COMMON_VCS_MACRO_OPT", ""), entry.get("VCS_MACRO_OPT", "")]:
+    for tok in m.split("+"):
+        tok = tok.strip()
+        if tok and "+define+" + tok not in defines:
+            defines.append("+define+" + tok)
+plusargs = ["+" + t for t in entry.get("VCS_PLUSARGS_OPT", "").split("+") if t.strip()]
+
+print('WL_MODULE="%s"' % mod)
+print('WL_TESTNAME="%s"' % entry.get("UVM_TESTNAME", case))
+print('WL_ITER="%s"' % entry.get("iteration", "1"))
+print('WL_DEFINES="%s"' % " ".join(defines))
+print('WL_PLUSARGS="%s"' % " ".join(plusargs))
+PYEOF
+) || die "$info"
+    eval "$info"
+}
+
+################################################################################
+# Filelist preprocessing: expand -f recursively, strip //-comments, and add an
+# +incdir for every source directory (VCS searches the including file's dir;
+# Verilator needs explicit +incdir). Roots follow the VCS Makefile assembly.
+################################################################################
+function preprocess_filelist() {
+    python3 - "$@" "$scratch_dir/uvm_vlt.f" <<'PYEOF'
+import os, sys
+
+outs_files, outs_incs = [], []
+seen_inc, seen_file, seen_f = set(), set(), set()
+
+def add_inc(d):
+    if d and d not in seen_inc:
+        seen_inc.add(d)
+        outs_incs.append("+incdir+" + d)
+
+def resolve(path, includer_dir):
+    if os.path.isabs(path) or os.path.exists(path):
+        return path
+    cand = os.path.join(includer_dir, path)
+    return cand if os.path.exists(cand) else path
+
+def walk(path, includer_dir):
+    p = resolve(path, includer_dir)
+    if not os.path.exists(p):
+        sys.exit("filelist entry not found: %s (from %s)" % (path, includer_dir))
+    rp = os.path.realpath(p)
+    if rp in seen_f:
+        return
+    seen_f.add(rp)
+    base = os.path.dirname(rp)
+    for raw in open(p, encoding="utf-8", errors="replace"):
+        line = raw.split("//")[0].strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("-f "):
+            walk(line[3:].strip(), base)
+        elif line.startswith("+incdir+"):
+            add_inc(line[len("+incdir+"):].strip())
+        else:
+            fp = resolve(line, base)
+            if fp not in seen_file:
+                seen_file.add(fp)
+                outs_files.append(fp)
+                add_inc(os.path.dirname(os.path.abspath(fp)))
+
+for root in sys.argv[1:-1]:
+    walk(root, os.getcwd())
+with open(sys.argv[-1], "w", encoding="utf-8") as f:
+    for i in outs_incs:
+        f.write(i + "\n")
+    for s in outs_files:
+        f.write(s + "\n")
+print("****wsim_local****: filelist: %d sources, %d incdirs" % (len(outs_files), len(outs_incs)))
+PYEOF
+    [ -f "$scratch_dir/uvm_vlt.f" ] || die "filelist preprocessing failed"
+}
+
+################################################################################
+# Compile with Verilator. --coverage is always on (cheap at this scale).
+################################################################################
+function compile() {
+    local trace_opts=""
+    [ "$OPTS_DUMPWAVE" == "TRUE" ] && trace_opts="--trace-fst"
+    echo "****$me****: compiling (verilator $(verilator --version | awk '{print $2}'))..."
+    verilator --binary --timing -j 0 \
+        --top-module tb_top \
+        --timescale-override 1ns/10ps \
+        -Wno-fatal \
+        +define+VERILATOR \
+        +define+UVM_NO_DPI \
+        +define+PID=003 \
+        $WL_DEFINES \
+        +incdir+"$UVM_HOME/src" \
+        "$UVM_HOME/src/uvm_pkg.sv" \
+        -f "$scratch_dir/uvm_vlt.f" \
+        "$database_path/verify/tb_top/macro/tb_define.sv" \
+        "$database_path/verify/utils/dpi_func.c" \
+        $trace_opts --coverage \
+        --Mdir obj_dir -o simv \
+        > "$scratch_dir/compile.log" 2>&1
+    if [ $? -ne 0 ]; then
+        echo "COMPILE FAILED - tail of compile.log:"
+        tail -40 "$scratch_dir/compile.log"
+        echo "$test_full_name		compile_error" >> "${sim_dir}/result.txt"
+        exit 1
+    fi
+    echo "****$me****: compile done"
+}
+
+################################################################################
+# Run one iteration in its own dir (sim.log, wave.fst, coverage.dat per run)
+################################################################################
+function run_one() {
+    local iter=$1 seed=$2 rundir=$3
+    local rc=0
+    mkdir -p "$rundir"
+    (
+        cd "$rundir" || exit 1
+        "$scratch_dir/obj_dir/simv" \
+            "+UVM_TESTNAME=$WL_TESTNAME" \
+            +UVM_VERBOSITY=UVM_MEDIUM \
+            +ntb_random_seed=$seed \
+            "+verilator+seed+$seed" \
+            $WL_PLUSARGS > sim.log 2>&1
+    ) || rc=$?
+    # PASS requires simv exit 0 AND a UVM report summary with zero errors/fatals;
+    # an aborted run (e.g. bad plusarg) leaves no summary and must not pass.
+    local uvm_err uvm_fatal result="FAIL"
+    uvm_err=$(grep "UVM_ERROR :" "$rundir/sim.log" 2>/dev/null | sed 's/[^0-9]//g')
+    uvm_fatal=$(grep "UVM_FATAL :" "$rundir/sim.log" 2>/dev/null | sed 's/[^0-9]//g')
+    if [ "$rc" == "0" ] && [ -f "$rundir/sim.log" ] \
+       && [ "$uvm_err" == "0" ] && [ "$uvm_fatal" == "0" ]; then
+        result="PASS"
+    fi
+    echo "$test_full_name		$result" >> "${sim_dir}/result.txt"
+    if [ "$result" == "PASS" ]; then
+        echo "****$me****: [$test_full_name iter$iter seed$seed] PASS"
+    else
+        echo "****$me****: [$test_full_name iter$iter seed$seed] FAIL - tail of sim.log:"
+        tail -30 "$rundir/sim.log"
+    fi
+}
+
+################################################################################
+
+RalGen
+get_case_info "$OPTS_TESTCASE_NAME"
+echo "****$me****: case=$OPTS_TESTCASE_NAME module=$WL_MODULE test=$WL_TESTNAME iter=$WL_ITER"
+
+rm -rf "$sim_dir"
+mkdir -p "$sim_dir"
+# compile cwd must sit three levels below the repo root (like VCS's comp_<test>/):
+# the .f files' '../../../verify/...' paths are written against that depth
+scratch_dir="$sim_dir/comp_${OPTS_TESTCASE_NAME}"
+mkdir -p "$scratch_dir"
+cd "$scratch_dir" || die "cannot cd $scratch_dir"
+
+preprocess_filelist \
+    "$database_path/verify/tb_top/macro/rtl_define.f" \
+    "$database_path/verify/tb_top/filelist/ip_file_lst.f" \
+    "$database_path/verify/tb_top/filelist/include.f" \
+    "$database_path/verify/tb_top/filelist/lib_lst.f" \
+    "$database_path/verify/tb_top/filelist/rtl_file_lst.f" \
+    "$database_path/verify/tb_top/filelist/uvm.f"
+
+compile
+
+base_seed=${OPTS_SEED_VALUE:-$((RANDOM * 32768 + RANDOM))}
+for ((iter = 0; iter < WL_ITER; iter++)); do
+    run_one "$iter" "$((base_seed + iter))" "$scratch_dir/run_iter${iter}"
+done
+
+if [ "$OPTS_COVRPT" == "TRUE" ]; then
+    echo "****$me****: generating coverage report..."
+    verilator_coverage "$scratch_dir"/run_iter*/coverage.dat \
+        --annotate "$scratch_dir/cov_report" || die "verilator_coverage failed"
+    echo "****$me****: coverage annotated under $scratch_dir/cov_report"
+fi
+
+cd "$wsim_dir_path" || exit
+echo "****$me****: done. Results in $sim_dir/result.txt"
+[ -f "$sim_dir/result.txt" ] && cat "$sim_dir/result.txt"
+exit 0

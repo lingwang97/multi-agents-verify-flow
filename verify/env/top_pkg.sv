@@ -2,7 +2,11 @@
 `define __TOP_PKG__SV__
 
 `include "uvm_macros.svh"
+// VCS (-ntb_opts uvm-1.2) resolves this include to its preloaded library;
+// in the local Verilator flow, $UVM_HOME/src/uvm_pkg.sv is compiled explicitly.
+`ifndef VERILATOR
 `include "uvm_pkg.sv"
+`endif
 
 package top_pkg;
   import uvm_pkg::*;

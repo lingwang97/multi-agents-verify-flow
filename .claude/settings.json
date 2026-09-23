@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash('/c/Program Files/WSL/wsl.exe' -d Ubuntu-24.04 -- bash *",
+      "PowerShell(& 'C:\\\\Program Files\\\\WSL\\\\wsl.exe' -d Ubuntu-24.04 -- bash -c \"grep -q oss-cad-suite ~/.profile || printf '\\\\nsource ~/tools/oss-cad-suite/environment\\\\nexport UVM_HOME=\\\\$HOME/tools/uvm-1.2\\\\n' >> ~/.profile; tail -3 ~/.profile; bash -lc 'command -v verilator && echo ENV_OK'\" 2>&1 | Out-String)",
+      "PowerShell(& 'C:\\\\Program Files\\\\WSL\\\\wsl.exe' -d Ubuntu-24.04 -- bash -lc \"cd /mnt/c/Users/wangling/pro_cc/projecd_id/sim && rm -f wsim_local_run.log && setsid nohup ./wsim_local -c reg_smoke_test > wsim_local_run.log 2>&1 < /dev/null & sleep 5; tail -3 /mnt/c/Users/wangling/pro_cc/projecd_id/sim/wsim_local_run.log\" 2>&1)",
+      "PowerShell(& 'C:\\\\Program Files\\\\WSL\\\\wsl.exe' -d Ubuntu-24.04 -- bash -lc \"which python3; python3 -c 'import openpyxl; print\\(\\\\\"oss-py:\\\\\", openpyxl.__version__\\)' 2>&1 | tail -1; /usr/bin/python3 -c 'import openpyxl; print\\(\\\\\"sys-py:\\\\\", openpyxl.__version__\\)' 2>&1 | tail -1\" 2>&1)",
+      "PowerShell(& 'C:\\\\Program Files\\\\WSL\\\\wsl.exe' -d Ubuntu-24.04 -- bash /mnt/c/Users/wangling/tools/wsl-setup/probe_py.sh 2>&1)",
+      "PowerShell(& 'C:\\\\Program Files\\\\WSL\\\\wsl.exe' -d Ubuntu-24.04 -- bash -lc \"grep -n '%Error' /mnt/c/Users/wangling/pro_cc/projecd_id/sim/uvm_scratch_local_reg_smoke_test/comp_reg_smoke_test/compile.log | head -10\" 2>&1)",
+      "PowerShell(& 'C:\\\\Program Files\\\\WSL\\\\wsl.exe' -d Ubuntu-24.04 -- bash -lc \"cd /mnt/c/Users/wangling/pro_cc/projecd_id/sim && rm -f wsim_local_run.log && setsid nohup ./wsim_local -c reg_smoke_test > wsim_local_run.log 2>&1 < /dev/null & sleep 12; tail -4 /mnt/c/Users/wangling/pro_cc/projecd_id/sim/wsim_local_run.log\" 2>&1)"
+    ]
+  }
+}

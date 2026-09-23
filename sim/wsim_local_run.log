@@ -1,0 +1,20 @@
+****wsim_local****: case=reg_smoke_test module=reg test=reg_smoke_test iter=1
+****wsim_local****: filelist: 18 sources, 40 incdirs
+****wsim_local****: compiling (verilator 5.053)...
+****wsim_local****: compile done
+****wsim_local****: [reg_smoke_test iter0 seed196239889] PASS
+****wsim_local****: generating coverage report...
+Coverage Summary:
+  line       : 30.3% ( 3305/10917)
+  toggle     : 6.7% (   43/  646)
+  branch     : 12.5% ( 2109/16901)
+  expr       : 8.9% (  178/ 1998)
+  fsm_state  : 0.0% (    0/    0)
+  fsm_arc    : 0.0% (    0/    0)
+  covergroup : 3.0% (   10/  336)
+Annotation Summary:
+  lines with all attached points covered :  6.00%  (1306/18781)
+See lines with '%00' in /mnt/c/Users/wangling/pro_cc/projecd_id/sim/uvm_scratch_local_reg_smoke_test/comp_reg_smoke_test/cov_report
+****wsim_local****: coverage annotated under /mnt/c/Users/wangling/pro_cc/projecd_id/sim/uvm_scratch_local_reg_smoke_test/comp_reg_smoke_test/cov_report
+****wsim_local****: done. Results in /mnt/c/Users/wangling/pro_cc/projecd_id/sim/uvm_scratch_local_reg_smoke_test/result.txt
+reg_smoke_test		PASS

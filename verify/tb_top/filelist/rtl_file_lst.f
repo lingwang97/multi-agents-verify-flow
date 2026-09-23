@@ -3,7 +3,7 @@
 //----------------------------------------------------------------------------------------
 
 // Custom-Design Lib File Start
-
+../../../hdl/rtl/soc_stub.sv
 // Custom-Design Lib File End
 
 

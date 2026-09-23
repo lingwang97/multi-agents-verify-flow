@@ -28,6 +28,28 @@ Run from the repo-root `sim/` (a sibling of `verify/`, where `wsim` and `project
 
 Pass/fail is decided by grepping `UVM_ERROR`/`UVM_FATAL` counts in `sim.log`; results roll up into `result.txt` and re-run commands for failures land in `fail_wave.txt`. The Makefile (`tb_top/scripts/Makefile`, source in `script/sflow/Makefile`) builds the actual `vcs`/`simv` command lines from `wsim`'s options; look there to understand what a given switch expands to.
 
+## Local open-source sim (WSL2 + Verilator)
+
+A second, fully open-source flow runs **locally on the Windows box** inside WSL2 (Ubuntu 24.04): Verilator (from OSS CAD Suite) + UVM-1.2 + FST waveforms + `verilator_coverage`. **The VCS/Verdi/LSF flow above stays the golden reference** — the local flow is for bring-up, smoke runs, stimulus development and line/toggle code coverage. Two hard limits: Verilator does **not** collect covergroup-based functional coverage (parsed only, so `*_coverage.sv`/`cg_addr`/`cg_bits` stay VCS-only), and its constraint solver handles only simple constraints.
+
+One-time setup (WSL 2.7.14 MSI already installed on this box): right-click-run `C:\Users\wangling\tools\wsl-setup\enable_wsl2.bat` as administrator (enables VirtualMachinePlatform; needs one UAC + one reboot), then after reboot import the distro: `"C:\Program Files\WSL\wsl.exe" --import Ubuntu-24.04 C:\Users\wangling\wsl\Ubuntu-24.04 C:\Users\wangling\tools\wsl-setup\ubuntu-24.04-wsl-rootfs.tar.gz --version 2`. Inside WSL, add `source ~/tools/oss-cad-suite/environment` and `export UVM_HOME=$HOME/tools/uvm-1.2` to `~/.bashrc` (automated by `C:\Users\wangling\tools\wsl-setup\bootstrap_ubuntu.sh`). Waveforms are viewed with native-Windows Surfer (`C:\Users\wangling\tools\surfer\surfer.exe`, FST/VCD viewer from surfer-project.org — SourceForge-hosted GTKWave is unreachable on this network) opening `\\wsl.localhost\Ubuntu-24.04\...` paths.
+
+Usage — deploy like any flow script, run from the repo-root `sim/` in WSL (single case only; `-m`/regression groups stay on VCS):
+
+```bash
+bash script/file_manage.sh                # deploys sim/wsim_local (like sim/wsim)
+./wsim_local -c reg_smoke_test            # build + run (FST dump on by default)
+./wsim_local -c reg_smoke_test -seed 1    # fixed base seed
+./wsim_local -c reg_smoke_test -nowave    # no waveform dump
+./wsim_local -c reg_smoke_test -covrpt    # + verilator_coverage report in cov_report/
+```
+
+Scratch is `sim/uvm_scratch_local_<case>/comp_<case>/` (compile+run cwd — deliberately three levels below the repo root, matching VCS's `comp_<test>/` convention, because the `.f` files' `../../../verify/...` paths are written against that depth): `compile.log`, `uvm_vlt.f` (preprocessed filelist — `-f` expanded, `//` comments stripped, per-directory `+incdir` added), `run_iterN/{sim.log,wave.fst,coverage.dat}`, `cov_report/`. RalGen runs automatically (mtime-based regen, unlike `wsim`'s git-diff check) and is invoked with `/usr/bin/python3` when needed, because OSS CAD Suite bundles its own python3 without openpyxl; `WSIM_LOCAL_COV=none ./wsim_local ...` regenerates the RAL without covergroups if a Verilator build chokes on them.
+
+Because this checkout has no DUT RTL yet, the local flow runs against a **stub**: `hdl/rtl/soc_stub.sv` (already referenced by `tb_top/filelist/rtl_file_lst.f`) plus a placeholder register CSV at `hdl/common/reg_table/reg_table_reg_list.csv`. Both sit at the exact paths the real design database occupies — when `hdl/` lands, replace them and the local flow needs no further changes.
+
+`VERILATOR`-ifdef differences from the VCS flow (all VCS-safe): `tb_top_soc.sv` guards the `sdf_annotate` `program` block (unsupported by Verilator) and adds clk/rst generation + the stub instance; `dump_wave.sv` adds an FST branch; `top_pkg.sv` skips `` `include "uvm_pkg.sv" `` (VCS resolves it via `-ntb_opts uvm-1.2`, Verilator compiles `$UVM_HOME/src/uvm_pkg.sv` explicitly); `vif_declare.sv` assigns vifs and sets `uvm_config_db` in one `initial` (Verilator gives no initial-block ordering guarantees). The build also passes `+define+UVM_NO_DPI` and does **not** compile UVM's `dpi/uvm_dpi.cc` — UVM-1.2's `uvm_hdl.c` has only vendor simulator backends and `#error`s out otherwise; with `UVM_NO_DPI` the library falls back to its pure-SV implementations (the project's own `dpi_func.c` is unaffected). Two Verilator comment pitfalls to remember when editing sources: a comment beginning `// verilator ...` is parsed as a lint pragma (`%Error-BADVLTPRAGMA` on unknown ones), and relative `+incdir+`/file paths in `.f` files resolve against the compile cwd — hence the depth-3 scratch dir above.
+
 ## Regenerating the environment
 
 The SV files are templates emitted by Python. **Editing generated files by hand is normal**, but know that a regeneration can overwrite them (`gen_uvm_env.py` skips a module whose `uvc/<mod>/` directory already exists unless `--overwrite` is given).
