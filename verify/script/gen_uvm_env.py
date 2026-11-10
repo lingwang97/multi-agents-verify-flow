@@ -1401,7 +1401,9 @@ def get_top_pkg_template():
 `define __TOP_PKG__SV__
 
 `include "uvm_macros.svh"
+`ifndef VERILATOR
 `include "uvm_pkg.sv"
+`endif
 
 package top_pkg;
   import uvm_pkg::*;
@@ -1705,10 +1707,10 @@ module tb_top();
     if_conn if_conn();                                       
 
 
-
+    `ifndef VERILATOR
     // Program  < sdf_annotate >  instantiation 
     sdf_annotate sdf_annotate();
-
+    `endif
     initial begin run_test(""); end
 
 endmodule
@@ -1716,13 +1718,14 @@ endmodule
 
 `include "if_conn.sv"
 
+`ifndef VERILATOR
 //***************************************************************************
 //******* Program  < sdf_annotate >  is used for annotate sdf file.  ********
 //***************************************************************************
 program sdf_annotate;
     `include "tb_sdf.sv"
 endprogram
-
+`endif
 // Other Component Module 
 
 
@@ -1796,21 +1799,22 @@ module tb_top();
     `endif                                    
 
 
-
-    // Program  < sdf_annotate >  instantiation 
-    sdf_annotate sdf_annotate();
-
+    `ifndef VERILATOR
+        // Program  < sdf_annotate >  instantiation 
+        sdf_annotate sdf_annotate();
+    `endif
     initial begin run_test(""); end
 
 endmodule
 
-
+`ifndef VERILATOR
 //***************************************************************************
 //******* Program  < sdf_annotate >  is used for annotate sdf file.  ********
 //***************************************************************************
 program sdf_annotate;
     `include "tb_sdf.sv"
 endprogram
+`endif
 
 // Other Component Module 
 
@@ -1853,6 +1857,14 @@ def get_dump():
     return '''//==============================================
 //======     Setting dump waveform     =========
 //==============================================
+
+`ifdef VERILATOR
+    initial begin
+        $display("\n[NOTE]\tStart Dump FST waveform (Verilator) at%t\n", $time);
+        $dumpfile("wave.fst");
+        $dumpvars(0, tb_top);
+    end
+`endif
 
 `ifdef DUMP_VPD
     initial begin
@@ -2907,13 +2919,13 @@ def generate_default_config():
                 "adapter_type":"apb"
             },
             {
-                "name": "jls",
+                "name": "apb_master",
                 "has_interface": True,
                 "has_config": True,
                 "has_tb_top": True,
                 "is_active": True,
-                "enable_adapter":False,
-                "adapter_type":"jamlink"
+                "enable_adapter":True,
+                "adapter_type":"apb"
             },
             {
                 "name": "cpft",

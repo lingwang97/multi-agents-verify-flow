@@ -15,10 +15,10 @@
       "adapter_type": "apb"
     },
     {
-      "name": "jls",
+      "name": "apb_master",
       "has_interface": true,
       "has_config": true,
-      "has_tb_top": false,
+      "has_tb_top": true,
       "is_active": true,
       "enable_adapter": true,
       "adapter_type": "apb"

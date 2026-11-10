@@ -702,7 +702,7 @@ def main():
     parser = argparse.ArgumentParser(
         description='UVC Auto Generation Script - Generate UVM Verification Component files'
     )
-    parser.add_argument('-n', '--name', required=True, help='UVC name (e.g., reg, jls, cpft)')
+    parser.add_argument('-n', '--name', required=True, help='UVC name (e.g., reg, cpft)')
     parser.add_argument('-o', '--output', default=None, help='Output directory path')
     parser.add_argument('-p', '--parent', default='uvc', help='Parent directory for UVC (default: uvc)')
     parser.add_argument('-t', '--bus_type', default=None, help='Setting bus type for reg model adapter')

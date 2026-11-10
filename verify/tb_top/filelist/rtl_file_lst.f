@@ -3,7 +3,7 @@
 //----------------------------------------------------------------------------------------
 
 // Custom-Design Lib File Start
-../../../hdl/rtl/soc_stub.sv
+
 // Custom-Design Lib File End
 
 
@@ -13,7 +13,7 @@
 
 
 // Module 1 Start
-
+../../../hdl/rtl/apb_v3_sram.v
 // Module 1 End
 
 // Module 2 Start

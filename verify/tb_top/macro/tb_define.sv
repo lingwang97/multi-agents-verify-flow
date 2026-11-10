@@ -6,7 +6,7 @@
 // entry macro
 //----------------------------------------------------------------------------------------
 `define PROJ_ID                 dpu_w
-`define TB_TOP                  tb_top_soc
+`define TB_TOP                  tb_top
 
 // ==========================================================================
 // Define Paremater-type MACRO 

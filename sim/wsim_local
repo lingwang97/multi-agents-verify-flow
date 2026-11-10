@@ -32,7 +32,6 @@ OPTS_DUMPWAVE="TRUE"
 OPTS_COVRPT="FALSE"
 OPTS_COV_TYPE="${WSIM_LOCAL_COV:-addr}"
 
-currentPwd=$(pwd)
 wsim_dir_path=$(dirname $(realpath $0))
 database_path="$wsim_dir_path/.."
 me=$(basename $0)
@@ -86,12 +85,15 @@ function RalGen() {
     [ -f "$csv_input" ]   || die "register table not found: $csv_input"
     [ -f "$reg_script" ]  || die "reg model generator not found: $reg_script"
     mkdir -p "$database_path/verify/ral"
-    if [ ! -f "$output" ] || [ "$csv_input" -nt "$output" ] || [ "$reg_script" -nt "$output" ]; then
+    local stamp="$output.covtype"
+    if [ ! -f "$output" ] || [ "$csv_input" -nt "$output" ] || [ "$reg_script" -nt "$output" ] \
+       || [ "$(cat "$stamp" 2>/dev/null)" != "$OPTS_COV_TYPE" ]; then
         echo "****$me****: generating RAL model ($OPTS_COV_TYPE coverage)"
         # OSS CAD Suite bundles its own python3 without openpyxl; use system python for RalGen
         local py3=python3
         /usr/bin/python3 -c 'import openpyxl' 2>/dev/null && py3=/usr/bin/python3
         "$py3" "$reg_script" -i "$csv_input" -cov "$OPTS_COV_TYPE" -o "$output" || die "RAL generation failed"
+        echo "$OPTS_COV_TYPE" > "$stamp"
     fi
     [ -f "$output" ] || die "ral_reg_model.sv was not generated"
 }
@@ -121,12 +123,15 @@ if found is None:
     sys.exit("case %r not found in any verify/json/case/*.json" % case)
 mod, cj, entry = found
 
+# same composition and "exclude" handling as testjson2lst.py: join, strip the excluded text, then split
+macro_str = "".join(global_macros + [cj.get("COMMON_VCS_MACRO_OPT", ""), entry.get("VCS_MACRO_OPT", "")])
+if entry.get("exclude"):
+    macro_str = macro_str.replace(entry["exclude"], "")
 defines = []
-for m in global_macros + [cj.get("COMMON_VCS_MACRO_OPT", ""), entry.get("VCS_MACRO_OPT", "")]:
-    for tok in m.split("+"):
-        tok = tok.strip()
-        if tok and "+define+" + tok not in defines:
-            defines.append("+define+" + tok)
+for tok in macro_str.split("+"):
+    tok = tok.strip()
+    if tok and "+define+" + tok not in defines:
+        defines.append("+define+" + tok)
 plusargs = ["+" + t for t in entry.get("VCS_PLUSARGS_OPT", "").split("+") if t.strip()]
 
 print('WL_MODULE="%s"' % mod)
@@ -199,11 +204,13 @@ PYEOF
 }
 
 ################################################################################
-# Compile with Verilator. --coverage is always on (cheap at this scale).
+# Compile with Verilator. --coverage is added only for -covrpt runs (coverage.dat is unused otherwise).
 ################################################################################
 function compile() {
     local trace_opts=""
+    local cov_opts=""
     [ "$OPTS_DUMPWAVE" == "TRUE" ] && trace_opts="--trace-fst"
+    [ "$OPTS_COVRPT" == "TRUE" ] && cov_opts="--coverage"
     echo "****$me****: compiling (verilator $(verilator --version | awk '{print $2}'))..."
     verilator --binary --timing -j 0 \
         --top-module tb_top \
@@ -218,7 +225,7 @@ function compile() {
         -f "$scratch_dir/uvm_vlt.f" \
         "$database_path/verify/tb_top/macro/tb_define.sv" \
         "$database_path/verify/utils/dpi_func.c" \
-        $trace_opts --coverage \
+        $trace_opts $cov_opts \
         --Mdir obj_dir -o simv \
         > "$scratch_dir/compile.log" 2>&1
     if [ $? -ne 0 ]; then
@@ -278,13 +285,23 @@ scratch_dir="$sim_dir/comp_${OPTS_TESTCASE_NAME}"
 mkdir -p "$scratch_dir"
 cd "$scratch_dir" || die "cannot cd $scratch_dir"
 
+# Block-level cases compile only their own module env + tb_top: <MOD>_BLOCK_TEST selects
+# tb_top/filelist/uvm_blk_<mod>.f (same rule as the VCS Makefile, no per-module branch).
+case_filelist="$database_path/verify/tb_top/filelist/uvm.f"
+blk_token=$(echo "$WL_DEFINES" | tr ' ' '\n' | sed -n 's/^+define+\([A-Z0-9_]*_BLOCK_TEST\)$/\1/p' | head -1)
+if [ -n "$blk_token" ]; then
+    blk_mod=$(echo "${blk_token%_BLOCK_TEST}" | tr 'A-Z' 'a-z')
+    case_filelist="$database_path/verify/tb_top/filelist/uvm_blk_${blk_mod}.f"
+    [ -f "$case_filelist" ] || die "block-level filelist not found for $blk_token: $case_filelist"
+fi
+
 preprocess_filelist \
     "$database_path/verify/tb_top/macro/rtl_define.f" \
     "$database_path/verify/tb_top/filelist/ip_file_lst.f" \
     "$database_path/verify/tb_top/filelist/include.f" \
     "$database_path/verify/tb_top/filelist/lib_lst.f" \
     "$database_path/verify/tb_top/filelist/rtl_file_lst.f" \
-    "$database_path/verify/tb_top/filelist/uvm.f"
+    "$case_filelist"
 
 compile
 

@@ -3,7 +3,7 @@
 /*  ============================================================  */
 `include "base_seq.sv"
 `include "reg_seq.sv"
-`include "jls_seq.sv"
+`include "apb_master_seq.sv"
 `include "ro_seq.sv"
 `include "uart_seq.sv"
 `include "efuse_seq.sv"

@@ -14,7 +14,7 @@ class top_env extends uvm_env;
 
     // module envs declarations
 	reg_env		reg_env_h;
-	jls_env		jls_env_h;
+	apb_master_env		apb_master_env_h;
 	ro_env		ro_env_h;
 	uart_env		uart_env_h;
 	efuse_env		efuse_env_h;
@@ -39,13 +39,13 @@ class top_env extends uvm_env;
         `endif
         // Create all module envs
 		reg_env_h = reg_env::type_id::create("reg_env_h", this);
-		jls_env_h = jls_env::type_id::create("jls_env_h", this);
+		apb_master_env_h = apb_master_env::type_id::create("apb_master_env_h", this);
 		ro_env_h = ro_env::type_id::create("ro_env_h", this);
 		uart_env_h = uart_env::type_id::create("uart_env_h", this);
 		efuse_env_h = efuse_env::type_id::create("efuse_env_h", this);
         
         // Setting the active driver
-		jls_env_h.drv_is_active = UVM_ACTIVE ;
+		apb_master_env_h.drv_is_active = UVM_ACTIVE ;
 		uart_env_h.drv_is_active = UVM_ACTIVE ;
 		efuse_env_h.drv_is_active = UVM_ACTIVE ;
 
@@ -79,7 +79,7 @@ class top_env extends uvm_env;
         vseqr_h.ral = this.ral;
         // connect virtual sequencer to subsequencers
 		vseqr_h.reg_seqr_h= reg_env_h.vseqr_h;
-		vseqr_h.jls_seqr_h= jls_env_h.vseqr_h;
+		vseqr_h.apb_master_seqr_h= apb_master_env_h.vseqr_h;
 		vseqr_h.ro_seqr_h= ro_env_h.vseqr_h;
 		vseqr_h.uart_seqr_h= uart_env_h.vseqr_h;
 		vseqr_h.efuse_seqr_h= efuse_env_h.vseqr_h;

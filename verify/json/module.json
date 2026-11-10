@@ -5,7 +5,7 @@
 	"modules":
     {  
         "reg":"case/reg.json",
-        "jls":"case/jls.json",
+        "apb_master":"case/apb_master.json",
         "ro":"case/ro.json",
         "uart":"case/uart.json",
         "efuse":"case/efuse.json"

@@ -15,7 +15,7 @@
 // --------------MODULE-FILE Start----------------------
 ../../../verify/env/top_if.sv
 -f ../../../verify/uvc/reg/script/uvm.f
--f ../../../verify/uvc/jls/script/uvm.f
+-f ../../../verify/uvc/apb_master/script/uvm.f
 -f ../../../verify/uvc/ro/script/uvm.f
 -f ../../../verify/uvc/uart/script/uvm.f
 -f ../../../verify/uvc/efuse/script/uvm.f

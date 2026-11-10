@@ -9,7 +9,7 @@ class top_virtual_sequencer extends uvm_sequencer;
   RAL_PKG::ral_gen_main 	ral;
   // module squencer declaration
   reg_sequencer		reg_seqr_h;
-  jls_sequencer		jls_seqr_h;
+  apb_master_sequencer		apb_master_seqr_h;
   ro_sequencer		ro_seqr_h;
   uart_sequencer		uart_seqr_h;
   efuse_sequencer		efuse_seqr_h;
@@ -17,7 +17,7 @@ class top_virtual_sequencer extends uvm_sequencer;
   //UVM automation macros for sequencers
   `uvm_component_utils_begin(top_virtual_sequencer)
     `uvm_field_object(reg_seqr_h, UVM_ALL_ON)
-    `uvm_field_object(jls_seqr_h, UVM_ALL_ON)
+    `uvm_field_object(apb_master_seqr_h, UVM_ALL_ON)
     `uvm_field_object(ro_seqr_h, UVM_ALL_ON)
     `uvm_field_object(uart_seqr_h, UVM_ALL_ON)
     `uvm_field_object(efuse_seqr_h, UVM_ALL_ON)

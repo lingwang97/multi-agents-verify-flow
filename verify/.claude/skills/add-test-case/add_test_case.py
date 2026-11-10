@@ -21,7 +21,7 @@ import os
 import re
 import sys
 
-MODULES = ["reg", "jls", "ro", "uart", "efuse"]
+MODULES = ["reg", "apb_master", "ro", "uart", "efuse"]
 
 # This script lives at verify/.claude/skills/add-test-case/ -
 # walk up 3 levels to reach verify (the "verify root").
@@ -120,11 +120,11 @@ def main():
         die(
             "Block-level base classes for module '%s' don't exist yet "
             "(missing %s and/or %s).\n"
-            "Only 'efuse' has a complete, Makefile-wired block-level base today - "
-            "see docs/test_case_dev_manual.md's Known Gaps section. Create the "
-            "%s / %s pair first by mirroring efuse_block_base_test.sv / "
-            "efuse_block_base_seq.sv, and confirm tb_top/scripts/Makefile actually "
-            "selects a filelist for +define+%s_BLOCK_TEST before using this tool "
+            "Only 'efuse' and 'apb_master' have a complete block-level base today - "
+            "see the Known Gaps section of test_case_dev_manual.md (next to this script). Create the "
+            "%s / %s pair first by mirroring apb_master_block_base_test.sv / "
+            "apb_master_block_base_seq.sv, and add tb_top/filelist/uvm_blk_<mod>.f "
+            "(the flow scripts pick it up from +define+%s_BLOCK_TEST) before using this tool "
             "for module '%s' at block level."
             % (mod, test_file, seq_file, test_base, seq_base, mod.upper(), mod)
         )
@@ -213,7 +213,7 @@ endclass : %(seq_class)s
     print("Added %s (seq) to %s" % (seq_class, seq_file))
     print("Added JSON case '%s' to %s" % (test_class, json_file))
     print("")
-    print("Next steps (see docs/test_case_dev_manual.md):")
+    print("Next steps (see .claude/skills/add-test-case/test_case_dev_manual.md):")
     print("  1. Fill in %s::body() with real stimulus." % seq_class)
     print("  2. Wire real protocol signals/checks if this test needs them "
           "(interface/driver/monitor/scoreboard).")

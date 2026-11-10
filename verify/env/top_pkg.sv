@@ -2,8 +2,6 @@
 `define __TOP_PKG__SV__
 
 `include "uvm_macros.svh"
-// VCS (-ntb_opts uvm-1.2) resolves this include to its preloaded library;
-// in the local Verilator flow, $UVM_HOME/src/uvm_pkg.sv is compiled explicitly.
 `ifndef VERILATOR
 `include "uvm_pkg.sv"
 `endif
@@ -16,7 +14,7 @@ package top_pkg;
 
   //import all module pkg
   import reg_pkg::*;
-  import jls_pkg::*;
+  import apb_master_pkg::*;
   import ro_pkg::*;
   import uart_pkg::*;
   import efuse_pkg::*;
@@ -34,7 +32,7 @@ package top_pkg;
   //include all module test
   `include "base_test.sv"
   `include "reg_test.sv"
-  `include "jls_test.sv"
+  `include "apb_master_test.sv"
   `include "ro_test.sv"
   `include "uart_test.sv"
   `include "efuse_test.sv"

@@ -13,7 +13,7 @@ module if_conn;
 
 		`include "top_if_conn.sv"
 		`include "reg_if_conn.sv"
-		`include "jls_if_conn.sv"
+		`include "apb_master_if_conn.sv"
 		`include "ro_if_conn.sv"
 		`include "uart_if_conn.sv"
 		`include "efuse_if_conn.sv"
@@ -22,7 +22,7 @@ module if_conn;
 
 		`include "top_if_conn_gpls.sv"
 		`include "reg_if_conn_gpls.sv"
-		`include "jls_if_conn_gpls.sv"
+		`include "apb_master_if_conn_gpls.sv"
 		`include "ro_if_conn_gpls.sv"
 		`include "uart_if_conn_gpls.sv"
 		`include "efuse_if_conn_gpls.sv"
