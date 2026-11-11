@@ -18,7 +18,6 @@ import base_uvc_pkg::*;
 `include "apb_master_monitor.sv"
 `include "apb_master_scoreboard.sv"
 `include "apb_master_coverage.sv"
-`include "apb_master_reg2apb_adapter.sv"
 `include "apb_master_agent.sv"
 `include "apb_master_env.sv"
 

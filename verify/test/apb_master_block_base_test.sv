@@ -8,8 +8,8 @@ class apb_master_block_base_test extends uvm_test;
     string end_time_str;
 
     apb_master_pkg::apb_master_env                      apb_master_env_h;
-    RAL_PKG::ral_gen_main                       ral;
-    apb_master_pkg::apb_master_reg2apb_adapter   apb_master_adapter_h;
+    // no RAL: enable_ral is false for this module
+    // no adapter: adapter_type is empty for this module
 
     // Virtual interface declarations
     virtual interface apb_master_if apb_master_vif;
@@ -57,8 +57,7 @@ class apb_master_block_base_test extends uvm_test;
         apb_master_env_h = apb_master_pkg::apb_master_env::type_id::create("apb_master_env_h", this);
         apb_master_env_h.drv_is_active = UVM_ACTIVE;
         
-        // create adapter
-        apb_master_adapter_h = apb_master_pkg::apb_master_reg2apb_adapter::type_id::create("apb_master_adapter_h", this);
+        // no adapter created (adapter_type is empty)
 
         // Create all config objects
         `uvm_info(get_type_name(),"****** Creating All base_cfg class ******",UVM_LOW);   
@@ -76,25 +75,15 @@ class apb_master_block_base_test extends uvm_test;
 
         start_time_int = wallclock();
 
-        // Create RAL model and cfg db setting
-        ral  = RAL_PKG::ral_gen_main::type_id::create("ral", this);
-        ral.configure(null, "");
-        ral.build();
-        ral.set_coverage(UVM_CVR_ALL);	
-        ral.lock_model();
-        ral.reset();
-        ral.set_hdl_path_root("tb_top"); //need to be updated
-
-        uvm_config_db#(RAL_PKG::ral_gen_main)::set(uvm_root::get(), "*", "ral", ral);
+        // no RAL model created (enable_ral is false)
 
 
     endfunction : build_phase
 
     virtual function void connect_phase(uvm_phase phase);
         super.connect_phase(phase);
-        //set regmodel prediction
-        ral.default_map.set_sequencer(apb_master_env_h.vseqr_h, apb_master_adapter_h);
-        ral.default_map.set_auto_predict(1);
+        // no adapter: RAL map has no bus sequencer, register front-door access is not wired
+        // no RAL: auto-predict not wired
 
     endfunction : connect_phase
 

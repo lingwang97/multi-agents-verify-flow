@@ -26,8 +26,7 @@ def get_base_sequence_template():
     return '''`ifndef __{name_upper}_SEQ_SV_
 `define __{name_upper}_SEQ_SV_
 
-import global_pkg::*;
-import reg_mdl_pkg::*;
+import global_pkg::*;{bseq_reg_import}
 
 class {name}_seq extends uvm_sequence;
 
@@ -41,7 +40,7 @@ class {name}_seq extends uvm_sequence;
 {cfg_declarations}
 
     // RAL_model-relative declarations
-    RAL_PKG::ral_gen_main ral;
+    {bseq_ral_decl}
     uvm_status_e status;
     rand uvm_reg_data_t data;
 
@@ -74,7 +73,7 @@ class {name}_seq extends uvm_sequence;
 
 
         // Get reg-model handle
-        ral = {env_name}_env_h.ral;
+        {bseq_ral_assign}
 
     endtask
 
@@ -123,10 +122,7 @@ class {name}_block_base_seq extends uvm_sequence;
     // Config declarations
     {name}_pkg::{name}_base_cfg {name}_cfg_h;
 
-    // RAL_model-relative declarations
-    RAL_PKG::ral_gen_main ral;
-    uvm_status_e status;
-    rand uvm_reg_data_t data;
+    {seq_ral_decl}
 
     // Other declarations
     uvm_table_printer _printer;
@@ -157,9 +153,7 @@ class {name}_block_base_seq extends uvm_sequence;
 
         // Get other cfg
 
-        // Get reg-model handle
-        if(!uvm_config_db#(RAL_PKG::ral_gen_main)::get(m_sequencer,"", "ral" ,ral))
-            `uvm_error(get_full_name(), "Ral handle missing")
+        {seq_ral_fetch}
 
     endtask
 
@@ -845,6 +839,98 @@ endfunction
 `endif //`ifndef __{name_upper}_TEST_SV_
 '''
 
+def get_top_ral_snippets(enable_ral, env_name='top'):
+    """Chip-level RAL wiring for the system flow (top_env / top_vseqr / base_seq / uvm.f).
+    The system has ONE chip model built from the whole reg table CSV - per-module
+    enable_ral has no system-level meaning; this flag is chip-global."""
+    if enable_ral:
+        return {
+            "top_ral_decl":    "// register model object declaration" + chr(10) +
+                               "    RAL_PKG::ral_gen_main " + chr(9) + "ral;",
+            "top_ral_build":   "// Create RAL model and cfg db setting" + chr(10) +
+                               '        ral  = RAL_PKG::ral_gen_main::type_id::create("ral", this);' + chr(10) +
+                               '        ral.configure(null, "");' + chr(10) +
+                               "        ral.build();" + chr(10) +
+                               "        ral.set_coverage(UVM_CVR_ALL);" + chr(10) +
+                               "        ral.lock_model();" + chr(10) +
+                               "        ral.reset();" + chr(10) +
+                               '        ral.set_hdl_path_root("tb_top.C[0].btnode.btc"); //need to be updated' + chr(10) +
+                               chr(10) +
+                               '        uvm_config_db#(RAL_PKG::ral_gen_main)::set(uvm_root::get(), "*", "ral", ral);',
+            "top_ral_connect": "vseqr_h.ral = this.ral;",
+            "vsqr_ral_decl":   "  RAL_PKG::ral_gen_main " + chr(9) + "ral;",
+            "bseq_ral_decl":   "    RAL_PKG::ral_gen_main ral;",
+            "bseq_ral_assign": "        ral = " + env_name + "_env_h.ral;",
+            "bseq_reg_import": chr(10) + "import reg_mdl_pkg::*;",
+            "flist_ral":       "../../../verify/utils/reg/reg_mdl_pkg.sv" + chr(10) +
+                               "../../../verify/ral/ral_reg_model.sv",
+        }
+    return {
+        "top_ral_decl":    "// no chip RAL: enable_ral is false at config top level",
+        "top_ral_build":   "// no chip RAL model created (enable_ral is false)",
+        "top_ral_connect": "// no RAL: vseqr carries no model handle",
+        "vsqr_ral_decl":   "// no chip RAL: enable_ral is false at config top level",
+        "bseq_ral_decl":   "// no chip RAL: enable_ral is false at config top level",
+        "bseq_ral_assign": "        // no RAL: no model handle",
+        "bseq_reg_import": "",
+        "flist_ral":       "",
+    }
+
+
+def get_block_test_ral_snippets(enable_ral):
+    """RAL wiring for the block base test/seq and the block uvm.f filelist.
+    RAL_PKG (ral_reg_model.sv) and reg_mdl_pkg only exist when the RAL model is
+    generated, so ral-disabled modules must not reference them."""
+    if enable_ral:
+        return {
+            "ral_handle":    "RAL_PKG::ral_gen_main                       ral;",
+            "ral_build":     "// Create RAL model and cfg db setting" + chr(10) +
+                             '        ral  = RAL_PKG::ral_gen_main::type_id::create("ral", this);' + chr(10) +
+                             '        ral.configure(null, "");' + chr(10) +
+                             "        ral.build();" + chr(10) +
+                             "        ral.set_coverage(UVM_CVR_ALL);" + chr(10) +
+                             "        ral.lock_model();" + chr(10) +
+                             "        ral.reset();" + chr(10) +
+                             '        ral.set_hdl_path_root("tb_top"); //need to be updated' + chr(10) +
+                             chr(10) +
+                             '        uvm_config_db#(RAL_PKG::ral_gen_main)::set(uvm_root::get(), "*", "ral", ral);',
+            "ral_predict":   "ral.default_map.set_auto_predict(1);",
+            "seq_ral_decl":  "// RAL_model-relative declarations" + chr(10) +
+                             "    RAL_PKG::ral_gen_main ral;" + chr(10) +
+                             "    uvm_status_e status;" + chr(10) +
+                             "    rand uvm_reg_data_t data;",
+            "seq_ral_fetch": "// Get reg-model handle" + chr(10) +
+                             '        if(!uvm_config_db#(RAL_PKG::ral_gen_main)::get(m_sequencer,"", "ral" ,ral))' + chr(10) +
+                             '            `uvm_error(get_full_name(), "Ral handle missing")',
+            "flist_ral":     "../../../verify/utils/reg/reg_mdl_pkg.sv" + chr(10) +
+                             "../../../verify/ral/ral_reg_model.sv",
+        }
+    return {
+        "ral_handle":    "// no RAL: enable_ral is false for this module",
+        "ral_build":     "// no RAL model created (enable_ral is false)",
+        "ral_predict":   "// no RAL: auto-predict not wired",
+        "seq_ral_decl":  "// no RAL: register front-door/backdoor not used",
+        "seq_ral_fetch": "",
+        "flist_ral":     "",
+    }
+
+
+def get_block_test_adapter_snippets(name, bus_type, adapter_type):
+    """Adapter wiring for <name>_block_base_test. The adapter class (and its pkg include) only
+    exists when adapter_type is non-empty, so the test must not reference it otherwise."""
+    if adapter_type:
+        return {
+            "adapter_decl":    f"{name}_pkg::{name}_reg2{bus_type}_adapter   {name}_adapter_h;",
+            "adapter_create":  f"// create adapter\n        {name}_adapter_h = {name}_pkg::{name}_reg2{bus_type}_adapter::type_id::create(\"{name}_adapter_h\", this);",
+            "adapter_connect": f"ral.default_map.set_sequencer({name}_env_h.vseqr_h, {name}_adapter_h);",
+        }
+    return {
+        "adapter_decl":    "// no adapter: adapter_type is empty for this module",
+        "adapter_create":  "// no adapter created (adapter_type is empty)",
+        "adapter_connect": "// no adapter: RAL map has no bus sequencer, register front-door access is not wired",
+    }
+
+
 def get_block_base_test_template():
     return '''import "DPI-C" function int wallclock();
 import global_pkg::*;
@@ -856,8 +942,8 @@ class {name}_block_base_test extends uvm_test;
     string end_time_str;
 
     {name}_pkg::{name}_env                      {name}_env_h;
-    RAL_PKG::ral_gen_main                       ral;
-    {name}_pkg::{name}_reg2{bus_type}_adapter   {name}_adapter_h;
+    {ral_handle}
+    {adapter_decl}
 
     // Virtual interface declarations
     virtual interface {name}_if {name}_vif;
@@ -905,8 +991,7 @@ class {name}_block_base_test extends uvm_test;
         {name}_env_h = {name}_pkg::{name}_env::type_id::create("{name}_env_h", this);
         {name}_env_h.drv_is_active = UVM_ACTIVE;
         
-        // create adapter
-        {name}_adapter_h = {name}_pkg::{name}_reg2{bus_type}_adapter::type_id::create("{name}_adapter_h", this);
+        {adapter_create}
 
         // Create all config objects
         `uvm_info(get_type_name(),"****** Creating All base_cfg class ******",UVM_LOW);   
@@ -924,16 +1009,7 @@ class {name}_block_base_test extends uvm_test;
 
         start_time_int = wallclock();
 
-        // Create RAL model and cfg db setting
-        ral  = RAL_PKG::ral_gen_main::type_id::create("ral", this);
-        ral.configure(null, "");
-        ral.build();
-        ral.set_coverage(UVM_CVR_ALL);	
-        ral.lock_model();
-        ral.reset();
-        ral.set_hdl_path_root("tb_top"); //need to be updated
-
-        uvm_config_db#(RAL_PKG::ral_gen_main)::set(uvm_root::get(), "*", "ral", ral);
+        {ral_build}
 
 
     endfunction : build_phase
@@ -941,8 +1017,8 @@ class {name}_block_base_test extends uvm_test;
     virtual function void connect_phase(uvm_phase phase);
         super.connect_phase(phase);
         //set regmodel prediction
-        ral.default_map.set_sequencer({name}_env_h.vseqr_h, {name}_adapter_h);
-        ral.default_map.set_auto_predict(1);
+        {adapter_connect}
+        {ral_predict}
 
     endfunction : connect_phase
 
@@ -1305,8 +1381,7 @@ class {env_name}_env extends uvm_env;
     `uvm_component_utils({env_name}_env)
     string      report_id = "{env_name}_env";
 
-    // register model object declaration
-    RAL_PKG::ral_gen_main 	ral;
+    {top_ral_decl}
     
     // top_virtual_sequencer declaration
     top_virtual_sequencer   vseqr_h;
@@ -1348,16 +1423,7 @@ class {env_name}_env extends uvm_env;
         // build the virtual sequencer
         vseqr_h = top_virtual_sequencer::type_id::create("vseqr_h", this); 
 
-        // Create RAL model and cfg db setting
-        ral  = RAL_PKG::ral_gen_main::type_id::create("ral", this);
-        ral.configure(null, "");
-        ral.build();
-        ral.set_coverage(UVM_CVR_ALL);	
-        ral.lock_model();
-        ral.reset();
-        ral.set_hdl_path_root("tb_top.C[0].btnode.btc"); //need to be updated
-
-        uvm_config_db#(RAL_PKG::ral_gen_main)::set(uvm_root::get(), "*", "ral", ral);
+        {top_ral_build}
 
     endfunction
 
@@ -1365,7 +1431,7 @@ class {env_name}_env extends uvm_env;
     function void connect_phase(uvm_phase phase);
         super.connect_phase(phase);
 
-        vseqr_h.ral = this.ral;
+        {top_ral_connect}
         // connect virtual sequencer to subsequencers
 {vsqr_connect}
 
@@ -1449,7 +1515,7 @@ class top_virtual_sequencer extends uvm_sequencer;
   //Control subsequences for convenient coordination and management
 
   // instance register model object
-  RAL_PKG::ral_gen_main 	ral;
+  {vsqr_ral_decl}
   // module squencer declaration
 {seqr_declaration}
   
@@ -2075,8 +2141,7 @@ def get_glb_uvm_f():
 
 // --------------BASE FILE Start-------------------- 
 ../../../verify/utils/global_pkg.sv
-../../../verify/utils/reg/reg_mdl_pkg.sv
-../../../verify/ral/ral_reg_model.sv
+{flist_ral}
 
 ../../../verify/utils/base_uvc/base_uvc_pkg.sv
 
@@ -2102,8 +2167,7 @@ def get_blk_uvm_f():
 
 // --------------BASE FILE Start-------------------- 
 ../../../verify/utils/global_pkg.sv
-../../../verify/utils/reg/reg_mdl_pkg.sv
-../../../verify/ral/ral_reg_model.sv
+{flist_ral}
 
 ../../../verify/utils/base_uvc/base_uvc_pkg.sv
 
@@ -2137,15 +2201,17 @@ def generate_tb_top(config, output_dir):
     #
     tb_top_ls=[]
     adapter_ls=[]
+    ral_map={}
     tb_top_ls.append(pid)
     for module in modules:
         has_tb_top = module['has_tb_top']
-        enable_adapter = module['enable_adapter']
+        adapter_type = module.get('adapter_type', '')
         module_name = module['name'].lower()
         if(has_tb_top):
             tb_top_ls.append(module_name)
-        if(enable_adapter):
+        if(adapter_type):
             adapter_ls.append(module_name)
+        ral_map[module_name] = module.get('enable_ral', True)
 
 
     ## generate components
@@ -2346,7 +2412,7 @@ def generate_tb_top(config, output_dir):
 
         if(ls!=pid):
             content=get_blk_uvm_f()
-            content=content.format(module_name=ls)
+            content=content.format(module_name=ls, **get_block_test_ral_snippets(ral_map.get(ls, True)))
             filepath = os.path.join(filelist, 'uvm_blk_'+ls+'.f')
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(content)
@@ -2384,7 +2450,8 @@ def generate_tb_top(config, output_dir):
     print(f"Generated: {filepath}")
 
     glb_uvm_f = get_glb_uvm_f()
-    content = glb_uvm_f.format(module_uvm_f='\n'.join(module_uvm_f),pid=pid)
+    content = glb_uvm_f.format(module_uvm_f='\n'.join(module_uvm_f),pid=pid,
+                               **get_top_ral_snippets(config.get('enable_ral', True), env_name=config.get('env_name', 'top')))
     filepath = os.path.join(filelist,  'uvm.f')
     with open(filepath, 'w', encoding='utf-8') as f:
         f.write(content)
@@ -2454,8 +2521,7 @@ def generate_uvc_modules(config, output_dir,overwrite):
     
     for module in modules:
         module_name = module['name'].lower()
-        enable_adapter = module['enable_adapter']
-        adapter_type = module['adapter_type']
+        adapter_type = module.get('adapter_type', '')
         module_dir = os.path.join(output_dir, 'uvc', module_name)
         
         print(f"Generating UVC module: {module_name}")
@@ -2464,9 +2530,8 @@ def generate_uvc_modules(config, output_dir,overwrite):
             continue
 
         # gen_uvc.py
-        print("enable_adapter:",enable_adapter)
         print("adapter_type:",adapter_type)
-        if(enable_adapter):
+        if(adapter_type):
             cmd = [sys.executable, "gen_uvc.py", "-n", module_name, "-o", module_dir,"-t",adapter_type]
         else:
             cmd = [sys.executable, "gen_uvc.py", "-n", module_name, "-o", module_dir]
@@ -2618,7 +2683,8 @@ def generate_base_sequence(config, output_dir):
         cfg_declarations='\n'.join(cfg_declarations),
         vif_get='\n'.join(vif_get),
         cfg_get='\n'.join(cfg_get),
-        inlcude_module_base_seq='\n'.join(inlcude_module_base_seq)
+        inlcude_module_base_seq='\n'.join(inlcude_module_base_seq),
+        **get_top_ral_snippets(config.get('enable_ral', True), env_name=config.get('env_name', 'top'))
     )
     
     seq_dir = os.path.join(output_dir, 'seq')
@@ -2673,7 +2739,8 @@ def generate_base_sequence(config, output_dir):
         has_tb_top = module['has_tb_top']
         if(has_tb_top): 
             ltemplate=get_block_base_sequence_template()
-            content = ltemplate.format(name=module_name,name_upper=module_name.upper())
+            content = ltemplate.format(name=module_name,name_upper=module_name.upper(),
+                                       **get_block_test_ral_snippets(module.get('enable_ral', True)))
 
             filepath = os.path.join(seq_dir, module_name+'_block_base_seq.sv')
             with open(filepath, 'w', encoding='utf-8') as f:
@@ -2788,7 +2855,9 @@ def generate_base_test(config, output_dir):
         has_tb_top = module['has_tb_top']
         adapter_type = module['adapter_type']
         if(has_tb_top):
-            content = mtemplate.format(name=module_name,name_upper=module_name.upper(),bus_type=adapter_type)
+            adapter_sv = get_block_test_adapter_snippets(module_name, adapter_type, module.get('adapter_type', ''))
+            content = mtemplate.format(name=module_name,name_upper=module_name.upper(),bus_type=adapter_type,
+                                       **adapter_sv, **get_block_test_ral_snippets(module.get('enable_ral', True)))
             filepath = os.path.join(test_dir, module_name+'_block_base_test.sv')
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(content)
@@ -2831,7 +2900,8 @@ def generate_top_env(config, output_dir):
         env_declarations='\n'.join(env_declarations),
         envs_create='\n'.join(envs_create),
         vsqr_connect='\n'.join(vsqr_connect),
-        env_drv_mode='\n'.join(env_drv_mode)
+        env_drv_mode='\n'.join(env_drv_mode),
+        **get_top_ral_snippets(config.get('enable_ral', True), env_name=config.get('env_name', 'top'))
     )
     
     env_dir = os.path.join(output_dir, 'env')
@@ -2878,7 +2948,8 @@ def generate_top_env(config, output_dir):
     top_vsqr_template=get_top_vsqr_template()
     content = top_vsqr_template.format(
         seqr_declaration='\n'.join(seqr_declaration),
-        seqr_automation='\n'.join(seqr_automation)
+        seqr_automation='\n'.join(seqr_automation),
+        **get_top_ral_snippets(config.get('enable_ral', True), env_name=config.get('env_name', 'top'))
     )
 
     filepath = os.path.join(env_dir, f'top_vseqr.sv')
@@ -2908,6 +2979,7 @@ def generate_default_config():
         "test_name": "base",
         "env_name": "top",
         "has_top_if_cfg":  True,
+        "enable_ral": True,
         "modules": [
             {
                 "name": "reg",
@@ -2915,8 +2987,8 @@ def generate_default_config():
                 "has_config": True,
                 "has_tb_top": False,
                 "is_active": False,
-                "enable_adapter":False,
-                "adapter_type":"apb"
+                "adapter_type":"",
+                "enable_ral":True
             },
             {
                 "name": "apb_master",
@@ -2924,8 +2996,8 @@ def generate_default_config():
                 "has_config": True,
                 "has_tb_top": True,
                 "is_active": True,
-                "enable_adapter":True,
-                "adapter_type":"apb"
+                "adapter_type":"",
+                "enable_ral":False
             },
             {
                 "name": "cpft",
@@ -2933,8 +3005,8 @@ def generate_default_config():
                 "has_config": True,
                 "has_tb_top": False,
                 "is_active": False,
-                "enable_adapter":False,
-                "adapter_type":"apb"
+                "adapter_type":"",
+                "enable_ral":True
             },
             {
                 "name": "uart",
@@ -2942,8 +3014,8 @@ def generate_default_config():
                 "has_config": True,
                 "has_tb_top": True,
                 "is_active": True,
-                "enable_adapter":True,
-                "adapter_type":"uart"
+                "adapter_type":"uart",
+                "enable_ral":True
             },
             {
                 "name": "efuse",
@@ -2951,8 +3023,8 @@ def generate_default_config():
                 "has_config": True,
                 "has_tb_top": True,
                 "is_active": True,
-                "enable_adapter": True,
-                "adapter_type": "apb"
+                "adapter_type": "apb",
+                "enable_ral": True
             }
         ]
     }
@@ -2988,6 +3060,7 @@ def main():
     
     if args.config:
         config = parse_config(args.config)
+        check_config(config)
     else:
         config = generate_default_config()
     
@@ -3034,6 +3107,32 @@ def main():
 def parse_config(config_file):
     with open(config_file, 'r', encoding='utf-8') as f:
         return json.load(f)
+
+
+def check_config(config):
+    """The reg2<bus> adapter converts uvm_reg front-door access to bus transactions;
+    it is meaningless without the RAL model, so adapter_type implies enable_ral."""
+    for module in config.get('modules', []):
+        name = module.get('name', '?')
+        adapter_type = module.get('adapter_type', '')
+        enable_ral = module.get('enable_ral', True)
+        if adapter_type and not enable_ral:
+            print("ERROR: module '%s' sets adapter_type='%s' but enable_ral=false; "
+                  "an adapter without a RAL model is not supported. "
+                  "Set adapter_type to \"\", or enable_ral to true." % (name, adapter_type))
+            sys.exit(1)
+    if not config.get('enable_ral', True):
+        for module in config.get('modules', []):
+            name = module.get('name', '?')
+            if module.get('enable_ral', True):
+                print("ERROR: config top-level enable_ral is false but module '%s' sets "
+                      "enable_ral=true; the system flow has one chip-level model, a module "
+                      "cannot keep RAL when the chip has none." % name)
+                sys.exit(1)
+            if module.get('adapter_type', ''):
+                print("ERROR: config top-level enable_ral is false but module '%s' sets "
+                      "adapter_type='%s'; set adapter_type to \"\"." % (name, module.get('adapter_type')))
+                sys.exit(1)
 
 
 if __name__ == '__main__':

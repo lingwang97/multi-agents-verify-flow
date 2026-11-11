@@ -4,8 +4,6 @@
 
 // --------------BASE FILE Start-------------------- 
 ../../../verify/utils/global_pkg.sv
-../../../verify/utils/reg/reg_mdl_pkg.sv
-../../../verify/ral/ral_reg_model.sv
 
 ../../../verify/utils/base_uvc/base_uvc_pkg.sv
 

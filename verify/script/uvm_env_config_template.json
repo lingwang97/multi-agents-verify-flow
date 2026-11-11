@@ -4,6 +4,7 @@
   "test_name": "base",
   "env_name": "top",
   "has_top_if_cfg": true,
+  "enable_ral": true,
   "modules": [
     {
       "name": "reg",
@@ -11,8 +12,8 @@
       "has_config": true,
       "has_tb_top": false,
       "is_active": false,
-      "enable_adapter": false,
-      "adapter_type": "apb"
+      "adapter_type": "",
+      "enable_ral": true
     },
     {
       "name": "apb_master",
@@ -20,8 +21,8 @@
       "has_config": true,
       "has_tb_top": true,
       "is_active": true,
-      "enable_adapter": true,
-      "adapter_type": "apb"
+      "adapter_type": "",
+      "enable_ral": false
     },
     {
       "name": "ro",
@@ -29,8 +30,8 @@
       "has_config": true,
       "has_tb_top": false,
       "is_active": false,
-      "enable_adapter": false,
-      "adapter_type": "apb"
+      "adapter_type": "",
+      "enable_ral": true
     },
     {
       "name": "uart",
@@ -38,8 +39,8 @@
       "has_config": true,
       "has_tb_top": false,
       "is_active": true,
-      "enable_adapter": true,
-      "adapter_type": "uart"
+      "adapter_type": "uart",
+      "enable_ral": true
     },
     {
       "name": "efuse",
@@ -47,8 +48,8 @@
       "has_config": true,
       "has_tb_top": true,
       "is_active": true,
-      "enable_adapter": true,
-      "adapter_type": "apb"
+      "adapter_type": "apb",
+      "enable_ral": true
     }
   ]
 }

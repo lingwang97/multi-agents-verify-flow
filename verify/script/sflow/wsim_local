@@ -273,7 +273,6 @@ function run_one() {
 
 ################################################################################
 
-RalGen
 get_case_info "$OPTS_TESTCASE_NAME"
 echo "****$me****: case=$OPTS_TESTCASE_NAME module=$WL_MODULE test=$WL_TESTNAME iter=$WL_ITER"
 
@@ -293,6 +292,14 @@ if [ -n "$blk_token" ]; then
     blk_mod=$(echo "${blk_token%_BLOCK_TEST}" | tr 'A-Z' 'a-z')
     case_filelist="$database_path/verify/tb_top/filelist/uvm_blk_${blk_mod}.f"
     [ -f "$case_filelist" ] || die "block-level filelist not found for $blk_token: $case_filelist"
+fi
+
+# RalGen only when the selected filelist actually compiles the RAL model
+# (enable_ral=false block modules drop the ral_reg_model.sv line from uvm_blk_<mod>.f)
+if grep -q "ral_reg_model" "$case_filelist"; then
+    RalGen
+else
+    echo "****$me****: filelist has no RAL dependency, skipping RalGen"
 fi
 
 preprocess_filelist \

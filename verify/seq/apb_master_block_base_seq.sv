@@ -9,10 +9,7 @@ class apb_master_block_base_seq extends uvm_sequence;
     // Config declarations
     apb_master_pkg::apb_master_base_cfg apb_master_cfg_h;
 
-    // RAL_model-relative declarations
-    RAL_PKG::ral_gen_main ral;
-    uvm_status_e status;
-    rand uvm_reg_data_t data;
+    // no RAL: register front-door/backdoor not used
 
     // Other declarations
     uvm_table_printer _printer;
@@ -43,9 +40,6 @@ class apb_master_block_base_seq extends uvm_sequence;
 
         // Get other cfg
 
-        // Get reg-model handle
-        if(!uvm_config_db#(RAL_PKG::ral_gen_main)::get(m_sequencer,"", "ral" ,ral))
-            `uvm_error(get_full_name(), "Ral handle missing")
 
     endtask
 

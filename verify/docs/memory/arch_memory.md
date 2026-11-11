@@ -1,18 +1,18 @@
 # arch_memory
 
-Architecture state, standing rules and lessons for developing this verify tree. Project-wide and tool-independent: read before structural changes, append when a new rule or lesson is learned (one entry = rule, why, how to apply). Stable "what/how" guidance lives in `verify/CLAUDE.md`; this file holds what changes with the project. Last updated 2026-11-11.
+Architecture state, standing rules and lessons for developing this verify tree. Project-wide and tool-independent: read before structural changes, append when a new rule or lesson is learned (one entry = rule, why, how to apply). Stable "what/how" guidance lives in `verify/CLAUDE.md`; this file holds what changes with the project. Last updated 2026-11-11 (enable_ral: module-level + chip-level).
 
 ---
 
 ## 0. Current architecture state
 
-| Module | UVC state | Block-level support | Notes |
+| Module | UVC state (adapter_type / enable_ral) | Block-level support | Notes |
 |---|---|---|---|
-| `apb_master` | **fully customised** (real if/driver/monitor/scoreboard/coverage), stub `reg2apb` adapter | yes (`uvm_blk_apb_master.f`, `+APB_MASTER_BLOCK_TEST`) | UVC for DUT `hdl/rtl/apb_v3_sram.v`; replaced the former `jls` module; worked reference for new UVCs |
+| `apb_master` | **fully customised** (real if/driver/monitor/scoreboard/coverage); `enable_ral: false`, no adapter | yes (`uvm_blk_apb_master.f`, `+APB_MASTER_BLOCK_TEST`) | UVC for DUT `hdl/rtl/apb_v3_sram.v`; replaced the former `jls` module; worked reference for new UVCs |
 | `efuse` | generated template | yes (`uvm_blk_efuse.f`, `+EFUSE_BLOCK_TEST`) | block base pair has RAL wiring, never exercised |
 | `reg`, `ro`, `uart` | generated template | no | no block filelist / base pair |
 
-- Module source of truth: `script/uvm_env_config_template.json` and `json/module.json`.
+- Module source of truth: `script/uvm_env_config_template.json` and `json/module.json`. Config knobs: top-level `enable_ral` (chip-global; gates top_env/top_vseqr/base_seq/uvm.f) and per-module `adapter_type` (empty = no adapter) + `enable_ral` (default true; false drops the RAL from the block base test/seq and `uvm_blk_<mod>.f`). `wsim_local` skips RalGen when the selected filelist has no `ral_reg_model` line - works for both levels automatically. Generator-enforced rules: `adapter_type` non-empty requires module `enable_ral: true`; top-level `enable_ral: false` requires every module `enable_ral: false` and `adapter_type: ""` (the system flow has ONE chip model built from the whole reg table CSV, so per-module RAL cannot survive a chip without one). Caveat: the VCS Makefile `init_reg_cfg` (+vcs+initreg+...) is NOT gated - backdoor register init depends on the chip model, handle manually if top-level enable_ral is ever set false.
 - System-level flow (`tb_top_soc.sv` + `uvm.f`) has no DUT (old `hdl/rtl/soc_stub.sv` removed); not runnable locally until the SoC RTL lands. `hdl/common/reg_table/reg_table_reg_list.csv` is a placeholder reg table (one `soc_reg` block).
 - RAL model `verify/ral/ral_reg_model.sv` is generated output (by `wsim`/`wsim_local` RalGen); never edit or commit it.
 - Leaf test classes: only `apb_master` has real ones (6 block tests + system smoke); other modules' JSON entries are placeholders (see `.claude/skills/add-test-case/test_case_dev_manual.md` §7 for the gap list).
@@ -80,4 +80,6 @@ Architecture state, standing rules and lessons for developing this verify tree. 
 - **Cases:** `+APB_MASTER_BLOCK_TEST` in `VCS_MACRO_OPT`; the wait-state case adds `+APB_SRAM_EN_WAIT` (DUT `EN_WAIT_DELAY_FUNC=1`). Run e.g. `./wsim_local -c apb_master_rw_rand_block_test -seed 1 -covrpt`.
 - **DUT quirks that shaped the UVC:** early PREADY in SETUP; one-phase lag after each transfer (driver inserts ≥1 idle cycle); `wait_cyc_limit` randomised once at t=0; out-of-range reads keep stale PRDATA with PSLVERR=1. Driver/monitor sample on **negedge** (DUT uses blocking assigns on posedge).
 - **Sequence helpers** live in `seq/apb_master_block_base_seq.sv` (`apb_write`/`apb_read`/`apb_idle`); every helper must `get_response` because the driver does `item_done(rsp)`.
-- Full findings and results: `docs/apb_v3_sram_verify_report.md`.
+- The apb_master DUT has no registers: `enable_ral: false`, `adapter_type: ""` (the former stub adapter was deleted). Full findings and results: `docs/apb_v3_sram_verify_report.md`.
+- Stale system-level path: `top_env.sv` sets `ral.set_hdl_path_root("tb_top.C[0].btnode.btc")` - a pre-apb_master chip hierarchy. Harmless while the placeholder RAL is unused, but it MUST be updated to the real hierarchy before any backdoor register access in the revived system flow.
+- Makefile gotcha: when a Python/shell patch writes a trailing backslash (line continuation) avoid `\"`-style escapes in heredocs; a mis-escaped backslash leaves a dangling quote and `bash -n` reports "unexpected EOF while looking for matching `"'"".
