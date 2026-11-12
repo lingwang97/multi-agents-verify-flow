@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 ## -----------------------------------------------------------------------------
-## wsim_local - local open-source simulation runner (Verilator + UVM-1.2, WSL)
+## wsim_oeda - open-source-EDA (oEDA) simulation runner (Verilator + UVM-1.2, WSL)
 ##
 ## Scope : single-case bring-up / smoke / code-coverage runs on the local box.
 ##         The Synopsys flow (./wsim: VCS + Verdi + LSF) stays the golden
 ##         reference. covergroup-based functional coverage is NOT collected by
 ##         Verilator (parsed only) - functional coverage still comes from VCS.
 ##
-## Source of truth lives in script/sflow/wsim_local; deployed to sim/ by
+## Source of truth lives in script/sflow/wsim_oeda; deployed to sim/ by
 ## script/file_manage.sh. Run from the repo-root sim/ directory:
 ##
-##   ./wsim_local -c reg_smoke_test            # build + run one case (FST dump on)
-##   ./wsim_local -c reg_smoke_test -seed 1    # fixed base seed
-##   ./wsim_local -c reg_smoke_test -nowave    # disable waveform dump
-##   ./wsim_local -c reg_smoke_test -covrpt    # + verilator_coverage annotated report
+##   ./wsim_oeda -c reg_smoke_test            # build + run one case (FST dump on)
+##   ./wsim_oeda -c reg_smoke_test -seed 1    # fixed base seed
+##   ./wsim_oeda -c reg_smoke_test -nowave    # disable waveform dump
+##   ./wsim_oeda -c reg_smoke_test -covrpt    # + verilator_coverage annotated report
 ##
 ## Environment (once, e.g. in ~/.bashrc):
 ##   source ~/tools/oss-cad-suite/environment     # provides verilator/make
@@ -71,7 +71,7 @@ command -v python3   >/dev/null || die "python3 not found"
 : "${UVM_HOME:=$HOME/tools/uvm-1.2}"
 [ -f "$UVM_HOME/src/uvm_pkg.sv" ] || die "UVM library not found at $UVM_HOME (export UVM_HOME=...)"
 
-sim_dir="$wsim_dir_path/uvm_scratch_local_${OPTS_TESTCASE_NAME}"
+sim_dir="$wsim_dir_path/uvm_scratch_oeda_${OPTS_TESTCASE_NAME}"
 test_full_name="$OPTS_TESTCASE_NAME"
 
 ################################################################################
@@ -103,45 +103,33 @@ function RalGen() {
 # Sets: WL_MODULE WL_TESTNAME WL_ITER WL_DEFINES WL_PLUSARGS
 ################################################################################
 function get_case_info() {
-    local info
-    info=$(python3 - "$1" "$database_path" <<'PYEOF'
-import json, os, sys
+    # Consume the SAME single-case list the VCS flow generates (single parser, no drift).
+    # The two UVM_REG_WIDTH macros are filtered out for now: alignment with VCS is
+    # deferred until the real reg table lands (docs/memory/arch_memory.md section 5 item 4).
+    local listfile script
+    listfile=$(mktemp)
+    script="$database_path/verify/tb_top/scripts/testjson2lst.py"
+    [ -f "$script" ] || die "testjson2lst.py not found: $script"
+    python3 "$script" -f "$database_path/verify/json/module.json" \
+        --define "$database_path/hdl/common/top/chip_define.sv" \
+        -c "$OPTS_TESTCASE_NAME" -o "$listfile" \
+        --project "$(cat "$wsim_dir_path/project_name")" --dpo null >/dev/null 2>&1 \
+        || die "testjson2lst.py failed for case $OPTS_TESTCASE_NAME"
+    local line
+    line=$(grep -v '^//' "$listfile" | head -1)
+    [ -n "$line" ] || die "case $OPTS_TESTCASE_NAME not found in the case JSON database"
+    rm -f "$listfile"
 
-case, root = sys.argv[1], sys.argv[2]
-mj_path = os.path.join(root, "verify", "json", "module.json")
-mj = json.load(open(mj_path, encoding="utf-8"))
-global_macros = [mj.get("UVM_VCS_MACRO_OPT", ""), mj.get("GLOBAL_VCS_MACOR_OPT", "")]
-
-found = None
-for mod, rel in mj["modules"].items():
-    cj = json.load(open(os.path.join(root, "verify", "json", rel), encoding="utf-8"))
-    entry = cj.get("tests", {}).get(case)
-    if entry is not None:
-        found = (mod, cj, entry)
-        break
-if found is None:
-    sys.exit("case %r not found in any verify/json/case/*.json" % case)
-mod, cj, entry = found
-
-# same composition and "exclude" handling as testjson2lst.py: join, strip the excluded text, then split
-macro_str = "".join(global_macros + [cj.get("COMMON_VCS_MACRO_OPT", ""), entry.get("VCS_MACRO_OPT", "")])
-if entry.get("exclude"):
-    macro_str = macro_str.replace(entry["exclude"], "")
-defines = []
-for tok in macro_str.split("+"):
-    tok = tok.strip()
-    if tok and "+define+" + tok not in defines:
-        defines.append("+define+" + tok)
-plusargs = ["+" + t for t in entry.get("VCS_PLUSARGS_OPT", "").split("+") if t.strip()]
-
-print('WL_MODULE="%s"' % mod)
-print('WL_TESTNAME="%s"' % entry.get("UVM_TESTNAME", case))
-print('WL_ITER="%s"' % entry.get("iteration", "1"))
-print('WL_DEFINES="%s"' % " ".join(defines))
-print('WL_PLUSARGS="%s"' % " ".join(plusargs))
-PYEOF
-) || die "$info"
-    eval "$info"
+    WL_MODULE=$(echo "$line" | sed -n 's/.*mudue_name=\([^ ]*\).*/\1/p')
+    WL_TESTNAME=$(echo "$line" | sed -n 's/.*UVM_TESTNAME=\([^ ]*\).*/\1/p')
+    WL_ITER=$(echo "$line" | sed -n 's/.* iter=\([^ ]*\).*/\1/p')
+    local macros plusargs tok
+    macros=$(echo "$line" | sed -n "s/.*VCS_MACRO_OPT='+define\([^']*\)'.*/\1/p" | tr '+' '\n' \
+        | grep -v '^$' | grep -v '^UVM_REG_DATA_WIDTH=' | grep -v '^UVM_HDL_MAX_WIDTH=' \
+        | sed 's/^/+define+/' | tr '\n' ' ')
+    WL_DEFINES="${macros% }"
+    plusargs=$(echo "$line" | sed -n 's/.*VCS_PLUSARGS_OPT=\([^ ]*\).*/\1/p')
+    WL_PLUSARGS="$plusargs"
 }
 
 ################################################################################
@@ -150,7 +138,7 @@ PYEOF
 # Verilator needs explicit +incdir). Roots follow the VCS Makefile assembly.
 ################################################################################
 function preprocess_filelist() {
-    python3 - "$@" "$scratch_dir/uvm_vlt.f" <<'PYEOF'
+    python3 - "$@" "$scratch_dir/uvm_oeda.f" <<'PYEOF'
 import os, sys
 
 outs_files, outs_incs = [], []
@@ -198,9 +186,9 @@ with open(sys.argv[-1], "w", encoding="utf-8") as f:
         f.write(i + "\n")
     for s in outs_files:
         f.write(s + "\n")
-print("****wsim_local****: filelist: %d sources, %d incdirs" % (len(outs_files), len(outs_incs)))
+print("****wsim_oeda****: filelist: %d sources, %d incdirs" % (len(outs_files), len(outs_incs)))
 PYEOF
-    [ -f "$scratch_dir/uvm_vlt.f" ] || die "filelist preprocessing failed"
+    [ -f "$scratch_dir/uvm_oeda.f" ] || die "filelist preprocessing failed"
 }
 
 ################################################################################
@@ -209,6 +197,12 @@ PYEOF
 function compile() {
     local trace_opts=""
     local cov_opts=""
+    local build_key
+    build_key="$(verilator --version)|$WL_DEFINES|$OPTS_DUMPWAVE|$OPTS_COVRPT|$(cksum "$scratch_dir/uvm_oeda.f" 2>/dev/null)"
+    if [ -x "$scratch_dir/obj_dir/simv" ] && [ "$(cat "$scratch_dir/.build_key" 2>/dev/null)" == "$build_key" ]; then
+        echo "****$me****: build inputs unchanged, reusing obj_dir"
+        return 0
+    fi
     [ "$OPTS_DUMPWAVE" == "TRUE" ] && trace_opts="--trace-fst"
     [ "$OPTS_COVRPT" == "TRUE" ] && cov_opts="--coverage"
     echo "****$me****: compiling (verilator $(verilator --version | awk '{print $2}'))..."
@@ -216,13 +210,13 @@ function compile() {
         --top-module tb_top \
         --timescale-override 1ns/10ps \
         -Wno-fatal \
-        +define+VERILATOR \
+        +define+OPEN_EDA \
         +define+UVM_NO_DPI \
         +define+PID=003 \
         $WL_DEFINES \
         +incdir+"$UVM_HOME/src" \
         "$UVM_HOME/src/uvm_pkg.sv" \
-        -f "$scratch_dir/uvm_vlt.f" \
+        -f "$scratch_dir/uvm_oeda.f" \
         "$database_path/verify/tb_top/macro/tb_define.sv" \
         "$database_path/verify/utils/dpi_func.c" \
         $trace_opts $cov_opts \
@@ -234,6 +228,7 @@ function compile() {
         echo "$test_full_name		compile_error" >> "${sim_dir}/result.txt"
         exit 1
     fi
+    echo "$build_key" > "$scratch_dir/.build_key"
     echo "****$me****: compile done"
 }
 
@@ -276,7 +271,8 @@ function run_one() {
 get_case_info "$OPTS_TESTCASE_NAME"
 echo "****$me****: case=$OPTS_TESTCASE_NAME module=$WL_MODULE test=$WL_TESTNAME iter=$WL_ITER"
 
-rm -rf "$sim_dir"
+# keep comp_<case>/obj_dir across runs (P2-lite build reuse); clear only per-run artifacts
+rm -rf "$sim_dir"/run_iter* "$sim_dir"/result.txt "$sim_dir"/cov_report 2>/dev/null
 mkdir -p "$sim_dir"
 # compile cwd must sit three levels below the repo root (like VCS's comp_<test>/):
 # the .f files' '../../../verify/...' paths are written against that depth

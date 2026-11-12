@@ -1467,7 +1467,7 @@ def get_top_pkg_template():
 `define __TOP_PKG__SV__
 
 `include "uvm_macros.svh"
-`ifndef VERILATOR
+`ifndef OPEN_EDA
 `include "uvm_pkg.sv"
 `endif
 
@@ -1773,10 +1773,22 @@ module tb_top();
     if_conn if_conn();                                       
 
 
-    `ifndef VERILATOR
+    `ifndef OPEN_EDA
     // Program  < sdf_annotate >  instantiation 
     sdf_annotate sdf_annotate();
     `endif
+    // Setting Clkgen/Rst initial config (DUT integration plugs into tb_clk/tb_rst)
+    logic tb_clk;
+    logic tb_rst;
+    initial begin
+        tb_clk = 1'b0;
+        forever #5 tb_clk = ~tb_clk;
+    end
+    initial begin
+        tb_rst = 1'b1;
+        repeat (20) @(posedge tb_clk);
+        tb_rst = 1'b0;
+    end
     initial begin run_test(""); end
 
 endmodule
@@ -1784,7 +1796,7 @@ endmodule
 
 `include "if_conn.sv"
 
-`ifndef VERILATOR
+`ifndef OPEN_EDA
 //***************************************************************************
 //******* Program  < sdf_annotate >  is used for annotate sdf file.  ********
 //***************************************************************************
@@ -1865,15 +1877,31 @@ module tb_top();
     `endif                                    
 
 
-    `ifndef VERILATOR
+    `ifndef OPEN_EDA
         // Program  < sdf_annotate >  instantiation 
         sdf_annotate sdf_annotate();
     `endif
+    // Setting Rst initial config and signal connection
+    // memory[] is initialized only in the !PRESETn branch, so reset must be
+    // asserted from time 0 and held for ~20 clocks.
+    initial begin
+        {pid}_pif.rst = 1'b1;
+        repeat (20) @(posedge {pid}_pif.clk);
+        {pid}_pif.rst = 1'b0;
+    end
+
+    // Setting Clkgen initial config and signal connection
+    logic tb_clk;
+    initial begin
+        tb_clk = 1'b0;
+        forever #5 tb_clk = ~tb_clk;
+    end
+    assign {pid}_pif.clk = tb_clk;
     initial begin run_test(""); end
 
 endmodule
 
-`ifndef VERILATOR
+`ifndef OPEN_EDA
 //***************************************************************************
 //******* Program  < sdf_annotate >  is used for annotate sdf file.  ********
 //***************************************************************************
@@ -1924,7 +1952,7 @@ def get_dump():
 //======     Setting dump waveform     =========
 //==============================================
 
-`ifdef VERILATOR
+`ifdef OPEN_EDA
     initial begin
         $display("\n[NOTE]\tStart Dump FST waveform (Verilator) at%t\n", $time);
         $dumpfile("wave.fst");
@@ -1994,7 +2022,7 @@ def get_tb_define():
 // entry macro
 //----------------------------------------------------------------------------------------
 `define PROJ_ID                 dpu_w
-`define TB_TOP                  tb_top_{pid}
+`define TB_TOP                  tb_top
 
 // ==========================================================================
 // Define Paremater-type MACRO 
@@ -2319,10 +2347,7 @@ def generate_tb_top(config, output_dir):
         if(tls ==pid): 
             continue
         content = top_tb_template.format(pid=tls)                  
-        filepath = os.path.join(tb_top_dir, 'tb_top_'+tls+'.sv')
-        with open(filepath, 'w', encoding='utf-8') as f:
-            f.write(content)
-        print(f"Generated: {filepath}")
+        write_new(os.path.join(tb_top_dir, 'tb_top_'+tls+'.sv'), content)
 
     #update pkg
     for tls in adapter_ls:
@@ -2405,18 +2430,12 @@ def generate_tb_top(config, output_dir):
     
     for ls in tb_top_ls:
         content = f_template.format(pid=ls)
-        filepath = os.path.join(filelist, 'tb_top_'+ls+'.f')
-        with open(filepath, 'w', encoding='utf-8') as f:
-            f.write(content)
-        print(f"Generated: {filepath}")
+        write_new(os.path.join(filelist, 'tb_top_'+ls+'.f'), content)
 
         if(ls!=pid):
             content=get_blk_uvm_f()
             content=content.format(module_name=ls, **get_block_test_ral_snippets(ral_map.get(ls, True)))
-            filepath = os.path.join(filelist, 'uvm_blk_'+ls+'.f')
-            with open(filepath, 'w', encoding='utf-8') as f:
-                f.write(content)
-            print(f"Generated: {filepath}")
+            write_new(os.path.join(filelist, 'uvm_blk_'+ls+'.f'), content)
 
     rtl_file_lst = get_rtl_file_lst()
 
@@ -2582,8 +2601,7 @@ def generate_testjson(config, output_dir):
         module_name = module['name'].lower()
         fname=module_name+".json"    
         mcontent=mjson_template.format(module_name=module_name,module_name_upper=module_name.upper())
-        with open(os.path.join(module_dir,fname), 'w', encoding='utf-8') as f:
-            f.write(mcontent)
+        write_new(os.path.join(module_dir,fname), mcontent)
 
 
         
@@ -2602,14 +2620,12 @@ def generate_interface(config, output_dir):
         fname=module_name+"_if_conn.sv"
         if_template=get_if_coon_template()
         ifcontent=if_template.format(module_name=module_name)
-        with open(os.path.join(if_dir,fname), 'w', encoding='utf-8') as f:
-            f.write(ifcontent)
+        write_new(os.path.join(if_dir,fname), ifcontent)
 
         fname_gpls=module_name+"_if_conn_gpls.sv"
-        if_template=get_if_coon_template() 
+        if_template=get_if_coon_template()
         ifcontent=if_template.format(module_name=module_name)
-        with open(os.path.join(if_dir,fname_gpls), 'w', encoding='utf-8') as f:
-            f.write(ifcontent)
+        write_new(os.path.join(if_dir,fname_gpls), ifcontent)
     
 
     has_top_if_cfg = config["has_top_if_cfg"]
@@ -2700,18 +2716,14 @@ def generate_base_sequence(config, output_dir):
         module_name = module['name'].lower()
         content = mtemplate.format(name=module_name)
         filepath = os.path.join(seq_dir, f'comm_{module_name}_methods.sv')
-        with open(filepath, 'w', encoding='utf-8') as f:
-            f.write(content)
-        print(f"Generated: {filepath}")
+        write_new(filepath, content)
 
     mtemplate=get_module_seq_template()
     for module in modules:
         module_name = module['name'].lower()
         content = mtemplate.format(name=module_name)
         filepath = os.path.join(seq_dir, f'{module_name}_seq.sv')
-        with open(filepath, 'w', encoding='utf-8') as f:
-            f.write(content)
-        print(f"Generated: {filepath}")
+        write_new(filepath, content)
 
     # cfg init and exit seq
     mtemplate=get_naming_template()
@@ -2743,9 +2755,7 @@ def generate_base_sequence(config, output_dir):
                                        **get_block_test_ral_snippets(module.get('enable_ral', True)))
 
             filepath = os.path.join(seq_dir, module_name+'_block_base_seq.sv')
-            with open(filepath, 'w', encoding='utf-8') as f:
-                f.write(content)
-            print(f"Generated: {filepath}")
+            write_new(filepath, content)
 
 
 
@@ -2844,9 +2854,7 @@ def generate_base_test(config, output_dir):
         content = mtemplate.format(name=module_name)
         
         filepath = os.path.join(test_dir, f'{module_name}_test.sv')
-        with open(filepath, 'w', encoding='utf-8') as f:
-            f.write(content)
-        print(f"Generated: {filepath}")
+        write_new(filepath, content)
 
     #add block test
     mtemplate=get_block_base_test_template()
@@ -2859,9 +2867,7 @@ def generate_base_test(config, output_dir):
             content = mtemplate.format(name=module_name,name_upper=module_name.upper(),bus_type=adapter_type,
                                        **adapter_sv, **get_block_test_ral_snippets(module.get('enable_ral', True)))
             filepath = os.path.join(test_dir, module_name+'_block_base_test.sv')
-            with open(filepath, 'w', encoding='utf-8') as f:
-                f.write(content)
-            print(f"Generated: {filepath}")
+            write_new(filepath, content)
 
         
 
@@ -3043,8 +3049,18 @@ def main():
                         help='Generate UVC modules using gen_uvc.py')
     parser.add_argument('--overwrite', action='store_true',default=False,
                         help='Generate UVC modules using gen_uvc.py')
+    parser.add_argument('--prune', action='store_true', default=False,
+                        help='List module files whose module is gone from the config')
+    parser.add_argument('--yes', action='store_true', default=False,
+                        help='With --prune: actually delete the listed orphan files/dirs')
     
     args = parser.parse_args()
+    if args.prune:
+        if not args.config:
+            print('--prune requires -c <config>')
+            sys.exit(1)
+        prune_orphans(parse_config(args.config), os.path.abspath(args.output), args.yes)
+        return
     
     if args.gcfg:
         config = generate_default_config()
@@ -3103,6 +3119,55 @@ def main():
     print(f"{'='*60}")
 
     
+
+def write_new(filepath, content):
+    """Module-private files are generated once and then hand-extended; never overwrite
+    an existing one (assembly files are template-pure and are rewritten unconditionally)."""
+    if os.path.exists(filepath):
+        print("Skipped (exists): %s" % filepath)
+        return
+    with open(filepath, 'w', encoding='utf-8') as f:
+        f.write(content)
+    print("Generated: %s" % filepath)
+
+
+def prune_orphans(config, output_dir, do_delete):
+    """Remove module-private files whose module is gone from the config. Paths are
+    fully derived from the module name, so the filesystem itself is the manifest."""
+    mods = {m['name'].lower() for m in config.get('modules', [])}
+    patterns = [
+        'uvc/{}', 'seq/{}_seq.sv', 'seq/{}_block_base_seq.sv', 'seq/comm_{}_methods.sv',
+        'test/{}_test.sv', 'test/{}_block_base_test.sv', 'json/case/{}.json',
+        'tb_top/tb_top/tb_top_{}.sv', 'tb_top/filelist/uvm_blk_{}.f',
+        'tb_top/filelist/tb_top_{}.f', 'intf/{}_if_conn.sv', 'intf/{}_if_conn_gpls.sv',
+    ]
+    import shutil
+    orphans = []
+    known = set()
+    for mod in os.listdir(os.path.join(output_dir, 'uvc')):
+        known.add(mod)
+    ormods = known - mods - {'README'}
+    for m in sorted(ormods):
+        for pat in patterns:
+            t = pat.format(m)
+            fp = os.path.join(output_dir, t)
+            if os.path.isfile(fp):
+                orphans.append(fp)
+            elif os.path.isdir(fp):
+                orphans.append(fp + os.sep)
+    if not orphans:
+        print("prune: no orphans")
+        return
+    for fp in orphans:
+        print(('prune: orphan ' + fp) if do_delete else ('orphan (use --yes to delete): ' + fp))
+    if do_delete:
+        for fp in orphans:
+            if fp.endswith(os.sep):
+                shutil.rmtree(fp.rstrip(os.sep))
+            else:
+                os.remove(fp)
+        print("prune: %d item(s) deleted" % len(orphans))
+
 
 def parse_config(config_file):
     with open(config_file, 'r', encoding='utf-8') as f:

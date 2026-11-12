@@ -45,12 +45,22 @@ module tb_top();
     if_conn if_conn();                                       
 
 
-
-    `ifndef VERILATOR
+    `ifndef OPEN_EDA
     // Program  < sdf_annotate >  instantiation 
     sdf_annotate sdf_annotate();
     `endif
-
+    // Setting Clkgen/Rst initial config (DUT integration plugs into tb_clk/tb_rst)
+    logic tb_clk;
+    logic tb_rst;
+    initial begin
+        tb_clk = 1'b0;
+        forever #5 tb_clk = ~tb_clk;
+    end
+    initial begin
+        tb_rst = 1'b1;
+        repeat (20) @(posedge tb_clk);
+        tb_rst = 1'b0;
+    end
     initial begin run_test(""); end
 
 endmodule
@@ -58,7 +68,7 @@ endmodule
 
 `include "if_conn.sv"
 
-`ifndef VERILATOR
+`ifndef OPEN_EDA
 //***************************************************************************
 //******* Program  < sdf_annotate >  is used for annotate sdf file.  ********
 //***************************************************************************
@@ -66,7 +76,6 @@ program sdf_annotate;
     `include "tb_sdf.sv"
 endprogram
 `endif
-
 // Other Component Module 
 
 

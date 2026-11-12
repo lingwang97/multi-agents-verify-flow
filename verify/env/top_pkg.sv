@@ -2,7 +2,7 @@
 `define __TOP_PKG__SV__
 
 `include "uvm_macros.svh"
-`ifndef VERILATOR
+`ifndef OPEN_EDA
 `include "uvm_pkg.sv"
 `endif
 

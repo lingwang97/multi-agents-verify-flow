@@ -1,6 +1,6 @@
 # arch_memory
 
-Architecture state, standing rules and lessons for developing this verify tree. Project-wide and tool-independent: read before structural changes, append when a new rule or lesson is learned (one entry = rule, why, how to apply). Stable "what/how" guidance lives in `verify/CLAUDE.md`; this file holds what changes with the project. Last updated 2026-11-11 (enable_ral: module-level + chip-level).
+Architecture state, standing rules and lessons for developing this verify tree. Project-wide and tool-independent: read before structural changes, append when a new rule or lesson is learned (one entry = rule, why, how to apply). Stable "what/how" guidance lives in `verify/CLAUDE.md`; this file holds what changes with the project. Last updated 2026-11-11 (enable_ral; oEDA rename + OPEN_EDA define; closed loop 5/6; R5 regen rule + section 7 system checklist).
 
 ---
 
@@ -12,9 +12,9 @@ Architecture state, standing rules and lessons for developing this verify tree. 
 | `efuse` | generated template | yes (`uvm_blk_efuse.f`, `+EFUSE_BLOCK_TEST`) | block base pair has RAL wiring, never exercised |
 | `reg`, `ro`, `uart` | generated template | no | no block filelist / base pair |
 
-- Module source of truth: `script/uvm_env_config_template.json` and `json/module.json`. Config knobs: top-level `enable_ral` (chip-global; gates top_env/top_vseqr/base_seq/uvm.f) and per-module `adapter_type` (empty = no adapter) + `enable_ral` (default true; false drops the RAL from the block base test/seq and `uvm_blk_<mod>.f`). `wsim_local` skips RalGen when the selected filelist has no `ral_reg_model` line - works for both levels automatically. Generator-enforced rules: `adapter_type` non-empty requires module `enable_ral: true`; top-level `enable_ral: false` requires every module `enable_ral: false` and `adapter_type: ""` (the system flow has ONE chip model built from the whole reg table CSV, so per-module RAL cannot survive a chip without one). Caveat: the VCS Makefile `init_reg_cfg` (+vcs+initreg+...) is NOT gated - backdoor register init depends on the chip model, handle manually if top-level enable_ral is ever set false.
+- Module source of truth: `script/uvm_env_config_template.json` and `json/module.json`. Config knobs: top-level `enable_ral` (chip-global; gates top_env/top_vseqr/base_seq/uvm.f) and per-module `adapter_type` (empty = no adapter) + `enable_ral` (default true; false drops the RAL from the block base test/seq and `uvm_blk_<mod>.f`). `wsim_oeda` skips RalGen when the selected filelist has no `ral_reg_model` line - works for both levels automatically. Generator-enforced rules: `adapter_type` non-empty requires module `enable_ral: true`; top-level `enable_ral: false` requires every module `enable_ral: false` and `adapter_type: ""` (the system flow has ONE chip model built from the whole reg table CSV, so per-module RAL cannot survive a chip without one). Caveat: the VCS Makefile `init_reg_cfg` (+vcs+initreg+...) is NOT gated - backdoor register init depends on the chip model, handle manually if top-level enable_ral is ever set false.
 - System-level flow (`tb_top_soc.sv` + `uvm.f`) has no DUT (old `hdl/rtl/soc_stub.sv` removed); not runnable locally until the SoC RTL lands. `hdl/common/reg_table/reg_table_reg_list.csv` is a placeholder reg table (one `soc_reg` block).
-- RAL model `verify/ral/ral_reg_model.sv` is generated output (by `wsim`/`wsim_local` RalGen); never edit or commit it.
+- RAL model `verify/ral/ral_reg_model.sv` is generated output (by `wsim`/`wsim_oeda` RalGen); never edit or commit it.
 - Leaf test classes: only `apb_master` has real ones (6 block tests + system smoke); other modules' JSON entries are placeholders (see `.claude/skills/add-test-case/test_case_dev_manual.md` §7 for the gap list).
 
 ---
@@ -40,6 +40,11 @@ Architecture state, standing rules and lessons for developing this verify tree. 
 - **apb_master naming:** existing block tests are `apb_master_<fp>_block_test`, so pass `--function <fp>_block`. Extra compile defines go through `--macro-opt` (e.g. `+APB_SRAM_EN_WAIT`); the script prepends `+<MODULE>_BLOCK_TEST`.
 - **Note:** the apb_master block tests/seqs in this repo were hand-written (script did not know the module yet); they follow the same structure as the skill templates, except the test class uses `uvm_component_utils_begin/_end` + `report_id` like the existing smoke class.
 
+### R5. Regeneration is safe only through the template-pure assembly rule
+- Module-private files (uvc/, `<mod>_seq/test`, `<mod>_block_base_*`, case json, `tb_top_<mod>.sv`, `uvm_blk_<mod>.f`, if_conn) are **skip-if-exists** — hand-extended content is never overwritten.
+- Assembly files (top_env, top_vseqr, top_pkg, vif_declare, base_seq/test, soc_sequence_lib, uvm.f, tb_define, tb_top_soc) are rewritten unconditionally from templates — **never hand-edit them; lift changes into `gen_uvm_env.py` templates** (precedents: OPEN_EDA guards, TB_TOP=tb_top, clk/rst in both tb_top templates).
+- Workflow: edit config -> `--guvc` -> `git diff` -> smoke one case; removal via `--prune [--yes]`.
+
 ### R4. Edit `script/`, then deploy
 - `script/` is the source of truth; `sim/wsim*`, `tb_top/scripts/` and `utils/` are deployed copies. After editing `script/sflow/*`, re-run `script/file_manage.sh` (or edit and copy both when the deploy step is unavailable).
 
@@ -54,20 +59,20 @@ Architecture state, standing rules and lessons for developing this verify tree. 
 
 ### Invoking from Windows
 - **Use the full path** `"/c/Program Files/WSL/wsl.exe" -d Ubuntu-24.04 -- ...` (the `system32` shim lacks the inbox kernel; symptom: exit 127 and garbled UTF-16 error).
-- **Git Bash quoting:** `wsl ... bash -c '...$c...'` loses `$c` (expanded to empty on the Windows side → `wsim_local -c  -seed 1` "invalid option"). Put multi-command runs in a script file and call it with `MSYS_NO_PATHCONV=1` so `/mnt/c/...` is not rewritten.
+- **Git Bash quoting:** `wsl ... bash -c '...$c...'` loses `$c` (expanded to empty on the Windows side → `wsim_oeda -c  -seed 1` "invalid option"). Put multi-command runs in a script file and call it with `MSYS_NO_PATHCONV=1` so `/mnt/c/...` is not rewritten.
 
 ### Verilator rules for UVC/tb code
 - No `program` block (guard `sdf_annotate` with `` `ifndef VERILATOR ``), no SVA concurrent assertions (use procedural monitor checks), vif assign + `uvm_config_db::set` in ONE `initial`, comments must not begin with "verilator", functional covergroups are not collected (VCS only), keep constraints simple.
 
 ### Results and coverage
-- **Pass criterion:** simv exit 0 and no `UVM_ERROR :`/`UVM_FATAL :` in `sim.log`. Scratch: `sim/uvm_scratch_local_<case>/comp_<case>/run_iterN/`.
-- **Reading coverage:** the `Coverage Summary` printed by `wsim_local -covrpt` is a TB+UVC+DUT mixture; for DUT-only numbers read the annotated `cov_report/<dut>.v` (counts prefixed `%000000` = zero-hit, `~` = partially covered).
+- **Pass criterion:** simv exit 0 and no `UVM_ERROR :`/`UVM_FATAL :` in `sim.log`. Scratch: `sim/uvm_scratch_oeda_<case>/comp_<case>/run_iterN/`.
+- **Reading coverage:** the `Coverage Summary` printed by `wsim_oeda -covrpt` is a TB+UVC+DUT mixture; for DUT-only numbers read the annotated `cov_report/<dut>.v` (counts prefixed `%000000` = zero-hit, `~` = partially covered).
 
 ---
 
 ## 3. Block-level flow conventions
 
-- Block cases carry `+<MOD>_BLOCK_TEST` in `VCS_MACRO_OPT`; `wsim_local` (`WL_DEFINES`) and the VCS Makefile select `tb_top/filelist/uvm_blk_<mod>.f` instead of `uvm.f`. Both derive the filelist from the `<MOD>_BLOCK_TEST` token (lower-cased module name), so a new block-level module only needs its `uvm_blk_<mod>.f`; a missing file stops with a clear error (Makefile `$(error)` / `wsim_local` `die`).
+- Block cases carry `+<MOD>_BLOCK_TEST` in `VCS_MACRO_OPT`; `wsim_oeda` (`WL_DEFINES`) and the VCS Makefile select `tb_top/filelist/uvm_blk_<mod>.f` instead of `uvm.f`. Both derive the filelist from the `<MOD>_BLOCK_TEST` token (lower-cased module name), so a new block-level module only needs its `uvm_blk_<mod>.f`; a missing file stops with a clear error (Makefile `$(error)` / `wsim_oeda` `die`).
 - Makefile gotcha: keep `$(error ...)` inside conditionals space-indented; a tab-indented one is parsed as a recipe line ("recipe commences before first target").
 - Generator vs generated files: VERILATOR guards (`top_pkg`, `tb_top_*`, `dump_wave`, `vif_declare`) are defined in the `gen_uvm_env.py` templates; fix the template and sync the generated file together, otherwise a regeneration silently drops the local-flow support.
 - Block tb top is `tb_top/tb_top/tb_top_<mod>.sv`; module name stays `tb_top` (`` `define TB_TOP tb_top `` in `tb_define.sv`).
@@ -77,9 +82,44 @@ Architecture state, standing rules and lessons for developing this verify tree. 
 ## 4. apb_master / apb_v3_sram specifics
 
 - **DUT:** `hdl/rtl/apb_v3_sram.v` (APB3 slave SRAM, listed in `tb_top/filelist/rtl_file_lst.f`); tb top `tb_top/tb_top/tb_top_apb_master.sv` generates clock/reset and instantiates the DUT. Instantiate with `.MEM_BLOCK_SIZE(32)` — default 8 breaks `wr_data2mem` (ignores `PADDR`). Reset must be asserted from t=0 (memory only initialised in the reset branch).
-- **Cases:** `+APB_MASTER_BLOCK_TEST` in `VCS_MACRO_OPT`; the wait-state case adds `+APB_SRAM_EN_WAIT` (DUT `EN_WAIT_DELAY_FUNC=1`). Run e.g. `./wsim_local -c apb_master_rw_rand_block_test -seed 1 -covrpt`.
+- **Cases:** `+APB_MASTER_BLOCK_TEST` in `VCS_MACRO_OPT`; the wait-state case adds `+APB_SRAM_EN_WAIT` (DUT `EN_WAIT_DELAY_FUNC=1`). Run e.g. `./wsim_oeda -c apb_master_rw_rand_block_test -seed 1 -covrpt`.
 - **DUT quirks that shaped the UVC:** early PREADY in SETUP; one-phase lag after each transfer (driver inserts ≥1 idle cycle); `wait_cyc_limit` randomised once at t=0; out-of-range reads keep stale PRDATA with PSLVERR=1. Driver/monitor sample on **negedge** (DUT uses blocking assigns on posedge).
 - **Sequence helpers** live in `seq/apb_master_block_base_seq.sv` (`apb_write`/`apb_read`/`apb_idle`); every helper must `get_response` because the driver does `item_done(rsp)`.
 - The apb_master DUT has no registers: `enable_ral: false`, `adapter_type: ""` (the former stub adapter was deleted). Full findings and results: `docs/apb_v3_sram_verify_report.md`.
+
+---
+
+## 5. Two-flow closed loop: oEDA first, VCS sign-off (rules since 2026-11-11)
+
+Naming: the open-source flow is **oEDA** (script `wsim_oeda`, scratch `sim/uvm_scratch_oeda_<case>/`, isolation define `+define+OPEN_EDA`); the business flow is VCS (`wsim`, `sim/uvm_scratch_<case>/`). Old `_local` artifacts on disk are historical and are not renamed.
+
+**Loop:** develop/debug a case with `./wsim_oeda -c <case> [-seed 1]` (fast iteration, FST waves) -> once stable, confirm the same case on VCS with `./wsim -c <case> -uvm` -> converge with VCS regression groups (`-smoke/-stage1/-stage2/-full`) and coverage (`-cm`, functional covergroups via `-fm`).
+
+**Sign-off rule: an oEDA PASS is necessary but never sufficient.** Convergence is signed off on VCS only. Equivalence between flows is judged by pass/fail plus coverage, never by cycle-accurate waveform comparison (randomization seed streams differ between simulators).
+
+**Capability gaps of oEDA - re-check each at convergence time:**
+1. Functional covergroups are NOT collected by Verilator - VCS `-fm`/`-cm` only.
+2. SVA concurrent assertions are not supported - none exist today; if added later they are VCS-only (deferred item, see section 6).
+3. Constraint solver: keep constraints simple enough for Verilator (repo convention); complex-constraint tests must pass on VCS.
+4. Width-macro divergence (intentional, pending): `testjson2lst.py` (VCS list) injects `+UVM_REG_DATA_WIDTH=1408+UVM_HDL_MAX_WIDTH=1408`; `wsim_oeda` filters these two macros out when consuming the list. Align (remove the filter) once the real `hdl/common/reg_table/reg_table_reg_list.csv` lands - until then RAL-dependent modules may differ in `uvm_reg_data_t` width between flows. (apb_master is unaffected: `enable_ral: false`.)
+5. Gate/post-layout (`-l gate|post`) and DPO flows are VCS-only.
+
+**Local batch loop (no dedicated tool):** `wsim_oeda` keeps `comp_<case>/obj_dir` across runs and skips verilator when the build key (verilator version + defines + uvm_oeda.f hash + wave/cov flags) is unchanged, so a plain shell loop is enough for a local pre-regression: `for c in apb_master_smoke_block_test apb_master_wait_block_test; do ./wsim_oeda -c "$c" -seed 1 -nowave; done` - only the first case pays the full compile; per-run artifacts (run_iter*, result.txt) are cleared each run.
+
+## 7. System-level bring-up checklist (blocked on SoC RTL; do not start early)
+
+1. SoC RTL lands in `hdl/` and is listed in `tb_top/filelist/rtl_file_lst.f` (system top `tb_top_soc.sv` already has clk/rst from the template; DUT/stub instantiation is hand work, not generatable).
+2. Real `hdl/common/reg_table/reg_table_reg_list.csv` replaces the placeholder -> triggers RalGen real model AND the width-macro alignment (remove the oEDA filter, section 5 item 4).
+3. `tb_top/config/Makefile.initreg.cfg` is referenced by the VCS Makefile but does not exist - create it when register init is first needed.
+4. DUT-to-UVC wiring in `intf/<mod>_if_conn.sv` skeletons (hand work per DUT).
+5. System smoke stimuli: the `reg/uart/efuse_smoke_test` classes exist but are inert; fill bodies (add-test-case skill covers scaffolding).
+6. Replace the fake tokens (`+DEFINE1...`) still present in reg/ro/uart/efuse case JSONs when real system cases are added.
+
+## 6. Deferred items
+
+- SVA protocol assertions (VCS-only, `*_if_pc.sv`-style): intentionally not implemented (2026-11-11). Revisit when protocol sign-off needs concurrent assertions.
+- Width-macro alignment: see item 4 in section 5.
+- Full compile cache (native-FS scratch, hash-keyed obj_dir): superseded by obj_dir reuse for as long as the primary environment is server Linux; revisit only if the WSL box becomes the primary debug environment again.
+
 - Stale system-level path: `top_env.sv` sets `ral.set_hdl_path_root("tb_top.C[0].btnode.btc")` - a pre-apb_master chip hierarchy. Harmless while the placeholder RAL is unused, but it MUST be updated to the real hierarchy before any backdoor register access in the revived system flow.
 - Makefile gotcha: when a Python/shell patch writes a trailing backslash (line continuation) avoid `\"`-style escapes in heredocs; a mis-escaped backslash leaves a dangling quote and `bash -n` reports "unexpected EOF while looking for matching `"'"".

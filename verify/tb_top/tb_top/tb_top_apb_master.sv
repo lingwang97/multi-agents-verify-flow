@@ -108,7 +108,7 @@ module tb_top();
 
 
     // Program  < sdf_annotate >  instantiation
-`ifndef VERILATOR
+`ifndef OPEN_EDA
     sdf_annotate sdf_annotate();
 `endif
 
@@ -120,7 +120,7 @@ endmodule
 //***************************************************************************
 //******* Program  < sdf_annotate >  is used for annotate sdf file.  ********
 //***************************************************************************
-`ifndef VERILATOR
+`ifndef OPEN_EDA
 program sdf_annotate;
     `include "tb_sdf.sv"
 endprogram

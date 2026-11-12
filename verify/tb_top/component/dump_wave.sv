@@ -2,7 +2,7 @@
 //======     Setting dump waveform     =========
 //==============================================
 
-`ifdef VERILATOR
+`ifdef OPEN_EDA
     initial begin
         $display("\n[NOTE]\tStart Dump FST waveform (Verilator) at%t\n", $time);
         $dumpfile("wave.fst");
