@@ -15,6 +15,52 @@ import csv
 import re
 
 reg_pattern=".*REG_[0-9]+.*"
+def derive_reg_width(records):
+    """Widest register width in bits over the whole table. Per register both the
+    field top bit (BitEnd+1, fields may span many rows) and the byte span
+    ((EndAddr-OffsetAddr+1)*8) count; uvm_reg_data_t must hold the register."""
+    def num(t, base=10):
+        t = t.strip()
+        if not t:
+            return None
+        try:
+            return int(t, base)
+        except ValueError:
+            try:
+                return int(t, 16)
+            except ValueError:
+                return None
+    hdr = records[0]
+    col = {}
+    for i, name in enumerate(hdr):
+        col[name] = i
+    need = ("RegName", "FieldName", "OffsetAddr", "EndAddr", "BitEnd")
+    if any(k not in col for k in need):
+        return 0
+    regs = {}
+    import re as _re
+    for row in records[1:]:
+        if len(row) <= max(col[k] for k in need):
+            continue
+        reg = row[col["RegName"]].strip()
+        if not reg:
+            continue
+        w = regs.get(reg, 0)
+        m_lbl = _re.match(r"REG_(\d+)$", row[col["Label"]].strip())
+        if m_lbl:
+            w = max(w, int(m_lbl.group(1)))
+        if row[col["FieldName"]].strip():
+            be = num(row[col["BitEnd"]])
+            if be is not None:
+                w = max(w, be + 1)
+        oa = num(row[col["OffsetAddr"]], 16)
+        ea = num(row[col["EndAddr"]], 16)
+        if oa is not None and ea is not None:
+            w = max(w, (ea - oa + 1) * 8)
+        regs[reg] = w
+    return max(regs.values()) if regs else 0
+
+
 def getparse():
     parser = argparse.ArgumentParser(description="input and output file about register model")
     parser.add_argument('-i','--input_reg_table',help='please input the reg_sfr_table, the format is xxx.xlsx',required=True, default='NO_Reg_Sfr_Tabel')
@@ -530,6 +576,12 @@ if __name__ == '__main__':
     ral_t      += "\n\nendpackage: RAL_PKG"
     ral_sv.write(ral_t)
     ral_sv.close()
+
+    # derived UVM_REG_DATA_WIDTH / UVM_HDL_MAX_WIDTH source for testjson2lst.py
+    width_file = os.path.join(os.path.dirname(os.path.abspath(file_name)), "ral_reg_width")
+    with open(width_file, 'w') as wf:
+        wf.write(str(derive_reg_width(records)) + "\n")
+    print("wrote %s" % width_file)
 
     vaid_col=[0,2,4,5,6,7,8,9,13,19]
 

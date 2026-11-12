@@ -101,7 +101,7 @@ Naming: the open-source flow is **oEDA** (script `wsim_oeda`, scratch `sim/uvm_s
 1. Functional covergroups are NOT collected by Verilator - VCS `-fm`/`-cm` only.
 2. SVA concurrent assertions are not supported - none exist today; if added later they are VCS-only (deferred item, see section 6).
 3. Constraint solver: keep constraints simple enough for Verilator (repo convention); complex-constraint tests must pass on VCS.
-4. Width-macro divergence (intentional, pending): `testjson2lst.py` (VCS list) injects `+UVM_REG_DATA_WIDTH=1408+UVM_HDL_MAX_WIDTH=1408`; `wsim_oeda` filters these two macros out when consuming the list. Align (remove the filter) once the real `hdl/common/reg_table/reg_table_reg_list.csv` lands - until then RAL-dependent modules may differ in `uvm_reg_data_t` width between flows. (apb_master is unaffected: `enable_ral: false`.)
+4. Width macros are **derived from the register table** (since 2026-11-12): RalGen (`gen_reg_model.py`) parses the CSV (field `BitEnd+1`, `Label REG_<n>`, byte span `(EndAddr-OffsetAddr+1)*8` - max of all three per register) and writes `verify/ral/ral_reg_width`; `testjson2lst.py` injects `max(64, derived)` into BOTH flows, and `wsim_oeda` no longer filters them. The old `chip_define.sv` + CORE_NUM parsing is gone (that file also no longer exists). Residual check when the real register table lands: confirm the derived value covers the real design's widest register - sliced registers depend on the Label/EndAddr columns being populated per slice; if they are not, the derivation undercounts and the number must be revisited.
 5. Gate/post-layout (`-l gate|post`) and DPO flows are VCS-only.
 
 **Local batch loop (no dedicated tool):** `wsim_oeda` keeps `comp_<case>/obj_dir` across runs and skips verilator when the build key (verilator version + defines + uvm_oeda.f hash + wave/cov flags) is unchanged, so a plain shell loop is enough for a local pre-regression: `for c in apb_master_smoke_block_test apb_master_wait_block_test; do ./wsim_oeda -c "$c" -seed 1 -nowave; done` - only the first case pays the full compile; per-run artifacts (run_iter*, result.txt) are cleared each run.
@@ -109,7 +109,7 @@ Naming: the open-source flow is **oEDA** (script `wsim_oeda`, scratch `sim/uvm_s
 ## 7. System-level bring-up checklist (blocked on SoC RTL; do not start early)
 
 1. SoC RTL lands in `hdl/` and is listed in `tb_top/filelist/rtl_file_lst.f` (system top `tb_top_soc.sv` already has clk/rst from the template; DUT/stub instantiation is hand work, not generatable).
-2. Real `hdl/common/reg_table/reg_table_reg_list.csv` replaces the placeholder -> triggers RalGen real model AND the width-macro alignment (remove the oEDA filter, section 5 item 4).
+2. Real `hdl/common/reg_table/reg_table_reg_list.csv` replaces the placeholder -> triggers RalGen real model AND the derived-width validation (section 5 item 4: check `verify/ral/ral_reg_width` covers the real widest register, especially sliced registers).
 3. `tb_top/config/Makefile.initreg.cfg` is referenced by the VCS Makefile but does not exist - create it when register init is first needed.
 4. DUT-to-UVC wiring in `intf/<mod>_if_conn.sv` skeletons (hand work per DUT).
 5. System smoke stimuli: the `reg/uart/efuse_smoke_test` classes exist but are inert; fill bodies (add-test-case skill covers scaffolding).

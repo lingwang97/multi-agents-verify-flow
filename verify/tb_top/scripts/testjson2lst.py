@@ -7,22 +7,6 @@ import re
 
 filename="./test.json"
 
-def getDesignCoreNum(chipDefineFile):
-  design_core_pattern=".*((SLICE([0-9]+))|(DEMI))+_CORE_NUM\s*[0-9]+'d([0-9]+)*"
-  total_core_num=0
-  with open(chipDefineFile,"r") as define_f:
-    while(True):
-      line=define_f.readline()
-      if not line:
-        break
-      design_core_match = re.match(design_core_pattern, line)
-      if design_core_match:
-        #print(design_core_match)
-        print("groups",design_core_match.groups()[-1])
-        total_core_num+=int(design_core_match.groups()[-1])
-  print("total_core_num:",total_core_num)
-  return total_core_num
-
 class JsonHighLevelStruct():
   uvmMacroOpt="UVM_VCS_MACRO_OPT"
   globalMacroOpt="GLOBAL_VCS_MACOR_OPT"
@@ -271,11 +255,19 @@ if __name__=="__main__":
   with open(filename,'r') as load_f:
     load_dict = json.load(load_f)
   load_f.close()
-  total_core_num=getDesignCoreNum(option.chip_define)
-  if(32*total_core_num > 1408):
-    uvmMacroOpt=load_dict[JsonHighLevelStruct.uvmMacroOpt]+"+UVM_REG_DATA_WIDTH="+str(32*total_core_num)+"+UVM_HDL_MAX_WIDTH="+str(32*total_core_num)
+  # UVM_REG_DATA_WIDTH / UVM_HDL_MAX_WIDTH are derived from the register table:
+  # gen_reg_model.py writes <verify>/ral/ral_reg_width (widest register, bits).
+  # UVM library default is 64; the derived value wins when it exceeds that.
+  uvm_data_width=64
+  ral_width_file=os.path.join(os.path.dirname(os.path.realpath(filename)),"..","ral","ral_reg_width")
+  if os.path.isfile(ral_width_file):
+    try:
+      uvm_data_width=max(uvm_data_width,int(open(ral_width_file).read().strip()))
+    except ValueError:
+      print("warn: bad ral_reg_width content, UVM_REG_DATA_WIDTH stays 64")
   else:
-  	uvmMacroOpt=load_dict[JsonHighLevelStruct.uvmMacroOpt]+"+UVM_REG_DATA_WIDTH=1408"+"+UVM_HDL_MAX_WIDTH=1408"
+    print("warn: ral_reg_width not found, UVM_REG_DATA_WIDTH defaults to 64")
+  uvmMacroOpt=load_dict[JsonHighLevelStruct.uvmMacroOpt]+"+UVM_REG_DATA_WIDTH="+str(uvm_data_width)+"+UVM_HDL_MAX_WIDTH="+str(uvm_data_width)
   #print(uvmMacroOpt)
   globalMacroOpt=load_dict[JsonHighLevelStruct.globalMacroOpt]
   if option.realcore :

@@ -111,7 +111,6 @@ function get_case_info() {
     script="$database_path/verify/tb_top/scripts/testjson2lst.py"
     [ -f "$script" ] || die "testjson2lst.py not found: $script"
     python3 "$script" -f "$database_path/verify/json/module.json" \
-        --define "$database_path/hdl/common/top/chip_define.sv" \
         -c "$OPTS_TESTCASE_NAME" -o "$listfile" \
         --project "$(cat "$wsim_dir_path/project_name")" --dpo null >/dev/null 2>&1 \
         || die "testjson2lst.py failed for case $OPTS_TESTCASE_NAME"
@@ -125,8 +124,7 @@ function get_case_info() {
     WL_ITER=$(echo "$line" | sed -n 's/.* iter=\([^ ]*\).*/\1/p')
     local macros plusargs tok
     macros=$(echo "$line" | sed -n "s/.*VCS_MACRO_OPT='+define\([^']*\)'.*/\1/p" | tr '+' '\n' \
-        | grep -v '^$' | grep -v '^UVM_REG_DATA_WIDTH=' | grep -v '^UVM_HDL_MAX_WIDTH=' \
-        | sed 's/^/+define+/' | tr '\n' ' ')
+        | grep -v '^$' | sed 's/^/+define+/' | tr '\n' ' ')
     WL_DEFINES="${macros% }"
     plusargs=$(echo "$line" | sed -n 's/.*VCS_PLUSARGS_OPT=\([^ ]*\).*/\1/p')
     WL_PLUSARGS="$plusargs"
