@@ -162,7 +162,7 @@ Pass/fail is decided by grepping `UVM_ERROR`/`UVM_FATAL` counts in `sim.log`; re
 
 **Important caveat**: apart from `apb_master`, no scoreboard in this repo has a real check yet (§2), so for `reg`/`ro`/`uart`/`efuse` a clean `UVM_ERROR`/`UVM_FATAL` count of zero does **not** mean your test verified anything — it may simply mean nothing was ever compared. Don't treat a passing run as "done" until your scoreboard (§3.6) has a real assertion in it.
 
-`wsim` only runs on Linux with VCS/Verdi/LSF. On the Windows box use the open-source flow instead (WSL2 + Verilator, see `CLAUDE.md` "Local open-source sim"): from the repo-root `sim/`, `./wsim_oeda -c <your_test_key> -seed 1 [-covrpt]` (single case; invoke WSL by full path from Windows, see `docs/memory/arch_memory.md` §2). It does not collect covergroup functional coverage.
+`wsim` only runs on Linux with VCS/Verdi/LSF. On the Windows box use the open-source flow instead (WSL2 + Verilator, see `CLAUDE.md` "Local open-source sim"): from the repo-root `sim/`, `./wsim_oeda -c <your_test_key> -seed 1 [-covrpt]` (single case; invoke WSL by full path from Windows, see `docs/ops/oeda_local_setup.md`). It does not collect covergroup functional coverage.
 
 ## 6. Definition of done for a leaf test
 
