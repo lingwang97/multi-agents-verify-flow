@@ -1,6 +1,8 @@
 # arch_memory
 
-Architecture state, standing rules and lessons for developing this verify tree. Project-wide and tool-independent: read before structural changes, append when a new rule or lesson is learned (one entry = rule, why, how to apply). Stable "what/how" guidance lives in `verify/CLAUDE.md`; this file holds what changes with the project. Last updated 2026-11-11 (enable_ral; oEDA rename + OPEN_EDA define; closed loop 5/6; R5 regen rule + section 7 system checklist).
+Architecture state, standing rules and lessons for developing this verify tree. Project-wide and tool-independent: read before structural changes, append when a new rule or lesson is learned (one entry = rule, why, how to apply). Stable "what/how" guidance lives in `verify/CLAUDE.md`; this file holds what changes with the project. Last updated 2026-11-19 (dedup pass: R5/§3/§0/§8 slims to CLAUDE.md canon; framework-change history migrated to `docs/memory/fw_env_memory.md`; R6 amended — framework changes are logged there, this chain records only rule/doc changes). Previous: 2026-11-18 (R6 doc governance: header TOC, canonical homes, §2→`docs/ops/oeda_local_setup.md`+CLAUDE.md, §4→`docs/modules/apb_master.md`; dual-track property policy). Older: 2026-11-17 (multi-agent flow deployed, §8; §6 SVA deferral lifted). Oldest: 2026-11-11 (enable_ral; oEDA rename + OPEN_EDA define; closed loop 5/6; R5 regen rule + section 7 system checklist — framework details migrated to fw_env_memory).
+
+**TOC** (section numbers are frozen per R6 — never renumber, only append; physical order preserved; logical reading order below): §0 module/architecture state → §1 maintenance rules R1–R6 → §5 two-flow closed loop → §3 block-level conventions → §7 system bring-up checklist (blocked) → §6 deferred items → §8 multi-agent deployment (2026-11-17/18) → §2 *(moved 2026-11-18: machine setup → `docs/ops/oeda_local_setup.md`; Verilator rules → CLAUDE.md oEDA/OPEN_EDA)* → §4 *(moved 2026-11-18: apb_master details → `docs/modules/apb_master.md`)*.
 
 ---
 
@@ -12,9 +14,8 @@ Architecture state, standing rules and lessons for developing this verify tree. 
 | `efuse` | generated template | yes (`uvm_blk_efuse.f`, `+EFUSE_BLOCK_TEST`) | block base pair has RAL wiring, never exercised |
 | `reg`, `ro`, `uart` | generated template | no | no block filelist / base pair |
 
-- Module source of truth: `script/uvm_env_config_template.json` and `json/module.json`. Config knobs: top-level `enable_ral` (chip-global; gates top_env/top_vseqr/base_seq/uvm.f) and per-module `adapter_type` (empty = no adapter) + `enable_ral` (default true; false drops the RAL from the block base test/seq and `uvm_blk_<mod>.f`). `wsim_oeda` skips RalGen when the selected filelist has no `ral_reg_model` line - works for both levels automatically. Generator-enforced rules: `adapter_type` non-empty requires module `enable_ral: true`; top-level `enable_ral: false` requires every module `enable_ral: false` and `adapter_type: ""` (the system flow has ONE chip model built from the whole reg table CSV, so per-module RAL cannot survive a chip without one). Caveat: the VCS Makefile `init_reg_cfg` (+vcs+initreg+...) is NOT gated - backdoor register init depends on the chip model, handle manually if top-level enable_ral is ever set false.
-- System-level flow (`tb_top_soc.sv` + `uvm.f`) has no DUT (old `hdl/rtl/soc_stub.sv` removed); not runnable locally until the SoC RTL lands. `hdl/common/reg_table/reg_table_reg_list.csv` is a placeholder reg table (one `soc_reg` block).
-- RAL model `verify/ral/ral_reg_model.sv` is generated output (by `wsim`/`wsim_oeda` RalGen); never edit or commit it.
+- Module source of truth: `script/uvm_env_config_template.json` and `json/module.json`. Config-knob semantics and the generator-enforced rules are canonized in `verify/CLAUDE.md` ("Regenerating the environment"). `wsim_oeda` skips RalGen when the selected filelist has no `ral_reg_model` line - works for both levels automatically. Caveat: the VCS Makefile `init_reg_cfg` (+vcs+initreg+...) is NOT gated - backdoor register init depends on the chip model, handle manually if top-level enable_ral is ever set false.
+- System-level flow (`tb_top_soc.sv` + `uvm.f`) has no DUT (old `hdl/rtl/soc_stub.sv` removed); not runnable locally until the SoC RTL lands. `hdl/common/reg_table/reg_table_reg_list.csv` is a placeholder reg table (one `soc_reg` block); the root-level `hdl/` design database currently holds only `apb_v3_sram.v`.
 - Leaf test classes: only `apb_master` has real ones (6 block tests + system smoke); other modules' JSON entries are placeholders (see `.claude/skills/add-test-case/test_case_dev_manual.md` §7 for the gap list).
 
 ---
@@ -41,51 +42,39 @@ Architecture state, standing rules and lessons for developing this verify tree. 
 - **Note:** the apb_master block tests/seqs in this repo were hand-written (script did not know the module yet); they follow the same structure as the skill templates, except the test class uses `uvm_component_utils_begin/_end` + `report_id` like the existing smoke class.
 
 ### R5. Regeneration is safe only through the template-pure assembly rule
-- Module-private files (uvc/, `<mod>_seq/test`, `<mod>_block_base_*`, case json, `tb_top_<mod>.sv`, `uvm_blk_<mod>.f`, if_conn) are **skip-if-exists** — hand-extended content is never overwritten.
-- Assembly files (top_env, top_vseqr, top_pkg, vif_declare, base_seq/test, soc_sequence_lib, uvm.f, tb_define, tb_top_soc) are rewritten unconditionally from templates — **never hand-edit them; lift changes into `gen_uvm_env.py` templates** (precedents: OPEN_EDA guards, TB_TOP=tb_top, clk/rst in both tb_top templates).
-- Workflow: edit config -> `--guvc` -> `git diff` -> smoke one case; removal via `--prune [--yes]`.
+- **Rule:** canon is `verify/CLAUDE.md` "Regenerating the environment" (module-private files skip-if-exists; assembly files are template-pure and rewritten on every regen — never hand-edit, lift changes into `gen_uvm_env.py` templates). The enforcement subset is inlined in the json2env_agent charter.
+- **History (framework lifts):** logged in `docs/memory/fw_env_memory.md` (OPEN_EDA guards, TB_TOP=tb_top, clk/rst in both tb_top templates, etc.).
 
 ### R4. Edit `script/`, then deploy
 - `script/` is the source of truth; `sim/wsim*`, `tb_top/scripts/` and `utils/` are deployed copies. After editing `script/sflow/*`, re-run `script/file_manage.sh` (or edit and copy both when the deploy step is unavailable).
 
+### R6. Documentation governance: canonical homes, summary+link, frozen anchors (2026-11-18)
+- **Rule:** every fact class has ONE canonical home; other docs keep a short summary plus a pointer, never a full restatement. Canonical map: Verilator/OPEN_EDA coding rules & oEDA usage/pass criterion & regeneration/config-knob rules → `verify/CLAUDE.md`; two-flow sign-off & coverage split → §5 here; multi-agent process/metrics/doc map → `docs/ops/multi_agent_ops.md`; per-module DUT knowledge → `docs/modules/<mod>.md` (cross-agent reference truth); machine setup → `docs/ops/oeda_local_setup.md` (operational, not project knowledge); framework-change history (env/template/generator changes) → `docs/memory/fw_env_memory.md` — the Last-updated chain of this file records only rule/doc changes.
+- **Promotion:** per-agent logs (`fw_env_memory`, `dev/`, `debug/`, `deliver/`, taskboard) record *what happened*; a stable fact distilled from a log is **promoted** into `docs/modules/<mod>.md` and the log entry marked "promoted" — never copy canon into logs.
+- **Anchors:** section numbers in this file are frozen once referenced elsewhere — never renumber, only append (the §6/§7 historical order is kept on purpose; the header TOC gives the logical view). When a policy changes: edit the canonical home first, then sync the summaries.
+- **Why:** the dual-track property policy (2026-11-17/18) required 7–8 synchronized edits; §-number references already drifted once (§7/§6 ordering).
+- **Check:** before editing a rule, find its canonical home via the doc map (ops §4); grep the old wording afterwards to catch missed summaries.
+
 ---
 
-## 2. Open-source (WSL2 + Verilator) flow: dev-box setup and lessons
+## 2. (moved 2026-11-18, per R6)
 
-### Dev-box setup (machine-specific)
-- One-time: right-click-run `C:\Users\wangling\tools\wsl-setup\enable_wsl2.bat` as administrator (VirtualMachinePlatform; one UAC + one reboot), then import the distro: `"C:\Program Files\WSL\wsl.exe" --import Ubuntu-24.04 C:\Users\wangling\wsl\Ubuntu-24.04 C:\Users\wangling\tools\wsl-setup\ubuntu-24.04-wsl-rootfs.tar.gz --version 2` (WSL 2.7.14 MSI already installed).
-- Inside WSL add `source ~/tools/oss-cad-suite/environment` and `export UVM_HOME=$HOME/tools/uvm-1.2` to `~/.bashrc` (automated by `C:\Users\wangling\tools\wsl-setup\bootstrap_ubuntu.sh`).
-- Waveforms: native-Windows Surfer `C:\Users\wangling\tools\surfer\surfer.exe` (FST/VCD) opening `\\wsl.localhost\Ubuntu-24.04\...` paths (SourceForge-hosted GTKWave is unreachable on this network).
-
-### Invoking from Windows
-- **Use the full path** `"/c/Program Files/WSL/wsl.exe" -d Ubuntu-24.04 -- ...` (the `system32` shim lacks the inbox kernel; symptom: exit 127 and garbled UTF-16 error).
-- **Git Bash quoting:** `wsl ... bash -c '...$c...'` loses `$c` (expanded to empty on the Windows side → `wsim_oeda -c  -seed 1` "invalid option"). Put multi-command runs in a script file and call it with `MSYS_NO_PATHCONV=1` so `/mnt/c/...` is not rewritten.
-
-### Verilator rules for UVC/tb code
-- No `program` block (guard `sdf_annotate` with `` `ifndef VERILATOR ``), no SVA concurrent assertions (use procedural monitor checks), vif assign + `uvm_config_db::set` in ONE `initial`, comments must not begin with "verilator", functional covergroups are not collected (VCS only), keep constraints simple.
-
-### Results and coverage
-- **Pass criterion:** simv exit 0 and no `UVM_ERROR :`/`UVM_FATAL :` in `sim.log`. Scratch: `sim/uvm_scratch_oeda_<case>/comp_<case>/run_iterN/`.
-- **Reading coverage:** the `Coverage Summary` printed by `wsim_oeda -covrpt` is a TB+UVC+DUT mixture; for DUT-only numbers read the annotated `cov_report/<dut>.v` (counts prefixed `%000000` = zero-hit, `~` = partially covered).
+Machine/dev-box setup and Windows invocation pitfalls → `docs/ops/oeda_local_setup.md`; Verilator coding rules, oEDA pass criterion and coverage reading → canonical in `verify/CLAUDE.md` (oEDA / OPEN_EDA sections). Kept as an anchor stub because several docs referenced "arch §2".
 
 ---
 
 ## 3. Block-level flow conventions
 
-- Block cases carry `+<MOD>_BLOCK_TEST` in `VCS_MACRO_OPT`; `wsim_oeda` (`WL_DEFINES`) and the VCS Makefile select `tb_top/filelist/uvm_blk_<mod>.f` instead of `uvm.f`. Both derive the filelist from the `<MOD>_BLOCK_TEST` token (lower-cased module name), so a new block-level module only needs its `uvm_blk_<mod>.f`; a missing file stops with a clear error (Makefile `$(error)` / `wsim_oeda` `die`).
+- Selection mechanics are canonized in `verify/CLAUDE.md` (oEDA "Block-level flow"). Unique bits: both flow scripts derive the filelist from the `<MOD>_BLOCK_TEST` token (lower-cased module name), so a new block-level module only needs its `uvm_blk_<mod>.f`; a missing file stops with a clear error (Makefile `$(error)` / `wsim_oeda` `die`).
 - Makefile gotcha: keep `$(error ...)` inside conditionals space-indented; a tab-indented one is parsed as a recipe line ("recipe commences before first target").
 - Generator vs generated files: VERILATOR guards (`top_pkg`, `tb_top_*`, `dump_wave`, `vif_declare`) are defined in the `gen_uvm_env.py` templates; fix the template and sync the generated file together, otherwise a regeneration silently drops the local-flow support.
 - Block tb top is `tb_top/tb_top/tb_top_<mod>.sv`; module name stays `tb_top` (`` `define TB_TOP tb_top `` in `tb_define.sv`).
 
 ---
 
-## 4. apb_master / apb_v3_sram specifics
+## 4. (moved 2026-11-18, per R6)
 
-- **DUT:** `hdl/rtl/apb_v3_sram.v` (APB3 slave SRAM, listed in `tb_top/filelist/rtl_file_lst.f`); tb top `tb_top/tb_top/tb_top_apb_master.sv` generates clock/reset and instantiates the DUT. Instantiate with `.MEM_BLOCK_SIZE(32)` — default 8 breaks `wr_data2mem` (ignores `PADDR`). Reset must be asserted from t=0 (memory only initialised in the reset branch).
-- **Cases:** `+APB_MASTER_BLOCK_TEST` in `VCS_MACRO_OPT`; the wait-state case adds `+APB_SRAM_EN_WAIT` (DUT `EN_WAIT_DELAY_FUNC=1`). Run e.g. `./wsim_oeda -c apb_master_rw_rand_block_test -seed 1 -covrpt`.
-- **DUT quirks that shaped the UVC:** early PREADY in SETUP; one-phase lag after each transfer (driver inserts ≥1 idle cycle); `wait_cyc_limit` randomised once at t=0; out-of-range reads keep stale PRDATA with PSLVERR=1. Driver/monitor sample on **negedge** (DUT uses blocking assigns on posedge).
-- **Sequence helpers** live in `seq/apb_master_block_base_seq.sv` (`apb_write`/`apb_read`/`apb_idle`); every helper must `get_response` because the driver does `item_done(rsp)`.
-- The apb_master DUT has no registers: `enable_ral: false`, `adapter_type: ""` (the former stub adapter was deleted). Full findings and results: `docs/apb_v3_sram_verify_report.md`.
+apb_master / apb_v3_sram DUT details, quirks, case macros and config rationale → `docs/modules/apb_master.md` (cross-agent per-module canon). Kept as an anchor stub; per-module UVC/adapter/block support state stays in §0.
 
 ---
 
@@ -117,9 +106,19 @@ Naming: the open-source flow is **oEDA** (script `wsim_oeda`, scratch `sim/uvm_s
 
 ## 6. Deferred items
 
-- SVA protocol assertions (VCS-only, `*_if_pc.sv`-style): intentionally not implemented (2026-11-11). Revisit when protocol sign-off needs concurrent assertions.
+- SVA protocol assertions: the 2026-11-11 deferral was lifted (2026-11-17/18) — property checks are **dual-tracked**; the mechanism canon is `verify/CLAUDE.md` (OPEN_EDA differences paragraph), summaries in ops §3 and §8. Status note kept here because this section tracks deferred items: Verilator must never see SVA outside the guard.
 - Width-macro alignment: see item 4 in section 5.
 - Full compile cache (native-FS scratch, hash-keyed obj_dir): superseded by obj_dir reuse for as long as the primary environment is server Linux; revisit only if the WSL box becomes the primary debug environment again.
 
 - Stale system-level path: `top_env.sv` sets `ral.set_hdl_path_root("tb_top.C[0].btnode.btc")` - a pre-apb_master chip hierarchy. Harmless while the placeholder RAL is unused, but it MUST be updated to the real hierarchy before any backdoor register access in the revived system flow.
 - Makefile gotcha: when a Python/shell patch writes a trailing backslash (line continuation) avoid `\"`-style escapes in heredocs; a mis-escaped backslash leaves a dangling quote and `bash -n` reports "unexpected EOF while looking for matching `"'"".
+
+## 8. Multi-agent verification flow (deployed 2026-11-17)
+
+Roles defined in `.claude/agents/` (spec2json = opus; json2env/dev/debug/deliver/review = sonnet); **the main session is the leader** — runbook `docs/ops/multi_agent_ops.md` (the original spec `docs/multi_agent_flow.txt` was absorbed into the agents/runbook and removed on 2026-11-18). User decisions baked into the deployment:
+
+- **Tiered confirmation**: sub-agents edit module-private/rollbackable files directly; source-of-truth files need a user-approved change plan; commits are leader-only with `COMMIT_APPROVED=1` after user approval — full rules: ops §1.
+- **Writable roots** `verify/` + `deliver_bridge/` + `sim/`, enforced by the `path_guard` hook (`.claude/hooks/path_guard.py`, wired in `.claude/settings.json` PreToolUse; Bash/PowerShell path writes stay advisory — only the `git commit` rule is hard there).
+- **VCS-first**: the VCS flow is the next setup item and will be deployed on Linux by the user; simulations run server-side (no local parallel cap). oEDA stays the local fast-iteration flow; passrate ≥ 80% (pass = exit 0 + no UVM_ERROR/FATAL) gates the VCS stage; VCS results are returned by the user into `sim/vcs_results/<date>/` for debug_agent analysis + conv-report.
+- **Coverage split (decided 2026-11-17/18)**: property checks dual-tracked, function covergroups VCS-only — canon: `verify/CLAUDE.md` OPEN_EDA paragraph; summaries: ops §3, §6 above.
+- **Memories/taskboard**: `docs/memory/fw_env_memory.md` (json2env), `docs/modules/<mod>.md` (cross-agent per-module canon, R6 promotion; first instance apb_master), `docs/memory/dev|debug|deliver/<mod>.md` (per-agent logs, from `_template.md`), `docs/memory/leader_taskboard.md` (leader), features in `docs/features/<mod>/`, reviews in `docs/review/`; `deliver_bridge/` recreated with a README (interface conventions).
