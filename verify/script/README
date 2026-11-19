@@ -3,12 +3,12 @@
 //====            for System-Level and Block-Level Verification                    ==
 //===================================================================================
 
-Develop Note:           
-    1.  script为自动化脚本的存储文件, 以及基础文件存储目录。  **** 不可删除****
-    2.  utils 存放通用的tool 文件
-    3.  其他文件均为自动生成，取决于项目规划
+Develop Note:
+    1.  script/ stores the automation scripts and base files.  **** DO NOT DELETE ****
+    2.  utils/ stores the common tool files.
+    3.  All other files are auto-generated, depending on the project plan.
 
-    开发时一些待确认的点：
-    1. 关于env中 drv_is_active 变量的传递会不会存在问题,connect自下而上,而build 自上而下
+    Open points noted during development:
+    1. Potential issue with propagating drv_is_active through the env: connect runs bottom-up while build runs top-down.
 
 File Introduction

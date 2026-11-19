@@ -45,9 +45,9 @@ echo "$cur" > "$STATE"
 reason=""
 if [ -n "$diff" ]; then
   changed=$(git -C "$VERIFY" diff HEAD --name-only -- $FILES | tr '\n' ' ')
-  reason="未提交改动的模块定义文件: ${changed}。"
+  reason="uncommitted changes in module-defining files: ${changed}. "
 fi
-[ -n "$drift" ] && reason="${reason}模块清单不一致(${drift})。"
+[ -n "$drift" ] && reason="${reason}module list drift (${drift}). "
 
-msg="架构同步提醒：${reason}请评估以下内容是否需要随之更新（路径相对 verify/）：(1) docs/memory/arch_memory.md 的 §0 模块表和 R1/R2；(2) add-test-case skill：.claude/skills/add-test-case/add_test_case.py 的 MODULES、SKILL.md 里所有模块枚举（description、简介、--module 用法行、块级 Gotcha、Troubleshooting 表）、test_case_dev_manual.md 的模块列表与 §7 缺口表；(3) CLAUDE.md 里的模块和 filelist 说明。请先把评估结论（哪些要改、怎么改）告诉用户，得到用户确认后才可修改，确认前不要编辑任何文件；若判断无需改动，请简短说明理由。"
+msg="Architecture sync reminder: ${reason}Please evaluate whether the following need a matching update (paths relative to verify/): (1) docs/memory/arch_memory.md - the §0 module table and R1/R2; (2) the add-test-case skill - MODULES in .claude/skills/add-test-case/add_test_case.py and every module enumeration in SKILL.md (frontmatter description, intro, --module usage line, block-level Gotcha, Troubleshooting table), plus the module list and §7 gap table in test_case_dev_manual.md; (3) the module and filelist notes in CLAUDE.md. Present the evaluation (what to change and how) to the user first and get confirmation before editing any file; if no change is needed, briefly state why."
 printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":"%s"}}\n' "$msg"
