@@ -61,7 +61,7 @@ Retrieval entry point: **look up this table first** to find the canonical home o
 | `.claude/agents/*.md` | each agent | charter: role/flow/inline constraints/report format (enforcement subset of the canons) |
 | `.claude/skills/` (add-test-case, conv-report) | skills | ops manuals (test_case_dev_manual §7 has the gap list) |
 | `docs/sys_function_splits.md` | spec2json | level-partition plan (exists once produced) |
-| `docs/apb_v3_sram_verify_report.md` | report | full apb_v3_sram verification conclusions |
+| `docs/reports/` | reports | verification campaign reports (`report_template.md` outline + conventions; one per campaign, append-only; leader compiles from agent outputs) |
 | `deliver_bridge/README.md` | interface | design↔verification directory conventions |
 
 **Key entries per hot file** (retrieval goes to file + section, not just the file):
