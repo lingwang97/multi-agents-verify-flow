@@ -68,7 +68,7 @@ Retrieval entry point: **look up this table first** to find the canonical home o
 
 - `verify/CLAUDE.md`: Commands (wsim/wsim_oeda usage, pass criterion) · "Regenerating the environment" (R5 canon: skip-if-exists vs template-pure, add/remove workflow, config knobs + generator-enforced rules) · oEDA/OPEN_EDA sections (Verilator rules + dual-track property canon) · Architecture (UVC pattern, filelist layering) · Multi-agent section (leader pointer).
 - `docs/memory/arch_memory.md`: §0 module/state table · R1/R2 module-sync rules (hook-referenced) · R3 skill preference · R6 doc governance · §5 two-flow closed loop · §6 deferred status · §7 system bring-up checklist · §8 deployment history.
-- `docs/ops/multi_agent_ops.md`: §0 roles · §1 tiered confirmation · §2 scheduling · §3 passrate/coverage · §4 this map · §5 escalation · §6 hooks · §7 dispatch input.
+- `docs/ops/multi_agent_ops.md`: §0 roles · §1 tiered confirmation · §2 scheduling · §3 passrate/coverage · §4 this map · §5 escalation · §6 hooks · §7 dispatch input · §8 new-requirement intake.
 - `docs/modules/<mod>.md`: DUT details/quirks/case macros per module (first instance: apb_master).
 
 **Task routing** (what am I trying to do → where to look):
@@ -104,3 +104,24 @@ Entry format everywhere: **date / change (or symptom) / reason / impact**. The l
 ## 7. Standard leader dispatch input
 
 A sub-agent task prompt must contain: target module/scope, spec basis (doc paths or a "pre-research mode" declaration), whether it carries user approval (source-of-truth operations), expected outputs and report requirements, and the relevant memory/features file paths. Check the returned report against the charter's report format; ask for missing items before folding into the user report.
+
+## 8. New-requirement intake procedure (leader, on every brand-new verification request)
+
+**Trigger test** — run this only when the request starts a NEW verification effort (new module, new feature set, new level). A continuation request ("continue debugging apb_master") gets only a next-step proposal, never the full pipeline. Before proposing, the leader does a light state check: arch §0 (does the module exist? block support?), taskboard (in-flight work), `docs/features/<mod>/` (existing feature lists), relevant memories.
+
+**Recommended pipeline** — present the six stages as a plan table personalized to the requirement; per stage state what it would do HERE, the inputs needed (spec doc paths or a "pre-research mode" declaration), expected outputs, and whether it can be skipped with the reason:
+
+| Stage | Agent | What it does here | Skip when |
+|---|---|---|---|
+| 1 | spec2json_agent | level partition → `sys_function_splits.md` + config proposal | module & levels already partitioned |
+| 2 | json2env_agent | env build/update (`--guvc`, deploy, smoke) | env for the target already exists (check §0 / fw_env_memory) |
+| 3 | dev_agent_N | confirmed feature list + UVC/test/seq/coverage development | — (core stage) |
+| 4 | debug_agent_N | oEDA debug → passrate ≥ 80% → VCS stage & convergence | — (core stage) |
+| 5 | review_agent | code review, P0/P1/P2 report | optional — user decides |
+| 6 | deliver_agent | status feedback to the design side | optional — user decides |
+
+**Decision interaction** — ask via AskUserQuestion: (a) adopt the full pipeline; (b) adopt with named stages skipped; (c) custom instructions. The pipeline is an entry suggestion only — **it never bypasses existing gates** (spec2json/json2env invocation approvals, feature-list confirmation, source-of-truth approvals all still apply, per §1 and the charters).
+
+**Recording** — write the decision + final plan to `docs/memory/leader_taskboard.md` and update it at every stage transition.
+
+**Explicit invocation** — `/new-verification <requirement>` (skill `.claude/skills/new-verification/`) runs this procedure with the given requirement.
