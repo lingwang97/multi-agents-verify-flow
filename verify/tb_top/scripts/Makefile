@@ -35,7 +35,12 @@ filelist_path=$(dataBasePath)/verify/tb_top/filelist
 gate_file =  $(filelist_path)/gate_file_lst.f
 gpls_lib_lst = $(filelist_path)/gpls_lib_lst.f
 UART_VIP_HOME="/project/SG/public/uart_vip/"
-DPO_DATABASE_DIR=/archive/project/SG/dpo_database
+# Site settings come from verify/script/sflow/flow_env.sh (the single definition point);
+# wsim passes WSIM_PYTHON and DPO_DATABASE_DIR on the make command line. No defaults here
+# on purpose - a second copy of the values would drift. Run through wsim.
+ifndef WSIM_PYTHON
+  $(warning WSIM_PYTHON not set - run through wsim (values live in verify/script/sflow/flow_env.sh))
+endif
 
 #######################################################################################################
 # Step 1-a: Checking simulation config setting from Macro Define(description b)
@@ -439,7 +444,7 @@ endif
 ifdef seed
 	SEED=$(seed)
 else
-	SEED := $(shell python2 -c "from random import randint; print randint(0,99999999)")
+	SEED := $(shell $(WSIM_PYTHON) -c "from random import randint; print(randint(0,99999999))")
 endif
 
 #-------------------------------------------------------------------------

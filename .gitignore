@@ -3,7 +3,6 @@ sim/uvm_scratch_*/
 sim/result.txt
 sim/fail_wave.txt
 verify/ral/
-hdl/common/reg_table/reg_table.md
 tools/
 obj_dir/
 cov_report/

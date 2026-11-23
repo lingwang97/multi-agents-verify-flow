@@ -587,7 +587,10 @@ if __name__ == '__main__':
 
 
     #ral_sv_t    = open(args_t.input_reg_table.replace("csv","md"), 'w')
-    output_md_name=args_t.input_reg_table[0:-13]+".md"
+    # md table view goes next to the generated model (verify/ral/), never into the
+    # register-table directory - the CSV may live anywhere (WSIM_REG_TABLE)
+    output_md_name=os.path.join(os.path.dirname(os.path.abspath(file_name)),
+                                os.path.splitext(os.path.basename(args_t.input_reg_table))[0]+".md")
     ral_sv_t    = open(output_md_name, 'w')
     ral_md = "# Register Table  \n"
     ral_md += "| "

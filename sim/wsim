@@ -45,7 +45,7 @@ OPTS_PROFILE=""
 OPTS_ONGS="FALSE"
 OPTS_REAL_CORE="FALSE"
 OPTS_LSF="TRUE"
-OPTS_LSF_QUEUE="amd7t83"
+OPTS_LSF_QUEUE=""   # default set from WSIM_LSF_QUEUE (flow_env.sh) after sourcing
 OPTS_LSF_CORES="1"
 OPTS_LSFSIG=""
 OPTS_TAG=""
@@ -56,6 +56,15 @@ currentPwd=`pwd`
 wsim_dir_path=$(dirname $(realpath $0))
 database_path="$wsim_dir_path/.."
 me=`basename $0`
+
+# project-level flow settings (WSIM_REG_TABLE, ...) - single definition point
+flow_env="$database_path/verify/script/sflow/flow_env.sh"
+if [[ ! -f $flow_env ]]; then
+    echo "****$me**** ERROR: project settings not found: $flow_env"
+    exit -1
+fi
+source $flow_env
+[[ -z $OPTS_LSF_QUEUE ]] && OPTS_LSF_QUEUE=$WSIM_LSF_QUEUE
 
 
 
@@ -302,7 +311,7 @@ function buildUvmCase()
         make_option+=" cm_switch=1"
     fi
 
-    if [ -n $OPTS_SEED_VALUE ] ; then
+    if [ -n "$OPTS_SEED_VALUE" ] ; then
         echo "custom seed is  ${OPTS_SEED_VALUE}" >> $simlog_dir
         make_option+=" seed=${OPTS_SEED_VALUE}"
     fi
@@ -336,6 +345,9 @@ function buildUvmCase()
     make_option+=" simv_opt=$OPTS_SIMV"
 
     make_option+=" testname=$testname"
+
+    # site settings from flow_env.sh (single definition point)
+    make_option+=" WSIM_PYTHON=$WSIM_PYTHON DPO_DATABASE_DIR=$WSIM_DPO_DB"
 
     if [[ -n $OPTS_CORNER ]]; then
 	    make_option+=" corner=$OPTS_CORNER"
@@ -454,10 +466,10 @@ function buildUvmCase()
         bsub_option="bsub -n ${OPTS_LSF_CORES} -m ${OPTS_HOST} -I ${OPTS_LSF_SIG} -q ${OPTS_LSF_QUEUE}"
     elif [[ $OPTS_LSF == "TRUE" ]]; then
         ## This part need to be maintained
-        host_file="/lsf/conf/lsbatch/kulh1-clu-lsf01/configdir/lsb.hosts"
-        lines=$(grep "amd7t83" ${host_file})
-        queue_names=($(grep "amd7t83" ${host_file} | head -3 | cut -d ' ' -f 1))
-        lsf_queue_name=($(grep "amd7t83" ${host_file} | head -3 | cut -d ' ' -f 1 | sed 's/amd/a/g'))
+        host_file="$WSIM_LSF_HOSTS_FILE"
+        lines=$(grep "$WSIM_LSF_QUEUE" ${host_file})
+        queue_names=($(grep "$WSIM_LSF_QUEUE" ${host_file} | head -3 | cut -d ' ' -f 1))
+        lsf_queue_name=($(grep "$WSIM_LSF_QUEUE" ${host_file} | head -3 | cut -d ' ' -f 1 | sed 's/amd/a/g'))
         queue_number=${#queue_names[@]}
         lsf_host_name=(0 0 0)
         lsf_host_slot=(0 0 0)
@@ -705,7 +717,7 @@ function parse_list()
 	projectfile_name=$wsim_dir_path/project_name
     project=`cat $projectfile_name`
 
-	python_command="python3.6 $database_path/verify/tb_top/scripts/testjson2lst.py -f $database_path/verify/json/module.json --define $database_path/hdl/common/top/chip_define.sv $python_opt $realCore_opt -o $outputfile ${level_opt} --project ${project} --dpo ${OPTS_DPO}"
+	python_command="$WSIM_PYTHON $database_path/verify/tb_top/scripts/testjson2lst.py -f $database_path/verify/json/module.json $python_opt $realCore_opt -o $outputfile ${level_opt} --project ${project} --dpo ${OPTS_DPO}"
 	log 3 "running command: $python_command"
 	$python_command | tee -a $simlog_dir
 
@@ -824,33 +836,34 @@ function comp_simv()
 
 function RalGen()
 {
-    if [[ ! -d $database_path/verify/ral ]]; then
-	    mkdir -p $database_path/verify/ral
-    fi
-    csv_input=$database_path/hdl/common/reg_table/reg_table_reg_list.csv
+    # register table location is project-level: WSIM_REG_TABLE (verify/script/sflow/flow_env.sh)
+    csv_input=$WSIM_REG_TABLE
     reg_script=$database_path/verify/utils/reg/gen_reg_model.py
     output=$database_path/verify/ral/ral_reg_model.sv
+    if [[ ! -f $csv_input ]]; then
+        # No CSV is a valid state while enable_ral is off: skip instead of aborting the
+        # whole run. A case whose filelist compiles ral_reg_model.sv then fails at
+        # compile time with the model missing; this log line says why.
+        log 2 "register table not found: $csv_input - RalGen skipped. Cases compiling the RAL model (enable_ral) need it: provide the CSV or update WSIM_REG_TABLE in verify/script/sflow/flow_env.sh"
+        return 0
+    fi
+    if [[ ! -d $database_path/verify/ral ]]; then
+        mkdir -p $database_path/verify/ral
+    fi
     host=$(env | grep "^HOST=" | head -n 1 | cut -d '-' -f 3)
     echo "#############################"
     echo "####  host is ${host}  ######"
     echo "#############################"
-    python_path="/opt/anaconda3/bin/python"
-    python_reg_command="$python_path $reg_script -i $csv_input  -cov addr -o $output"
-    if [[ ! -f $database_path/verify/ral/ral_reg_model.sv ]]; then
-        log 2 "ral_reg_model.sv initial generation"
-        log 2 "running command: python $reg_script -i $csv_input -cov addr -o $output"
+    python_path="$WSIM_PYTHON"
+    python_reg_command="$python_path $reg_script -i $csv_input -cov addr -o $output"
+    # regenerate when the model is missing or older than the CSV / generator
+    # (mtime works for any CSV location, unlike the former git-diff check)
+    if [[ ! -f $output || $csv_input -nt $output || $reg_script -nt $output ]]; then
+        log 2 "generating ral_reg_model.sv from $csv_input"
+        log 2 "running command: $python_reg_command"
         $python_reg_command
-    else
-        csv_update=`git diff $csv_input`
-        script_update=`git diff $reg_script`
-        if [[ -n csv_update || -n script_update ]]; then
-            log 2 "source xlsx file or script file has update, generate the ral_reg_model.sv again"
-            log 2 "running command: python $reg_script -i $csv_input  -cov addr -o $output"
-            $python_reg_command
-	    fi
-	    log 2 "if there is error happen during wsim script, it might be io problem for $csv_input file, just commit your change and rerun"
     fi
-    if [[ ! -f $database_path/verify/ral/ral_reg_model.sv ]]; then
+    if [[ ! -f $output ]]; then
         log 2 "ral_reg_model.sv does not generate right, please check the source file ${csv_input}, script file ${reg_script}"
         exit -1
     fi
@@ -1047,12 +1060,12 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-#generate uvm register model in RalGen function
+#generate uvm register model in RalGen function (skipped with a warning when the WSIM_REG_TABLE CSV is absent)
 RalGen
 
 #do dpo database merge
 if [[ ${OPTS_DPO} =~ "apply" ]]; then
-    dporg merge -d  /archive/project/SG/dpo_database/dpo_learn_db
+    dporg merge -d  $WSIM_DPO_DB/dpo_learn_db
     log 3 "do merge database done.."
 fi
 

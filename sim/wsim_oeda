@@ -19,8 +19,9 @@
 ##   source ~/tools/oss-cad-suite/environment     # provides verilator/make
 ##   export UVM_HOME=$HOME/tools/uvm-1.2          # default if unset
 ##
-## Set WSIM_LOCAL_COV=none to regenerate the RAL without covergroups if the
-## Verilator build chokes on the generated covergroup code.
+## Set WSIM_OEDA_COV=none (legacy name WSIM_LOCAL_COV still honoured) to regenerate
+## the RAL without covergroups if the Verilator build chokes on the generated
+## covergroup code.
 ## -----------------------------------------------------------------------------
 
 set -o pipefail
@@ -30,11 +31,16 @@ OPTS_TESTCASE_NAME=""
 OPTS_SEED_VALUE=""
 OPTS_DUMPWAVE="TRUE"
 OPTS_COVRPT="FALSE"
-OPTS_COV_TYPE="${WSIM_LOCAL_COV:-addr}"
+OPTS_COV_TYPE="${WSIM_OEDA_COV:-${WSIM_LOCAL_COV:-addr}}"
 
 wsim_dir_path=$(dirname $(realpath $0))
 database_path="$wsim_dir_path/.."
 me=$(basename $0)
+
+# project-level flow settings (WSIM_REG_TABLE, ...) - single definition point
+flow_env="$database_path/verify/script/sflow/flow_env.sh"
+[ -f "$flow_env" ] || { echo "****$me****'ERROR!!!'project settings not found: $flow_env" >&2; exit 1; }
+source "$flow_env"
 
 function usage() {
     echo "USAGE: $0 [OPTION]"
@@ -76,13 +82,13 @@ test_full_name="$OPTS_TESTCASE_NAME"
 
 ################################################################################
 # RalGen - mirrors wsim's RalGen: (re)generate verify/ral/ral_reg_model.sv from
-# hdl/common/reg_table/reg_table_reg_list.csv when missing or inputs are newer.
+# the register table $WSIM_REG_TABLE (flow_env.sh) when missing or inputs are newer.
 ################################################################################
 function RalGen() {
-    local csv_input="$database_path/hdl/common/reg_table/reg_table_reg_list.csv"
+    local csv_input="$WSIM_REG_TABLE"
     local reg_script="$database_path/verify/utils/reg/gen_reg_model.py"
     local output="$database_path/verify/ral/ral_reg_model.sv"
-    [ -f "$csv_input" ]   || die "register table not found: $csv_input"
+    [ -f "$csv_input" ]   || die "register table not found: $csv_input - this case compiles the RAL model (enable_ral); provide the CSV or update WSIM_REG_TABLE in verify/script/sflow/flow_env.sh"
     [ -f "$reg_script" ]  || die "reg model generator not found: $reg_script"
     mkdir -p "$database_path/verify/ral"
     local stamp="$output.covtype"

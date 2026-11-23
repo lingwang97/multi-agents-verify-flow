@@ -1,7 +1,0 @@
-BlockName,Label,RegName,FieldName,BaseAddr,OffsetAddr,EndAddr,ResetValue,BitStart,BitEnd,VirtualType,Has_Reset,ResetSource,ResetSource1,HdlPath,RegSliceName,,,,
-hdl_soc_reg,Block,,,0x0,,0xc,,,,,,,,,,,,,
-hdl_soc_reg,REG_32,SOC_CTRL,,,0x0,,,,,RW,,,,,,,,,
-hdl_soc_reg,REG_BIT,SOC_CTRL,enable,,0x0,,,0,,RW,1,,,,,,,,
-hdl_soc_reg,REG_BIT,SOC_CTRL,mode,,0x0,,,2,3,RW,1,,,,,,,,
-hdl_soc_reg,REG_32,SOC_STATUS,,,0x4,,,,,RO,,,,,,,,,
-hdl_soc_reg,REG_BIT,SOC_STATUS,busy,,0x4,,,0,,RO,0,,,,,,,,
