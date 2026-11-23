@@ -2,7 +2,7 @@
 
 ## 1. Purpose & audience
 
-This is a task-oriented guide for engineers writing a new test case in the `verify` UVM environment for the `soc` project. It is **not** a UVM tutorial — it assumes you know UVM basics and want to know specifically what to do *in this repo*. For the overall architecture (filelist layering, naming conventions, `wsim` flow), read `CLAUDE.md` at the root of this tree first; this manual only repeats what's needed inline.
+This is a task-oriented guide for engineers writing a new test case in the `verify` UVM environment for the `soc` project. It is **not** a UVM tutorial — it assumes you know UVM basics and want to know specifically what to do *in this repo*. For the overall architecture (naming conventions, `wsim` flow), read `CLAUDE.md` at the root of this tree first (filelist layering: `.claude/rules/filelists.md`); this manual only repeats what's needed inline.
 
 **Automating §3/§4:** this manual lives inside the `add-test-case` skill (`.claude/skills/add-test-case/`, next to `SKILL.md` and `add_test_case.py`) because the skill scaffolds the mechanical parts of §3 and §4 (the `test/`/`seq/` classes and the JSON entry) in one step, following the exact naming and inheritance rules below. Run `python3 .claude/skills/add-test-case/add_test_case.py --help` — you'll still need to fill in real stimulus (§3.4-3.6) by hand. Paths in this manual are relative to the verify root (`verify/`) unless stated otherwise. When a module is added or removed, keep this manual in sync with the skill (see `docs/memory/arch_memory.md` R1/R2).
 
@@ -29,7 +29,7 @@ Given all this, **writing a new test case here means filling in real content at 
 ### 3.1 Decide block-level vs. system-level
 
 - **System-level** (full-chip): extend the generated `<mod>_base_test` / `<mod>_base_seq`.
-- **Block-level** (single IP): use the `+define+<MOD>_BLOCK_TEST` macro (see `CLAUDE.md` Conventions) which selects the `uvm_blk_<mod>.f` filelist (the VCS Makefile and `wsim_oeda` both derive it from the define, no per-module branch). `json/case/apb_master.json` shows the real convention: `"VCS_MACRO_OPT":"+APB_MASTER_BLOCK_TEST"`, plus extra defines appended when a case needs a different compile (`+APB_MASTER_BLOCK_TEST+APB_SRAM_EN_WAIT`). Block-level support exists for `efuse` and `apb_master` only.
+- **Block-level** (single IP): use the `+define+<MOD>_BLOCK_TEST` macro (see `CLAUDE.md` "Block-level flow") which selects the `uvm_blk_<mod>.f` filelist (the VCS Makefile and `wsim_oeda` both derive it from the define, no per-module branch). `json/case/apb_master.json` shows the real convention: `"VCS_MACRO_OPT":"+APB_MASTER_BLOCK_TEST"`, plus extra defines appended when a case needs a different compile (`+APB_MASTER_BLOCK_TEST+APB_SRAM_EN_WAIT`). Block-level support exists for `efuse` and `apb_master` only.
 
 ### 3.2 Pick a base to extend
 
@@ -109,7 +109,7 @@ These assume every register handle is named literally `reg_<regname>` under a bl
 
 ### 3.5 Fill in per-module helpers
 
-Put reusable tasks (register read/write wrappers, wait-for-signal helpers, etc.) in `seq/comm_<mod>_methods.sv`. Because this file is `` `include``-d directly inside `base_seq`'s class body (`CLAUDE.md` line 58), anything you define there becomes a callable member task of `base_seq` and every `<mod>_base_seq` subclass — no separate import needed. Today the `comm_<mod>_methods.sv` files are empty placeholders; `apb_master` keeps its reusable helpers (`apb_write/apb_read/apb_idle`) directly in `seq/apb_master_block_base_seq.sv` instead.
+Put reusable tasks (register read/write wrappers, wait-for-signal helpers, etc.) in `seq/comm_<mod>_methods.sv`. Because this file is `` `include``-d directly inside `base_seq`'s class body (`CLAUDE.md` Architecture, "Test/sequence base"), anything you define there becomes a callable member task of `base_seq` and every `<mod>_base_seq` subclass — no separate import needed. Today the `comm_<mod>_methods.sv` files are empty placeholders; `apb_master` keeps its reusable helpers (`apb_write/apb_read/apb_idle`) directly in `seq/apb_master_block_base_seq.sv` instead.
 
 ### 3.6 Wire the interface/driver/monitor/scoreboard/coverage for the real protocol
 
@@ -162,7 +162,7 @@ Pass/fail is decided by grepping `UVM_ERROR`/`UVM_FATAL` counts in `sim.log`; re
 
 **Important caveat**: apart from `apb_master`, no scoreboard in this repo has a real check yet (§2), so for `reg`/`ro`/`uart`/`efuse` a clean `UVM_ERROR`/`UVM_FATAL` count of zero does **not** mean your test verified anything — it may simply mean nothing was ever compared. Don't treat a passing run as "done" until your scoreboard (§3.6) has a real assertion in it.
 
-`wsim` only runs on Linux with VCS/Verdi/LSF. On the Windows box use the open-source flow instead (WSL2 + Verilator, see `CLAUDE.md` "Local open-source sim"): from the repo-root `sim/`, `./wsim_oeda -c <your_test_key> -seed 1 [-covrpt]` (single case; invoke WSL by full path from Windows, see `docs/ops/oeda_local_setup.md`). It does not collect covergroup functional coverage.
+`wsim` only runs on Linux with VCS/Verdi/LSF. On the Windows box use the open-source flow instead (WSL2 + Verilator, see `CLAUDE.md` "Open-source EDA flow"): from the repo-root `sim/`, `./wsim_oeda -c <your_test_key> -seed 1 [-covrpt]` (single case; invoke WSL by full path from Windows, see `docs/ops/oeda_local_setup.md`). It does not collect covergroup functional coverage.
 
 ## 6. Definition of done for a leaf test
 

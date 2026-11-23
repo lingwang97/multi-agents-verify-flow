@@ -1,8 +1,8 @@
 # arch_memory
 
-Architecture state, standing rules and lessons for developing this verify tree. Project-wide and tool-independent: read before structural changes, append when a new rule or lesson is learned (one entry = rule, why, how to apply). Stable "what/how" guidance lives in `verify/CLAUDE.md`; this file holds what changes with the project. Last updated 2026-11-23 (§9 open development gaps added — canonical home of the former dev-manual §7 table; §0 adapter column corrected; reg-table location is the project-level `WSIM_REG_TABLE` in `verify/script/sflow/flow_env.sh`; §0/§7.2 repointed; §6 parameterization item resolved). Earlier: 2026-11-20 (reg-table dependency gated by enable_ral: spec2json intake REG TABLE CONFIRMATION gate, CLAUDE.md canon; placeholder CSV + derived RAL artifacts REMOVED; §6 registers the path-parameterization follow-up). Previous: 2026-11-19 (dedup pass: R5/§3/§0/§8 slims to CLAUDE.md canon; framework-change history migrated to `docs/memory/fw_env_memory.md`; R6 amended — framework changes are logged there, this chain records only rule/doc changes). Older: 2026-11-18 (R6 doc governance: header TOC, canonical homes, §2→`docs/ops/oeda_local_setup.md`+CLAUDE.md, §4→`docs/modules/apb_master.md`; dual-track property policy). Oldest: 2026-11-17 (multi-agent flow deployed, §8; §6 SVA deferral lifted). Oldest: 2026-11-11 (enable_ral; oEDA rename + OPEN_EDA define; closed loop 5/6; R5 regen rule + section 7 system checklist — framework details migrated to fw_env_memory).
+Architecture state, standing rules and lessons for developing this verify tree. Project-wide and tool-independent: read before structural changes, append when a new rule or lesson is learned (one entry = rule, why, how to apply). Stable "what/how" guidance lives in `verify/CLAUDE.md` and the path-scoped `.claude/rules/`; this file holds what changes with the project. Last updated 2026-11-23. Change history: `git log -- docs/memory/arch_memory.md` (framework changes: `docs/memory/fw_env_memory.md`).
 
-**TOC** (section numbers are frozen per R6 — never renumber, only append; physical order preserved; logical reading order below): §0 module/architecture state → §1 maintenance rules R1–R6 → §5 two-flow closed loop → §3 block-level conventions → §7 system bring-up checklist (blocked) → §6 deferred items → §8 multi-agent deployment (2026-11-17/18) → §9 open development gaps → §2 *(moved 2026-11-18: machine setup → `docs/ops/oeda_local_setup.md`; Verilator rules → CLAUDE.md oEDA/OPEN_EDA)* → §4 *(moved 2026-11-18: apb_master details → `docs/modules/apb_master.md`)*.
+**TOC** (section numbers are frozen per R6 — never renumber, only append; physical order preserved; logical reading order below): §0 module/architecture state → §1 maintenance rules R1–R6 → §5 two-flow closed loop → §3 block-level conventions → §7 system bring-up checklist (blocked) → §6 deferred items → §8 multi-agent deployment → §9 open development gaps. §2 and §4 are retired and their numbers are not reused (content moved 2026-11-18: machine setup → `docs/ops/oeda_local_setup.md`; Verilator rules → `.claude/rules/oeda-verilator.md`; apb_master details → `docs/modules/apb_master.md`).
 
 ---
 
@@ -33,7 +33,7 @@ Architecture state, standing rules and lessons for developing this verify tree. 
 - **Automatic reminder:** the project hook `.claude/hooks/arch_memory_check.sh` (wired in `.claude/settings.json`, `PreToolUse`/`Bash`) fires once per state when `script/uvm_env_config_template.json`, `json/module.json` or `script/gen_uvm_env.py` have uncommitted changes, or when `MODULES` in `add_test_case.py` differs from the modules in `json/module.json`. It only injects a reminder to evaluate this file, the skill (`add_test_case.py`, `SKILL.md`, `test_case_dev_manual.md`) and `CLAUDE.md`; nothing is edited until the user confirms. State is kept in `.git/arch_memory_hook.state` (delete it to re-trigger).
 
 ### R2. Adding or removing a module → sync CLAUDE.md, the dev manual and §0 above
-- **Rule:** also update `verify/CLAUDE.md` (filelist notes, local-flow notes), `.claude/skills/add-test-case/test_case_dev_manual.md` (module list; lives inside the skill directory since 2026-11-09), the module table in §0 and the open-gap list in §9 of this file.
+- **Rule:** also update `verify/CLAUDE.md` and `.claude/rules/` (any module names they mention), `.claude/skills/add-test-case/test_case_dev_manual.md` (module list; lives inside the skill directory since 2026-11-09), the module table in §0 and the open-gap list in §9 of this file.
 - **Why:** these are the first documents a new session reads; stale module names mislead tooling and people.
 - **Status:** the manual's former §7 gap table moved to §9 here on 2026-11-23 (it had already drifted: it listed an apb_master adapter that was deleted long before). Re-verify §9 whenever RAL, adapters, block-level flow or JSON placeholders change.
 
@@ -50,7 +50,7 @@ Architecture state, standing rules and lessons for developing this verify tree. 
 - `script/` is the source of truth; `sim/wsim*`, `tb_top/scripts/` and `utils/` are deployed copies. After editing `script/sflow/*`, re-run `script/file_manage.sh` (or edit and copy both when the deploy step is unavailable).
 
 ### R6. Documentation governance: canonical homes, summary+link, frozen anchors (2026-11-18)
-- **Rule:** every fact class has ONE canonical home; other docs keep a short summary plus a pointer, never a full restatement. Canonical map: Verilator/OPEN_EDA coding rules & oEDA usage/pass criterion & regeneration/config-knob rules → `verify/CLAUDE.md`; two-flow sign-off & coverage split → §5 here; multi-agent process/metrics/doc map → `docs/ops/multi_agent_ops.md`; per-module DUT knowledge → `docs/modules/<mod>.md` (cross-agent reference truth); machine setup → `docs/ops/oeda_local_setup.md` (operational, not project knowledge); framework-change history (env/template/generator changes) → `docs/memory/fw_env_memory.md` — the Last-updated chain of this file records only rule/doc changes.
+- **Rule:** every fact class has ONE canonical home; other docs keep a short summary plus a pointer, never a full restatement. Canonical map: oEDA usage/pass criterion & regeneration/config-knob rules & RalGen/reg-table behaviour → `verify/CLAUDE.md`; Verilator/OPEN_EDA coding rules & the dual-track property mechanism → `.claude/rules/oeda-verilator.md`; flow settings, deploy and flow-script gotchas → `.claude/rules/flow-scripts.md`; filelist conventions → `.claude/rules/filelists.md`; two-flow sign-off & coverage split → §5 here; multi-agent process/metrics/doc map → `docs/ops/multi_agent_ops.md`; per-module DUT knowledge → `docs/modules/<mod>.md` (cross-agent reference truth); machine setup → `docs/ops/oeda_local_setup.md` (operational, not project knowledge); framework-change history (env/template/generator changes) → `docs/memory/fw_env_memory.md`; rule/doc change history → git log (this file keeps only a Last-updated date).
 - **Promotion:** per-agent logs (`fw_env_memory`, `dev/`, `debug/`, `deliver/`, taskboard) record *what happened*; a stable fact distilled from a log is **promoted** into `docs/modules/<mod>.md` and the log entry marked "promoted" — never copy canon into logs.
 - **Anchors:** section numbers in this file are frozen once referenced elsewhere — never renumber, only append (the §6/§7 historical order is kept on purpose; the header TOC gives the logical view). When a policy changes: edit the canonical home first, then sync the summaries.
 - **Why:** the dual-track property policy (2026-11-17/18) required 7–8 synchronized edits; §-number references already drifted once (§7/§6 ordering).
@@ -58,24 +58,11 @@ Architecture state, standing rules and lessons for developing this verify tree. 
 
 ---
 
-## 2. (moved 2026-11-18, per R6)
-
-Machine/dev-box setup and Windows invocation pitfalls → `docs/ops/oeda_local_setup.md`; Verilator coding rules, oEDA pass criterion and coverage reading → canonical in `verify/CLAUDE.md` (oEDA / OPEN_EDA sections). Kept as an anchor stub because several docs referenced "arch §2".
-
----
-
 ## 3. Block-level flow conventions
 
 - Selection mechanics are canonized in `verify/CLAUDE.md` (oEDA "Block-level flow"). Unique bits: both flow scripts derive the filelist from the `<MOD>_BLOCK_TEST` token (lower-cased module name), so a new block-level module only needs its `uvm_blk_<mod>.f`; a missing file stops with a clear error (Makefile `$(error)` / `wsim_oeda` `die`).
-- Makefile gotcha: keep `$(error ...)` inside conditionals space-indented; a tab-indented one is parsed as a recipe line ("recipe commences before first target").
-- Generator vs generated files: VERILATOR guards (`top_pkg`, `tb_top_*`, `dump_wave`, `vif_declare`) are defined in the `gen_uvm_env.py` templates; fix the template and sync the generated file together, otherwise a regeneration silently drops the local-flow support.
+- Generator vs generated files and Makefile gotchas: `.claude/rules/generated-assembly.md` and `.claude/rules/flow-scripts.md`.
 - Block tb top is `tb_top/tb_top/tb_top_<mod>.sv`; module name stays `tb_top` (`` `define TB_TOP tb_top `` in `tb_define.sv`).
-
----
-
-## 4. (moved 2026-11-18, per R6)
-
-apb_master / apb_v3_sram DUT details, quirks, case macros and config rationale → `docs/modules/apb_master.md` (cross-agent per-module canon). Kept as an anchor stub; per-module UVC/adapter/block support state stays in §0.
 
 ---
 
@@ -89,7 +76,7 @@ Naming: the open-source flow is **oEDA** (script `wsim_oeda`, scratch `sim/uvm_s
 
 **Capability gaps of oEDA - re-check each at convergence time:**
 1. Functional covergroups are NOT collected by Verilator - VCS `-fm`/`-cm` only.
-2. SVA concurrent assertions are not supported - none exist today; if added later they are VCS-only (deferred item, see section 6).
+2. SVA concurrent assertions are not supported - property checks are dual-tracked (SVA VCS-only, procedural equivalents on oEDA; `.claude/rules/oeda-verilator.md`).
 3. Constraint solver: keep constraints simple enough for Verilator (repo convention); complex-constraint tests must pass on VCS.
 4. Width macros are **derived from the register table** (since 2026-11-12): RalGen (`gen_reg_model.py`) parses the CSV (field `BitEnd+1`, `Label REG_<n>`, byte span `(EndAddr-OffsetAddr+1)*8` - max of all three per register) and writes `verify/ral/ral_reg_width`; `testjson2lst.py` injects `max(64, derived)` into BOTH flows, and `wsim_oeda` no longer filters them. The old `chip_define.sv` + CORE_NUM parsing is gone (that file also no longer exists). Residual check when the real register table lands: confirm the derived value covers the real design's widest register - sliced registers depend on the Label/EndAddr columns being populated per slice; if they are not, the derivation undercounts and the number must be revisited.
 5. Gate/post-layout (`-l gate|post`) and DPO flows are VCS-only.
@@ -107,14 +94,11 @@ Naming: the open-source flow is **oEDA** (script `wsim_oeda`, scratch `sim/uvm_s
 
 ## 6. Deferred items
 
-- ~~Reg-table path parameterization~~ **resolved 2026-11-23**: the location is the project-level `WSIM_REG_TABLE` in `verify/script/sflow/flow_env.sh` (mechanism: CLAUDE.md RAL bullet; change log: fw_env_memory).
-
-- SVA protocol assertions: the 2026-11-11 deferral was lifted (2026-11-17/18) — property checks are **dual-tracked**; the mechanism canon is `verify/CLAUDE.md` (OPEN_EDA differences paragraph), summaries in ops §3 and §8. Status note kept here because this section tracks deferred items: Verilator must never see SVA outside the guard.
+- SVA protocol assertions: the 2026-11-11 deferral was lifted (2026-11-17/18) — property checks are **dual-tracked**; the mechanism canon is `.claude/rules/oeda-verilator.md`, summaries in ops §3 and §8. Status note kept here because this section tracks deferred items: Verilator must never see SVA outside the guard.
 - Width-macro alignment: see item 4 in section 5.
 - Full compile cache (native-FS scratch, hash-keyed obj_dir): superseded by obj_dir reuse for as long as the primary environment is server Linux; revisit only if the WSL box becomes the primary debug environment again.
 
 - Stale system-level path: `top_env.sv` sets `ral.set_hdl_path_root("tb_top.C[0].btnode.btc")` - a pre-apb_master chip hierarchy. Harmless while the placeholder RAL is unused, but it MUST be updated to the real hierarchy before any backdoor register access in the revived system flow.
-- Makefile gotcha: when a Python/shell patch writes a trailing backslash (line continuation) avoid `\"`-style escapes in heredocs; a mis-escaped backslash leaves a dangling quote and `bash -n` reports "unexpected EOF while looking for matching `"'"".
 
 ## 8. Multi-agent verification flow (deployed 2026-11-17)
 
@@ -123,7 +107,7 @@ Roles defined in `.claude/agents/` (spec2json = opus; json2env/dev/debug/deliver
 - **Tiered confirmation**: sub-agents edit module-private/rollbackable files directly; source-of-truth files need a user-approved change plan; commits are leader-only with `COMMIT_APPROVED=1` after user approval — full rules: ops §1.
 - **Writable roots** `verify/` + `deliver_bridge/` + `sim/`, enforced by the `path_guard` hook (`.claude/hooks/path_guard.py`, wired in `.claude/settings.json` PreToolUse; Bash/PowerShell path writes stay advisory — only the `git commit` rule is hard there).
 - **VCS-first**: the VCS flow is the next setup item and will be deployed on Linux by the user; simulations run server-side (no local parallel cap). oEDA stays the local fast-iteration flow; passrate ≥ 80% (pass = exit 0 + no UVM_ERROR/FATAL) gates the VCS stage; VCS results are returned by the user into `sim/vcs_results/<date>/` for debug_agent analysis + conv-report.
-- **Coverage split (decided 2026-11-17/18)**: property checks dual-tracked, function covergroups VCS-only — canon: `verify/CLAUDE.md` OPEN_EDA paragraph; summaries: ops §3, §6 above.
+- **Coverage split (decided 2026-11-17/18)**: property checks dual-tracked, function covergroups VCS-only — canon: `.claude/rules/oeda-verilator.md`; summaries: ops §3, §6 above.
 - **Memories/taskboard**: `docs/memory/fw_env_memory.md` (json2env), `docs/modules/<mod>.md` (cross-agent per-module canon, R6 promotion; first instance apb_master), `docs/memory/dev|debug|deliver/<mod>.md` (per-agent logs, from `_template.md`), `docs/memory/leader_taskboard.md` (leader), features in `docs/features/<mod>/`, reviews in `docs/review/`; `deliver_bridge/` recreated with a README (interface conventions).
 
 ## 9. Open development gaps (canonical since 2026-11-23)

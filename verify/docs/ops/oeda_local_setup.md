@@ -1,7 +1,7 @@
 # oEDA local flow environment manual (WSL2 + Verilator, machine-specific)
 
 > Split out of `arch_memory.md` §2 on 2026-11-18 (R6 doc governance: machine setup is an ops manual, not project knowledge).
-> Division of labor: day-to-day commands and the project coding constraints (Verilator/OPEN_EDA rules, pass criterion) are canonized in `verify/CLAUDE.md` (oEDA / OPEN_EDA sections); this file covers only how this machine is set up and driven.
+> Division of labor: day-to-day commands and the pass criterion are canonized in `verify/CLAUDE.md` (oEDA section), the Verilator/OPEN_EDA coding rules in `.claude/rules/oeda-verilator.md`; this file covers only how this machine is set up and driven.
 
 ## One-time setup (machine-specific)
 

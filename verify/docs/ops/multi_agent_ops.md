@@ -23,7 +23,7 @@ Leader duties: analyze user needs, schedule and manage the other agents, analyze
 Sub-agents cannot ask the user mid-run, so file confirmation is tiered:
 
 - **Sub-agents may edit directly** (rollbackable artifacts): their own module's module-private files (`uvc/<mod>/`, `<mod>_seq/test`, `<mod>_block_base_*`, `json/case/<mod>.json`, `tb_top_<mod>.sv`, `uvm_blk_<mod>.f`, `<mod>_if_conn*`), newly written test/seq/coverage code, `docs/features/`, `docs/review/`, agent memories under `docs/memory/`, `deliver_bridge/` reports. Exception: a new reference model (`uvc/<mod>/src/<mod>_ref_model.sv`) is approval-gated — plan first, develop only after user approval (dev_agent charter).
-- **Change plan + user approval required first**: anything under `script/` (generators/flow), `script/uvm_env_config_template.json`, `tb_top/filelist/*.f`, assembly/base template-pure files, `CLAUDE.md`, rule-bearing entries of `arch_memory.md`, cross-module shared files.
+- **Change plan + user approval required first**: anything under `script/` (generators/flow), `script/uvm_env_config_template.json`, `tb_top/filelist/*.f`, assembly/base template-pure files, `CLAUDE.md`, `.claude/rules/`, rule-bearing entries of `arch_memory.md`, cross-module shared files.
 - **git commit always requires user approval**: agents never commit (hook-hard-blocked); the leader compiles the impact analysis → user approves → the leader runs `COMMIT_APPROVED=1 git commit ...` (the hook's only escape hatch, leader-only).
 
 ## 2. Scheduling discipline
@@ -46,7 +46,8 @@ Retrieval entry point: **look up this table first** to find the canonical home o
 
 | File | Owner | Content (canonical level) |
 |---|---|---|
-| `verify/CLAUDE.md` | whole project (loaded every session) | overview/commands/stable conventions; **canon of Verilator/OPEN_EDA coding rules, oEDA usage and pass criterion** |
+| `verify/CLAUDE.md` | whole project (loaded every session) | overview/commands/stable conventions; **canon of oEDA usage and pass criterion, regeneration/config-knob rules, RalGen/reg-table behaviour** |
+| `.claude/rules/*.md` | whole project (path-scoped, load when matching files are opened) | **canon of Verilator/OPEN_EDA coding rules + dual-track property mechanism** (`oeda-verilator.md`), flow settings/deploy/script gotchas (`flow-scripts.md`), filelist conventions (`filelists.md`); assembly-file reminder (`generated-assembly.md`, summary of the CLAUDE.md regen canon) |
 | `docs/ops/multi_agent_ops.md` | leader | **process canon**: roles/tiered confirmation/scheduling/passrate/hooks/this table |
 | `docs/ops/oeda_local_setup.md` | environment | local WSL2/Verilator machine setup and Windows invocation pitfalls (machine-specific ops manual) |
 | `docs/memory/arch_memory.md` | whole project (spec2json owns the verification-strategy parts) | **architecture state §0, maintenance rules R1-R6, two-flow closed loop §5, deployment history §8** (section numbers frozen, header TOC) |
@@ -66,7 +67,7 @@ Retrieval entry point: **look up this table first** to find the canonical home o
 
 **Key entries per hot file** (retrieval goes to file + section, not just the file):
 
-- `verify/CLAUDE.md`: Commands (wsim/wsim_oeda usage, pass criterion) · "Regenerating the environment" (R5 canon: skip-if-exists vs template-pure, add/remove workflow, config knobs + generator-enforced rules) · oEDA/OPEN_EDA sections (Verilator rules + dual-track property canon) · Architecture (UVC pattern, filelist layering) · Multi-agent section (leader pointer).
+- `verify/CLAUDE.md`: Commands (wsim usage, pass criterion) · oEDA section (wsim_oeda usage, pass criterion, block-level flow) · "Regenerating the environment" (R5 canon: skip-if-exists vs template-pure, config knobs + generator-enforced rules) · "Flow scripts and the register table" (RalGen gating) · Architecture (non-obvious UVC/base facts) · Multi-agent section (leader pointer).
 - `docs/memory/arch_memory.md`: §0 module/state table · R1/R2 module-sync rules (hook-referenced) · R3 skill preference · R6 doc governance · §5 two-flow closed loop · §6 deferred status · §7 system bring-up checklist · §8 deployment history · §9 open development gaps.
 - `docs/ops/multi_agent_ops.md`: §0 roles · §1 tiered confirmation · §2 scheduling · §3 passrate/coverage · §4 this map · §5 escalation · §6 hooks · §7 dispatch input · §8 new-requirement intake.
 - `docs/modules/<mod>.md`: DUT details/quirks/case macros per module (first instance: apb_master).
@@ -79,8 +80,8 @@ Retrieval entry point: **look up this table first** to find the canonical home o
 | Run/simulate a case | CLAUDE Commands (wsim / wsim_oeda) + pass criterion |
 | Write a leaf test/seq | add-test-case manual (§3/§4) + arch §9 open gaps + arch R3 |
 | Check a DUT behavior/quirk | `docs/modules/<mod>.md` |
-| Change the framework/generator | CLAUDE Regen canon + arch R5 → log to fw_env_memory |
-| Dual-track property / coverage questions | CLAUDE OPEN_EDA canon + ops §3 + arch §6 status |
+| Change the framework/generator | CLAUDE Regen canon + `.claude/rules/generated-assembly.md` / `flow-scripts.md` + arch R5 → log to fw_env_memory |
+| Dual-track property / coverage questions | `.claude/rules/oeda-verilator.md` + ops §3 + arch §6 status |
 | Locate any document | this map + the key-entries list above |
 | Change the multi-agent process | this file (ops) — then sync the charter summaries |
 

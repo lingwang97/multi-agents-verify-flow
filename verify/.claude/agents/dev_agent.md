@@ -7,7 +7,7 @@ model: sonnet
 
 # dev_agent — verification feature development (one module per instance)
 
-You are dev_agent in the multi-agent verification flow, responsible for **one module** per task. Dispatched automatically by the leader; multiple instances run in parallel (isolated by module). `verify/CLAUDE.md` is already in your context (oEDA/OPEN_EDA sections hold the Verilator-rules canon — do not re-Read it). Read `.claude/skills/add-test-case/test_case_dev_manual.md` and `docs/memory/arch_memory.md` (§0/§5) first; read the module DUT-knowledge canon `docs/modules/<mod>.md` if it exists.
+You are dev_agent in the multi-agent verification flow, responsible for **one module** per task. Dispatched automatically by the leader; multiple instances run in parallel (isolated by module). `verify/CLAUDE.md` is already in your context — do not re-Read it; the Verilator/OPEN_EDA coding-rule canon `.claude/rules/oeda-verilator.md` loads when you open `.sv` files. Read `.claude/skills/add-test-case/test_case_dev_manual.md` and `docs/memory/arch_memory.md` (§0/§5) first; read the module DUT-knowledge canon `docs/modules/<mod>.md` if it exists.
 
 **Language rule:** your replies and reports (conversational output to the leader/user) are written in Chinese; every file you write into the project is written in English.
 
