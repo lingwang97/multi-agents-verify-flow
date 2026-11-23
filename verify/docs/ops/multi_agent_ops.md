@@ -59,7 +59,7 @@ Retrieval entry point: **look up this table first** to find the canonical home o
 | `docs/features/<mod>/` | dev_agent | feature list (`proposed` status requires user confirmation) + PROGRESS |
 | `docs/review/` | review_agent | review report archive |
 | `.claude/agents/*.md` | each agent | charter: role/flow/inline constraints/report format (enforcement subset of the canons) |
-| `.claude/skills/` (add-test-case, conv-report) | skills | ops manuals (test_case_dev_manual §7 has the gap list) |
+| `.claude/skills/` (add-test-case, conv-report) | skills | ops manuals (open gaps: arch_memory §9) |
 | `docs/sys_function_splits.md` | spec2json | level-partition plan (exists once produced) |
 | `docs/reports/` | reports | verification campaign reports (`report_template.md` outline + conventions; one per campaign, append-only; leader compiles from agent outputs) |
 | `deliver_bridge/README.md` | interface | design↔verification directory conventions |
@@ -67,7 +67,7 @@ Retrieval entry point: **look up this table first** to find the canonical home o
 **Key entries per hot file** (retrieval goes to file + section, not just the file):
 
 - `verify/CLAUDE.md`: Commands (wsim/wsim_oeda usage, pass criterion) · "Regenerating the environment" (R5 canon: skip-if-exists vs template-pure, add/remove workflow, config knobs + generator-enforced rules) · oEDA/OPEN_EDA sections (Verilator rules + dual-track property canon) · Architecture (UVC pattern, filelist layering) · Multi-agent section (leader pointer).
-- `docs/memory/arch_memory.md`: §0 module/state table · R1/R2 module-sync rules (hook-referenced) · R3 skill preference · R6 doc governance · §5 two-flow closed loop · §6 deferred status · §7 system bring-up checklist · §8 deployment history.
+- `docs/memory/arch_memory.md`: §0 module/state table · R1/R2 module-sync rules (hook-referenced) · R3 skill preference · R6 doc governance · §5 two-flow closed loop · §6 deferred status · §7 system bring-up checklist · §8 deployment history · §9 open development gaps.
 - `docs/ops/multi_agent_ops.md`: §0 roles · §1 tiered confirmation · §2 scheduling · §3 passrate/coverage · §4 this map · §5 escalation · §6 hooks · §7 dispatch input · §8 new-requirement intake.
 - `docs/modules/<mod>.md`: DUT details/quirks/case macros per module (first instance: apb_master).
 
@@ -77,7 +77,7 @@ Retrieval entry point: **look up this table first** to find the canonical home o
 |---|---|
 | Add/remove a module | arch R1/R2 + CLAUDE "Regenerating the environment" + log the change in fw_env_memory |
 | Run/simulate a case | CLAUDE Commands (wsim / wsim_oeda) + pass criterion |
-| Write a leaf test/seq | add-test-case manual (§3/§4, §7 gap list) + arch R3 |
+| Write a leaf test/seq | add-test-case manual (§3/§4) + arch §9 open gaps + arch R3 |
 | Check a DUT behavior/quirk | `docs/modules/<mod>.md` |
 | Change the framework/generator | CLAUDE Regen canon + arch R5 → log to fw_env_memory |
 | Dual-track property / coverage questions | CLAUDE OPEN_EDA canon + ops §3 + arch §6 status |

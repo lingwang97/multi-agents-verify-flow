@@ -14,6 +14,8 @@ The current environment state (module table, generation rules) lives in `arch_me
 - ≤2026-11-11 `hdl/rtl/soc_stub.sv` removed — the system flow has no DUT until the SoC RTL lands; VCS Makefile gained the `block_env` branch (`uvm_blk_<mod>.f` selection).
 - 2026-11-11 `enable_ral` config knob added (chip-global + per-module) with its generator-enforced rules.
 - 2026-11-11 oEDA rename: `wsim_local` → `wsim_oeda`; scratch `uvm_scratch_oeda_<case>/`; isolation define `+define+OPEN_EDA`; old `_local` on-disk artifacts kept as-is.
+- ≤2026-11-09 RAL include fix: `utils/reg/reg_mdl_pkg.sv` includes `uvm_reg_macros.sv`, which exists in `utils/reg/` (former filename mismatch; was dev-manual gap #2).
+- ≤2026-11-09 First real sequence starts: every `apb_master_*_block_test` calls `seq.start(apb_master_env_h.vseqr_h)` (was dev-manual gap #7 "no real .start() anywhere").
 - 2026-11-12 Width macros derived from the register table: RalGen (`gen_reg_model.py`) writes `verify/ral/ral_reg_width`; the old `chip_define.sv` + CORE_NUM parsing removed.
 - 2026-11-20 Placeholder reg-table CSV removed from the tree (together with the placeholder-derived `verify/ral/ral_reg_model.sv` + `ral_reg_width`); reg-table dependency strictly gated by enable_ral (spec2json intake gate; RalGen dies "register table not found" if the CSV is missing when needed).
 - Reason: eliminate the silent-placeholder channel (user decision).
@@ -28,3 +30,8 @@ The current environment state (module table, generation rules) lives in `arch_me
 - Change: `flow_env.sh` gains a site section — `WSIM_PYTHON` (`/opt/anaconda3/bin/python`), `WSIM_LSF_QUEUE` (`amd7t83`), `WSIM_LSF_HOSTS_FILE`, `WSIM_DPO_DB` — with values identical to the former literals. `wsim` reads them (queue default, 4 queue-discovery greps, hosts file, RalGen + testjson2lst python, DPO merge) and forwards `WSIM_PYTHON`/`DPO_DATABASE_DIR` on the make command line; the Makefile drops its copies (DPO path, `python2` seed — now `print()`-style, works on python 3) and warns when run without wsim. Dead `--define .../chip_define.sv` argument removed (file gone since 2026-11-12; testjson2lst never read it). `wsim` seed test fixed: the unquoted `[ -n $OPTS_SEED_VALUE ]` was always true, so make always got an empty `seed=` and the random-seed branch was dead.
 - Reason: one definition point per site value ahead of the Linux migration (user decision); `python2` likely absent on the new server.
 - Impact: three different python interpreters unified into one; migration = edit one file. Verified: `bash -n`; GNU make probe in WSL (vars flow in from the command line, DPO dbdir expands, seed generated on python3, explicit `seed=42` honoured, warning when make runs without wsim); stale-literal scan clean; oEDA apb_master smoke PASS. Not verified: a real VCS/LSF run (server-only). Open: hostname-based LSF enable, `host=sinh1` consumer — settle at the migration.
+
+## 2026-11-23 Dev-manual gap table moved to arch_memory §9
+- Change: the `test_case_dev_manual.md` §7 "Known gaps" table is retired; open gaps (G3/G4/G5/G6/G8/G10) now live in `arch_memory.md` §9, resolved ones (#1/#2/#7) are recorded in this log, and duplicates of existing homes (#9 → arch §7, #10 block support → arch §0) were dropped.
+- Reason: mutable state belongs in arch (R6), history here; the manual's copy had drifted (claimed an apb_master adapter that no longer exists).
+- Impact: one home for gap state, in the file every sub-agent already reads; closing a gap = delete the §9 row + add a line here.

@@ -20,9 +20,9 @@ Before you start, understand exactly where this repo currently stands. Four of t
 
 **The finished worked example is `apb_master`** (block level, DUT `hdl/rtl/apb_v3_sram.v`): a real interface (`apb_master_if.sv` with the APB3 signals), a negedge FSM driver, a monitor that reconstructs transfers and runs procedural protocol checks, a shadow-memory scoreboard, real coverage bins, sequence helpers `apb_write/apb_read/apb_idle` in `seq/apb_master_block_base_seq.sv`, six leaf tests (`apb_master_{smoke,reset,rw_rand,error,boundary,wait}_block_test`) and real JSON entries; results were reported in the 2026-09-28 campaign report (removed from the tree, in git history). Copy its structure when customising another UVC.
 
-**The other partially-real pattern** is `test/efuse_block_base_test.sv` + `seq/efuse_block_base_seq.sv` — a standalone pair (not derived from `base_test`/`base_seq`) for block-level (single-IP) testing that shows genuine RAL wiring (apb_master's block base follows the same pair shape). Neither has exercised a real register read/write — see §3.2 and §7 gap #8.
+**The other partially-real pattern** is `test/efuse_block_base_test.sv` + `seq/efuse_block_base_seq.sv` — a standalone pair (not derived from `base_test`/`base_seq`) for block-level (single-IP) testing that shows genuine RAL wiring (apb_master's block base follows the same pair shape). Neither has exercised a real register read/write — see §3.2.
 
-Given all this, **writing a new test case here means filling in real content at every layer**, not just adding a JSON entry to something that already works end-to-end. Section 7 lists the specific blockers you're likely to hit first.
+Given all this, **writing a new test case here means filling in real content at every layer**, not just adding a JSON entry to something that already works end-to-end. `docs/memory/arch_memory.md` §9 lists the specific blockers you're likely to hit first.
 
 ## 3. Step-by-step: writing a new leaf test class
 
@@ -82,7 +82,7 @@ ral.default_map.set_sequencer(efuse_env_h.vseqr_h, efuse_adapter_h);
 ral.default_map.set_auto_predict(1);
 ```
 
-**Flag before you rely on this**: this wiring is plumbed but has never actually been exercised by a real `ral.<reg>.write()/read()` call anywhere in the repo (see §7 gap #8) — treat it as an unproven starting point, not a validated reference.
+**Flag before you rely on this**: this wiring is plumbed but has never actually been exercised by a real `ral.<reg>.write()/read()` call anywhere in the repo — treat it as an unproven starting point, not a validated reference.
 
 ### 3.3 Start a sequence on the (virtual) sequencer
 
@@ -105,7 +105,7 @@ Start a **chip-wide** sequence with `seq.start(vseqr_h)`; start a sequence that 
 `define WR_REG(module,reg,value)  ral.``module``.reg_``reg``.wr(value)
 `define RD_REG(module,reg,value)  ral.``module``.reg_``reg``.rd(value)
 ```
-These assume every register handle is named literally `reg_<regname>` under a block named `<module>` — **this naming assumption is unconfirmed** against what `utils/reg/gen_reg_model.py` actually generates: the RAL model is now generated at runtime (`ral/ral_reg_model.sv`, top class `ral_gen_main` with a single `soc_reg` block of the placeholder CSV), and no sequence calls these macros yet (see §7 gap #3). Confirm the real generated names before relying on them; you may need plain `ral.<block>.<reg>.write(status, data, .parent(this));` calls instead. Note the `apb_master` block tests do not use RAL at all (the DUT has no registers).
+These assume every register handle is named literally `reg_<regname>` under a block named `<module>` — **this naming assumption is unconfirmed** against what `utils/reg/gen_reg_model.py` actually generates: the RAL model is generated at runtime (`ral/ral_reg_model.sv`, top class `ral_gen_main`) from the register-table CSV at `$WSIM_REG_TABLE` — none is checked in yet — and no sequence calls these macros yet. Confirm the real generated names before relying on them; you may need plain `ral.<block>.<reg>.write(status, data, .parent(this));` calls instead. Note the `apb_master` block tests do not use RAL at all (the DUT has no registers).
 
 ### 3.5 Fill in per-module helpers
 
@@ -175,20 +175,3 @@ Before calling a new test case finished, confirm:
 - [ ] The sequence calls `.start()` on the correct (virtual) sequencer (§3.3).
 - [ ] The JSON entry uses real macros/plusargs (not the placeholder tokens) and `UVM_TESTNAME` matches an actual class.
 - [ ] `wsim -c <key> -uvm` produces zero `UVM_ERROR`/`UVM_FATAL` **and** you've confirmed the scoreboard actually exercised the intended behavior (not just a clean log by default).
-
-## 7. Known gaps to fix first
-
-These are current, confirmed blockers/bugs in this checkout — check this list before you get surprised mid-development.
-
-| # | Gap | Where | Impact | Done looks like |
-|---|---|---|---|---|
-| 1 | ~~RAL model not generated yet~~ Resolved | `verify/ral/ral_reg_model.sv` is generated by `wsim`/`wsim_oeda`'s `RalGen` step from the CSV at `$WSIM_REG_TABLE` (project-level, `verify/script/sflow/flow_env.sh`); no CSV is checked in (placeholder removed 2026-11-20) — provide the real one when a config enables `enable_ral` (spec2json intake gate); without it RAL-compiling cases fail with "register table not found" | — | Provide the real reg table (and repoint `WSIM_REG_TABLE` if it is not at the default path) when the SoC database lands |
-| 2 | ~~Include filename mismatch~~ Resolved | `utils/reg/reg_mdl_pkg.sv` now includes `uvm_reg_macros.sv`, which exists in `utils/reg/` | — | Done |
-| 3 | `reg_<name>` handle-naming assumption unconfirmed | `utils/reg/uvm_reg_macros.sv:15-25` assumes register handles are named `reg_<regname>`; no sequence uses the macros yet, and the generated model is `ral_gen_main` → `soc_reg` block | The `` `WR_REG``/`` `RD_REG`` etc. macros may not match what `gen_reg_model.py` actually emits | Confirmed (or generator/macros adjusted) by one real register access |
-| 4 | Adapters incomplete/unvalidated | `apb_master`, `uart`, `efuse` have a `reg2<bus>_adapter.sv`; `reg` and `ro` have none. All existing ones are generic stubs doing a bare `we`/`addr`/`data` copy (`uvc/efuse/src/efuse_reg2apb_adapter.sv`: "Please complete the conversion logic of the bus..."; apb_master has none because the DUT has no registers (`enable_ral: false`, `adapter_type: ""` in `script/uvm_env_config_template.json`) | RAL front-door access through any UVC isn't validated against real bus timing | `reg`/`ro` adapters written; adapters validated against real protocol semantics |
-| 5 | `comm_<mod>_methods.sv` empty | All are placeholder comments only (apb_master keeps helpers in `apb_master_block_base_seq.sv`) | No reusable per-module sequence helpers in the `comm_*` files | Populated as real tests are written |
-| 6 | Most `UVM_TESTNAME` values still have no leaf class | Only the `apb_master` entries have real leaf classes (6 block tests + the system smoke test); `ro_smoke_test` and `efuse_smoke_block_test` exist but are inert; the other placeholder entries (`<mod>_random_test`, etc.) have no class | Still the core work this manual exists to guide for `reg`/`ro`/`uart`/`efuse` | Leaf classes written per §3 (or via the skill), JSON updated per §4 |
-| 7 | ~~No real `.start()` call exists anywhere~~ Resolved | All `apb_master_*_block_test` classes call `seq.start(apb_master_env_h.vseqr_h)` for real | — | Done — the reference examples §3.3 points at |
-| 8 | `efuse_block_base_test/_seq` RAL wiring never exercised | Build/connect phases create and wire `ral`/adapter/sequencer, but no `ral.<reg>.write()/read()` call exists anywhere in the repo | Treat this pattern as "wiring example only," not proof the path works end-to-end | A real register access through this path succeeds |
-| 9 | JSON case files are placeholder scaffolding (except apb_master) | `reg`/`ro`/`uart`/`efuse` `json/case/*.json` use fake tokens (`DEFINE1/2/3=100`, `PLUSARGS1/PLUSARG2`, `DEFINE4`) | Copying these tokens into a new entry propagates meaningless macros | Real, module-specific macros/plusargs in place per §4.3 |
-| 10 | `uart` (and `reg`/`ro`) have no block-level support | No `tb_top/filelist/uvm_blk_<mod>.f`, no `<mod>_block_base_test/_seq`, (the flow scripts derive the filelist from `<MOD>_BLOCK_TEST`, so these are the only missing pieces) | Block-level testing only works for `efuse` and `apb_master` | Block-base files, `tb_top_<mod>.sv` and `uvm_blk_<mod>.f` authored (mirroring apb_master's) |
