@@ -30,7 +30,8 @@ def run(label, expect, tool, ti, sub=False, mode=None, extra=None, raw=None):
         d.update(extra)
     p = subprocess.run([sys.executable, os.path.join(HOOK_DIR, "path_guard.py")],
                        input=raw if raw is not None else json.dumps(d),
-                       capture_output=True, text=True, env=ENV, cwd=V)
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                       universal_newlines=True, env=ENV, cwd=V)
     if p.returncode not in (0, 2):
         got = "CRASH"
     elif p.returncode == 2:

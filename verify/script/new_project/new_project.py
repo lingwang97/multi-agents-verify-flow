@@ -12,6 +12,8 @@ Subcommands (run from anywhere; --root selects the target verify/ dir):
 
 The variable registry is vars.json (single home); the interview that drives these
 commands is the /new-project skill (.claude/skills/new-project/SKILL.md).
+
+Python 3.6+ (no 3.7-only APIs: no capture_output/text, no required subparsers).
 """
 import argparse
 import datetime
@@ -147,7 +149,8 @@ def _which(name):
 
 def _run(cmd, timeout=20):
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                           universal_newlines=True, timeout=timeout)
         return r.returncode, r.stdout
     except (OSError, subprocess.SubprocessError):
         return 1, ""
@@ -465,7 +468,8 @@ def cmd_check(root, markdown):
     bash = _which("bash")
     if bash:
         for s in ("script/sflow/wsim", "script/sflow/wsim_oeda", "script/sflow/flow_env.sh"):
-            rc = subprocess.run([bash, "-n", os.path.join(root, s).replace("\\", "/")], capture_output=True).returncode
+            rc = subprocess.run([bash, "-n", os.path.join(root, s).replace("\\", "/")],
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE).returncode
             res.append(("READY" if rc == 0 else "FAIL", "bash -n", s))
 
     order = {"FAIL": 0, "PENDING": 1, "WARN": 2, "READY": 3}
@@ -643,7 +647,7 @@ def cmd_bootstrap(dst, with_flags, force):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--root", default=SRC_VERIFY, help="target verify/ directory (default: the one holding this script)")
-    sub = ap.add_subparsers(dest="cmd", required=True)
+    sub = ap.add_subparsers(dest="cmd")  # required= is 3.7+; checked below
     b = sub.add_parser("bootstrap")
     b.add_argument("--dst", required=True, help="new repo root")
     b.add_argument("--with", dest="withs", action="append", default=[], help="optional manifest group, e.g. apb-master")
@@ -660,6 +664,9 @@ def main():
     c = sub.add_parser("check")
     c.add_argument("--markdown", action="store_true")
     args = ap.parse_args()
+    if not args.cmd:
+        ap.print_help()
+        sys.exit(2)
     root = os.path.abspath(args.root)
     if args.cmd == "bootstrap":
         cmd_bootstrap(args.dst, args.withs, args.force)
