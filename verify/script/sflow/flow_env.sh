@@ -30,5 +30,14 @@ WSIM_PYTHON="/opt/anaconda3/bin/python"
 WSIM_LSF_QUEUE="amd7t83"
 # LSF cluster host configuration read for queue/host discovery.
 WSIM_LSF_HOSTS_FILE="/lsf/conf/lsbatch/kulh1-clu-lsf01/configdir/lsb.hosts"
+# LSF dispatch master switch: anything but TRUE runs every case locally.
+WSIM_LSF_ENABLE="TRUE"
+# Host-name fragments (3rd '-'-separated field of $HOST) allowed to submit to
+# LSF; runs started on other hosts fall back to local execution. Empty = any host.
+WSIM_LSF_SUBMIT_HOSTS="cch gat0"
+# Execution-host names in WSIM_LSF_HOSTS_FILE, used for per-queue slot discovery.
+WSIM_LSF_EXEC_HOST_REGEX="kulh1-a[0-9a-zA-Z]+-cch[0-9]+"
+# sed expression mapping a host-group name in WSIM_LSF_HOSTS_FILE to its queue name.
+WSIM_LSF_QUEUE_SED='s/amd/a/g'
 # DPO learn/apply/reference database root.
 WSIM_DPO_DB="/archive/project/SG/dpo_database"

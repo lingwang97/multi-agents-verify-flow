@@ -35,3 +35,8 @@ The current environment state (module table, generation rules) lives in `arch_me
 - Change: the `test_case_dev_manual.md` §7 "Known gaps" table is retired; open gaps (G3/G4/G5/G6/G8/G10) now live in `arch_memory.md` §9, resolved ones (#1/#2/#7) are recorded in this log, and duplicates of existing homes (#9 → arch §7, #10 block support → arch §0) were dropped.
 - Reason: mutable state belongs in arch (R6), history here; the manual's copy had drifted (claimed an apb_master adapter that no longer exists).
 - Impact: one home for gap state, in the file every sub-agent already reads; closing a gap = delete the §9 row + add a line here.
+
+## 2026-11-23 LSF site logic parameterized; dead host=sinh1 removed
+- Change: the last site literals in `wsim` moved to `flow_env.sh`: `WSIM_LSF_ENABLE` (master switch, `TRUE`), `WSIM_LSF_SUBMIT_HOSTS` (`cch gat0` — replaces the hostname guess; empty = any host), `WSIM_LSF_EXEC_HOST_REGEX` (`kulh1-a[0-9a-zA-Z]+-cch[0-9]+`), `WSIM_LSF_QUEUE_SED` (`s/amd/a/g`). The `host=sinh1` make argument was removed — nothing in the Makefile or its tcl files reads it.
+- Reason: prerequisite of the `/new-project` bootstrap skill (no script edits during a project setup; user decision); closes the taskboard "LSF enable design" item.
+- Impact: none on the current server (defaults equal the old literals). Verified: `bash -n`; no site literal left in `wsim`; the rewritten submit-host block reproduces the old decision for 8 HOST/ENABLE combinations, empty list = any host; queue sed and host regex checked on a sample hosts line. Real LSF dispatch still server-side (taskboard).
