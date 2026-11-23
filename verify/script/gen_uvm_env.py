@@ -1954,7 +1954,7 @@ def get_dump():
 
 `ifdef OPEN_EDA
     initial begin
-        $display("\n[NOTE]\tStart Dump FST waveform (Verilator) at%t\n", $time);
+        $display("\\n[NOTE]\\tStart Dump FST waveform (Verilator) at%t\\n", $time);
         $dumpfile("wave.fst");
         $dumpvars(0, tb_top);
     end

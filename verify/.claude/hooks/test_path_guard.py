@@ -56,6 +56,7 @@ def main():
     run("sub: .claude/rules mode=auto", "deny", "Write", W(os.path.join(V, ".claude", "rules", "x.md")), True, "auto")
     run("sub: uvm.f", "ask", "Edit", W(os.path.join(V, "tb_top", "filelist", "uvm.f")), True, "default")
     run("sub: top_env.sv", "ask", "Edit", W(os.path.join(V, "env", "top_env.sv")), True, "default")
+    run("sub: component/dump_wave.sv", "ask", "Edit", W(os.path.join(V, "tb_top", "component", "dump_wave.sv")), True, "default")
     run("sub: json/module.json", "ask", "Edit", W(os.path.join(V, "json", "module.json")), True, "default")
     run("sub: msys path script/", "ask", "Edit", W("/c" + V[2:].replace("\\", "/") + "/script/sflow/wsim") if V[1] == ":" else W(os.path.join(V, "script", "sflow", "wsim")), True, "default")
     run("sub: relative path script/", "ask", "Edit", W("script/sflow/wsim"), True, "default", {"cwd": V})

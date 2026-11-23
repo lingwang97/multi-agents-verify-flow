@@ -1,0 +1,198 @@
+{
+  "_doc": [
+    "Variable registry for /new-project - the single home of every value a new chip project must define before the verification flow starts.",
+    "Read by new_project.py (detect/status/set/apply/check) and by the new-project skill (interview).",
+    "A new framework variable (a new flow_env.sh setting, a new config knob, a new filelist) is registered here in the same change (arch_memory R7).",
+    "Paths in 'file'/'files' are relative to verify/. 'kind' decides how apply writes the value:",
+    "  json_field     top-level key of a JSON file ('key'); 'type' bool|str",
+    "  sh_var         VAR=\"value\" line in a shell file ('var'); relative repo paths are prefixed with $database_path/ when 'repo_path' is true",
+    "  text_file      whole file rendered from 'template' ({v} = value)",
+    "  filelist_block lines between 'start' and 'end' marker comments, one per list item, rendered from 'line' ({v})",
+    "  choice_rewrite per-choice literal snippets ('snippets': {file: {choice: text}}) swapped in the listed files",
+    "  record_only    kept in answers.json only (drives the report / later stages)",
+    "  detect_only    never written; check verifies the tool/setting on this machine (machine-level, CLAUDE.md rule)",
+    "'rewrites': [{files, pattern}] - after apply, every occurrence of pattern with the previously applied value is replaced by the new value.",
+    "'deferrable': the user may answer 'defer'; the item is listed as pending in the check report.",
+    "'phase': interview order (1 identity, 2 inputs, 3 machine tools, 4 VCS server, 5 filelists, 6 Claude config)."
+  ],
+  "config_file": "script/uvm_env_config_template.json",
+  "flow_env_file": "script/sflow/flow_env.sh",
+  "vars": [
+    {
+      "id": "project_name", "phase": 1, "kind": "json_field",
+      "file": "script/uvm_env_config_template.json", "key": "project_name", "type": "str",
+      "prompt": "Chip/project name (lower-case identifier). Names the system top tb_top_<name>.sv and its filelist.",
+      "validate": "^[a-z][a-z0-9_]*$",
+      "rewrites": [
+        {"files": ["CLAUDE.md", ".claude/rules/oeda-verilator.md", ".claude/rules/generated-assembly.md",
+                   ".claude/rules/filelists.md", ".claude/agents/debug_agent.md", ".claude/hooks/path_guard.py",
+                   ".claude/skills/add-test-case/test_case_dev_manual.md"],
+         "pattern": "tb_top_{v}"},
+        {"files": ["CLAUDE.md"], "pattern": "for the SoC `{v}`"}
+      ]
+    },
+    {
+      "id": "pid", "phase": 1, "kind": "text_file",
+      "file": "script/sflow/project_name", "template": "`define PID {v}",
+      "prompt": "Project id (deployed as sim/project_name; read by wsim, the Makefile and testjson2lst).",
+      "validate": "^[A-Za-z0-9_]+$",
+      "rewrites": [{"files": ["CLAUDE.md"], "pattern": "(project id `PID {v}`)"}]
+    },
+    {
+      "id": "top_enable_ral", "phase": 1, "kind": "json_field",
+      "file": "script/uvm_env_config_template.json", "key": "enable_ral", "type": "bool",
+      "prompt": "Does the chip have a register model (top-level enable_ral)? false forces every module enable_ral=false and adapter_type=\"\".",
+      "default": "true", "validate": "^(true|false)$"
+    },
+    {
+      "id": "has_top_if_cfg", "phase": 1, "kind": "json_field",
+      "file": "script/uvm_env_config_template.json", "key": "has_top_if_cfg", "type": "bool",
+      "prompt": "Generate the top-level interface config (env/top_if.sv + top_if_pc.sv)?",
+      "default": "true", "validate": "^(true|false)$"
+    },
+
+    {
+      "id": "spec_dir", "phase": 2, "kind": "record_only",
+      "prompt": "Directory with the architecture/design/verification-plan documents (repo-root relative). 'none' = pre-research mode on reference RTL.",
+      "default": "verify/docs/spec", "detect": "spec_dir", "deferrable": true
+    },
+    {
+      "id": "rtl_dir", "phase": 2, "kind": "record_only",
+      "prompt": "Directory holding the chip RTL (repo-root relative), scanned to propose the RTL filelist.",
+      "default": "hdl/rtl", "detect": "rtl_dir", "deferrable": true
+    },
+    {
+      "id": "reg_table", "phase": 2, "kind": "sh_var",
+      "file": "script/sflow/flow_env.sh", "var": "WSIM_REG_TABLE", "repo_path": true,
+      "prompt": "Register-table CSV consumed by RalGen (repo-root relative or absolute). Needed only when enable_ral is on.",
+      "default": "hdl/common/reg_table/reg_table_reg_list.csv", "detect": "reg_table", "deferrable": true
+    },
+
+    {
+      "id": "uvm_home", "phase": 3, "kind": "detect_only", "detect": "env:UVM_HOME",
+      "prompt": "UVM-1.2 library for the oEDA flow (environment variable UVM_HOME, default $HOME/tools/uvm-1.2)."
+    },
+    {
+      "id": "verilator", "phase": 3, "kind": "detect_only", "detect": "path:verilator",
+      "prompt": "Verilator on PATH for the oEDA flow (OSS CAD Suite environment sourced)."
+    },
+    {
+      "id": "vcs", "phase": 3, "kind": "detect_only", "detect": "path:vcs",
+      "prompt": "Synopsys VCS on PATH (VCS sign-off flow)."
+    },
+    {
+      "id": "verdi_home", "phase": 3, "kind": "detect_only", "detect": "env:VERDI_HOME",
+      "prompt": "VERDI_HOME (FSDB dump / Verdi GUI)."
+    },
+    {
+      "id": "oeda_platform", "phase": 3, "kind": "choice_rewrite",
+      "prompt": "Where does the oEDA (Verilator) flow run? linux = natively on this Linux host; wsl = WSL2 on a Windows box.",
+      "choices": ["linux", "wsl"], "default": "linux",
+      "snippets": {
+        "CLAUDE.md": {
+          "wsl": "Local fast-iteration flow on this Windows box, inside WSL2 Ubuntu 24.04: Verilator (OSS CAD Suite) + UVM-1.2 + FST waves + `verilator_coverage`. Machine setup, the Surfer viewer and `wsl.exe` invocation pitfalls: `docs/ops/oeda_local_setup.md`.",
+          "linux": "Local fast-iteration flow, run natively on this Linux host: Verilator (OSS CAD Suite) + UVM-1.2 + FST waves + `verilator_coverage`. Machine setup and the waveform viewer: `docs/ops/oeda_local_setup.md`."
+        },
+        "CLAUDE.md#2": {
+          "wsl": "# from the repo-root sim/, inside WSL; single case only",
+          "linux": "# from the repo-root sim/; single case only"
+        },
+        ".claude/agents/debug_agent.md": {
+          "wsl": "`\"/c/Program Files/WSL/wsl.exe\" -d Ubuntu-24.04 -- bash /mnt/c/Users/wangling/pro_cc/projecd_id/sim/<run_script>.sh`\n   Multi-command runs must go into a script file (Git Bash quoting loses `$var`; add `MSYS_NO_PATHCONV=1` inside the script), never inline.",
+          "linux": "`cd <repo>/sim && ./wsim_oeda -c <case> -seed 1` (see `docs/ops/oeda_local_setup.md` for the environment).\n   Multi-command runs go into a script file, never inline."
+        }
+      }
+    },
+
+    {
+      "id": "wsim_python", "phase": 4, "kind": "sh_var", "file": "script/sflow/flow_env.sh", "var": "WSIM_PYTHON",
+      "prompt": "Python 3 (with openpyxl) used by RalGen, testjson2lst and the Makefile seed.",
+      "detect": "python", "validate": "^\\S+$"
+    },
+    {
+      "id": "lsf_enable", "phase": 4, "kind": "sh_var", "file": "script/sflow/flow_env.sh", "var": "WSIM_LSF_ENABLE",
+      "prompt": "Dispatch simulations through LSF (bsub)? FALSE runs every case on the local host.",
+      "choices": ["TRUE", "FALSE"], "default": "TRUE", "validate": "^(TRUE|FALSE)$"
+    },
+    {
+      "id": "lsf_queue", "phase": 4, "kind": "sh_var", "file": "script/sflow/flow_env.sh", "var": "WSIM_LSF_QUEUE",
+      "prompt": "Default LSF queue (also the pattern used to discover sibling queues in the hosts file).",
+      "detect": "lsf_queues", "deferrable": true
+    },
+    {
+      "id": "lsf_hosts_file", "phase": 4, "kind": "sh_var", "file": "script/sflow/flow_env.sh", "var": "WSIM_LSF_HOSTS_FILE",
+      "prompt": "LSF cluster hosts file (lsb.hosts) read for queue/host slot discovery.",
+      "detect": "lsf_hosts_file", "deferrable": true
+    },
+    {
+      "id": "lsf_submit_hosts", "phase": 4, "kind": "sh_var", "file": "script/sflow/flow_env.sh", "var": "WSIM_LSF_SUBMIT_HOSTS",
+      "prompt": "Host-name fragments (3rd '-'-separated field of $HOST) allowed to submit to LSF, space separated; empty = any host.",
+      "detect": "host", "deferrable": true
+    },
+    {
+      "id": "lsf_exec_host_regex", "phase": 4, "kind": "sh_var", "file": "script/sflow/flow_env.sh", "var": "WSIM_LSF_EXEC_HOST_REGEX",
+      "prompt": "Extended regex matching execution-host names in the hosts file.",
+      "deferrable": true
+    },
+    {
+      "id": "lsf_queue_sed", "phase": 4, "kind": "sh_var", "file": "script/sflow/flow_env.sh", "var": "WSIM_LSF_QUEUE_SED",
+      "prompt": "sed expression mapping a host-group name in the hosts file to its LSF queue name ('s/x/x/' = identity).",
+      "default": "s/x/x/", "deferrable": true
+    },
+    {
+      "id": "dpo_db", "phase": 4, "kind": "sh_var", "file": "script/sflow/flow_env.sh", "var": "WSIM_DPO_DB",
+      "prompt": "DPO learn/apply/reference database root (only used with -dpo).",
+      "deferrable": true
+    },
+
+    {
+      "id": "rtl_files", "phase": 5, "kind": "filelist_block",
+      "file": "tb_top/filelist/rtl_file_lst.f", "start": "// Module 1 Start", "end": "// Module 1 End",
+      "line": "../../../{v}",
+      "prompt": "Chip RTL source files (repo-root relative), in compile order.",
+      "detect": "rtl_files", "deferrable": true, "list": true
+    },
+    {
+      "id": "include_dirs", "phase": 5, "kind": "filelist_block",
+      "file": "tb_top/filelist/include.f", "start": "// --------------DESIGN-RELATIVE Start", "end": "// --------------DESIGN-RELATIVE End",
+      "line": "+incdir+../../../{v}/",
+      "prompt": "RTL include directories (repo-root relative). Empty list = none.",
+      "detect": "include_dirs", "deferrable": true, "list": true
+    },
+    {
+      "id": "ip_files", "phase": 5, "kind": "filelist_block",
+      "file": "tb_top/filelist/ip_file_lst.f", "start": "// Custom-Design Lib File Start", "end": "// Custom-Design Lib File End",
+      "line": "../../../{v}",
+      "prompt": "IP model files (repo-root relative). Empty list = none.",
+      "deferrable": true, "list": true
+    },
+
+    {
+      "id": "reply_language", "phase": 6, "kind": "record_only",
+      "prompt": "Language of conversational output (replies, reports, questions) of the leader and every agent.",
+      "default": "Chinese", "validate": "^[A-Z][a-z]+$",
+      "rewrites": [
+        {"files": ["CLAUDE.md"], "pattern": "(replies, reports) is in {v};"},
+        {"files": ["docs/ops/multi_agent_ops.md"], "pattern": "AskUserQuestion — is in {v};"},
+        {"files": [".claude/agents/debug_agent.md", ".claude/agents/deliver_agent.md", ".claude/agents/dev_agent.md",
+                   ".claude/agents/json2env_agent.md", ".claude/agents/review_agent.md", ".claude/agents/spec2json_agent.md"],
+         "pattern": "are written in {v};"},
+        {"files": [".claude/agents/debug_agent.md", ".claude/agents/deliver_agent.md", ".claude/agents/dev_agent.md",
+                   ".claude/agents/json2env_agent.md", ".claude/agents/review_agent.md", ".claude/agents/spec2json_agent.md"],
+         "pattern": "the leader, in {v})"}
+      ]
+    },
+    {
+      "id": "file_language", "phase": 6, "kind": "record_only",
+      "prompt": "Language of every file written into the project (docs, memories, reports, commit messages).",
+      "default": "English", "validate": "^[A-Z][a-z]+$",
+      "rewrites": [
+        {"files": ["CLAUDE.md"], "pattern": "into the project is in {v}."},
+        {"files": ["docs/ops/multi_agent_ops.md"], "pattern": "(this one included) is in {v}."},
+        {"files": [".claude/agents/debug_agent.md", ".claude/agents/deliver_agent.md", ".claude/agents/dev_agent.md",
+                   ".claude/agents/json2env_agent.md", ".claude/agents/review_agent.md", ".claude/agents/spec2json_agent.md"],
+         "pattern": "is written in {v}."}
+      ]
+    }
+  ]
+}

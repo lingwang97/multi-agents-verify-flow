@@ -23,7 +23,7 @@ Leader duties: analyze user needs, schedule and manage the other agents, analyze
 Sub-agents cannot ask the user mid-run, so file confirmation is tiered:
 
 - **Sub-agents may edit directly** (rollbackable artifacts): their own module's module-private files (`uvc/<mod>/`, `<mod>_seq/test`, `<mod>_block_base_*`, `json/case/<mod>.json`, `tb_top_<mod>.sv`, `uvm_blk_<mod>.f`, `<mod>_if_conn*`), newly written test/seq/coverage code, `docs/features/`, `docs/review/`, agent memories under `docs/memory/`, `deliver_bridge/` reports. Exception: a new reference model (`uvc/<mod>/src/<mod>_ref_model.sv`) is approval-gated — plan first, develop only after user approval (dev_agent charter).
-- **Change plan + user approval required first**: anything under `script/` (generators/flow), `script/uvm_env_config_template.json`, `tb_top/filelist/*.f`, assembly/base template-pure files, `CLAUDE.md`, `.claude/rules/`, rule-bearing entries of `arch_memory.md`, cross-module shared files. Sub-agent Write/Edit of these paths (except `arch_memory.md`) is gated by path_guard (§6: prompt in default mode, block in auto-like modes); Bash-side writes stay advisory.
+- **Change plan + user approval required first**: anything under `script/` (generators/flow), `script/uvm_env_config_template.json`, `tb_top/filelist/*.f`, assembly/base template-pure files, `CLAUDE.md`, `.claude/rules/`, rule-bearing entries of `arch_memory.md`, cross-module shared files. Exception: `/new-project` writes project values into these files from the main session, through `new_project.py apply`, after the user confirms the summary table. Sub-agent Write/Edit of these paths (except `arch_memory.md`) is gated by path_guard (§6: prompt in default mode, block in auto-like modes); Bash-side writes stay advisory.
 - **git commit always requires user approval**: agents never commit (hook-hard-blocked); the leader compiles the impact analysis → user approves → the leader runs `COMMIT_APPROVED=1 git commit ...` (the hook's only escape hatch, leader-only).
 
 ## 2. Scheduling discipline
@@ -50,7 +50,7 @@ Retrieval entry point: **look up this table first** to find the canonical home o
 | `.claude/rules/*.md` | whole project (path-scoped, load when matching files are opened) | **canon of Verilator/OPEN_EDA coding rules + dual-track property mechanism** (`oeda-verilator.md`), flow settings/deploy/script gotchas (`flow-scripts.md`), filelist conventions (`filelists.md`); assembly-file reminder (`generated-assembly.md`, summary of the CLAUDE.md regen canon) |
 | `docs/ops/multi_agent_ops.md` | leader | **process canon**: roles/tiered confirmation/scheduling/passrate/hooks/this table |
 | `docs/ops/oeda_local_setup.md` | environment | local WSL2/Verilator machine setup and Windows invocation pitfalls (machine-specific ops manual) |
-| `docs/memory/arch_memory.md` | whole project (spec2json owns the verification-strategy parts) | **architecture state §0, maintenance rules R1-R6, two-flow closed loop §5, deployment history §8** (section numbers frozen, header TOC) |
+| `docs/memory/arch_memory.md` | whole project (spec2json owns the verification-strategy parts) | **architecture state §0, maintenance rules R1-R7, two-flow closed loop §5, deployment history §8** (section numbers frozen, header TOC) |
 | `docs/modules/<mod>.md` | cross-agent | **per-module DUT-knowledge canon** (instance: apb_master); stable facts distilled from process logs are promoted here per R6 |
 | `docs/memory/fw_env_memory.md` | json2env_agent | environment framework change log |
 | `docs/memory/dev/<mod>.md` | dev_agent | module development log (copy-create from `dev/_template.md`) |
@@ -60,7 +60,8 @@ Retrieval entry point: **look up this table first** to find the canonical home o
 | `docs/features/<mod>/` | dev_agent | feature list (`proposed` status requires user confirmation) + PROGRESS |
 | `docs/review/` | review_agent | review report archive |
 | `.claude/agents/*.md` | each agent | charter: role/flow/inline constraints/report format (enforcement subset of the canons) |
-| `.claude/skills/` (add-test-case, conv-report, new-verification) | skills | ops manuals and the intake procedure (open gaps: arch_memory §9) |
+| `.claude/skills/` (add-test-case, conv-report, new-verification, new-project) | skills | ops manuals, the intake procedure and the new-chip setup (open gaps: arch_memory §9) |
+| `script/new_project/` | leader | new-chip bootstrap: `manifest.txt` (carry/reset/regenerate classification), `vars.json` (registry of every project value), `new_project.py` + `bootstrap.sh`, `answers.json` (this project's recorded values) |
 | `docs/sys_function_splits.md` | spec2json | level-partition plan (exists once produced) |
 | `docs/reports/` | reports | verification campaign reports (`report_template.md` outline + conventions; one per campaign, append-only; leader compiles from agent outputs) |
 | `deliver_bridge/README.md` | interface | design↔verification directory conventions |
@@ -130,3 +131,5 @@ A sub-agent task prompt must contain: target module/scope, spec basis (doc paths
 **Recording** — write the decision + final plan to `docs/memory/leader_taskboard.md` and update it at every stage transition.
 
 **Explicit invocation** — `/new-verification <requirement>` (skill `.claude/skills/new-verification/`) runs this procedure with the given requirement.
+
+**New chip** — a new chip project is first bootstrapped (`script/new_project/bootstrap.sh`, run by the user) and parameterized with `/new-project` (interview → apply → check); that skill ends by asking whether to start this intake.

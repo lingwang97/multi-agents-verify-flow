@@ -1,0 +1,57 @@
+# new_project manifest - the single home of the new-chip classification:
+# what a new project carries over, what it gets reset, what is regenerated.
+# Read by `new_project.py bootstrap`. Paths are relative to the repo root.
+#
+#   carry <glob>                copied as-is
+#   reset <path> <kind>         written fresh from the source file (kinds in new_project.py)
+#   with:<flag> <glob>          carried only when bootstrap gets --with-<flag>
+#   exclude <glob>              never copied (wins over carry)
+#
+# Not listed = not copied. That covers everything gen_uvm_env.py --guvc or
+# file_manage.sh regenerates (env/, test/, seq/, intf/, json/, uvc/<mod>/,
+# tb_top/tb_top/*, tb_top/component/*, tb_top/filelist/uvm*.f + tb_top_*.f,
+# tb_define.sv, tb_top/scripts/*, utils/, sim/*, verify/ral/) and the
+# chip-specific state (hdl/, docs/modules/, docs/features/<mod>/,
+# docs/review/, docs/reports/<reports>, root README.md).
+
+carry .gitignore
+carry deliver_bridge/README.md
+carry verify/CLAUDE.md
+carry verify/.claude/**
+carry verify/script/**
+carry verify/docs/ops/multi_agent_ops.md
+carry verify/docs/reports/README.md
+carry verify/docs/reports/report_template.md
+carry verify/docs/features/README.md
+carry verify/docs/memory/dev/_template.md
+carry verify/docs/memory/debug/_template.md
+carry verify/docs/memory/deliver/_template.md
+carry verify/tb_top/config/*.cfg
+carry verify/tb_top/coverage/README
+carry verify/tb_top/data/README
+carry verify/tb_top/filelist/README
+carry verify/tb_top/macro/README
+carry verify/tb_top/scripts/README
+
+reset verify/tb_top/filelist/rtl_file_lst.f filelist
+reset verify/tb_top/filelist/ip_file_lst.f filelist
+reset verify/tb_top/filelist/include.f filelist
+reset verify/tb_top/filelist/lib_lst.f filelist
+reset verify/tb_top/filelist/gate_file_lst.f filelist
+reset verify/tb_top/filelist/gate_ip_file_lst.f filelist
+reset verify/tb_top/filelist/gpls_lib_lst.f filelist
+reset verify/tb_top/macro/rtl_define.f filelist
+reset verify/script/uvm_env_config_template.json config
+reset verify/docs/memory/arch_memory.md arch
+reset verify/docs/memory/fw_env_memory.md fw_env
+reset verify/docs/memory/leader_taskboard.md taskboard
+reset verify/docs/ops/oeda_local_setup.md oeda_setup
+reset verify/script/new_project/answers.json answers
+
+with:apb-master verify/uvc/apb_master/**
+with:apb-master verify/docs/modules/apb_master.md
+
+exclude **/__pycache__/**
+exclude **/*.pyc
+exclude verify/.claude/settings.local.json
+exclude verify/script/new_project/answers.json

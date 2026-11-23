@@ -2,7 +2,7 @@
 
 Architecture state, standing rules and lessons for developing this verify tree. Project-wide and tool-independent: read before structural changes, append when a new rule or lesson is learned (one entry = rule, why, how to apply). Stable "what/how" guidance lives in `verify/CLAUDE.md` and the path-scoped `.claude/rules/`; this file holds what changes with the project. Last updated 2026-11-23. Change history: `git log -- docs/memory/arch_memory.md` (framework changes: `docs/memory/fw_env_memory.md`).
 
-**TOC** (section numbers are frozen per R6 — never renumber, only append; physical order preserved; logical reading order below): §0 module/architecture state → §1 maintenance rules R1–R6 → §5 two-flow closed loop → §3 block-level conventions → §7 system bring-up checklist (blocked) → §6 deferred items → §8 multi-agent deployment → §9 open development gaps. §2 and §4 are retired and their numbers are not reused (content moved 2026-11-18: machine setup → `docs/ops/oeda_local_setup.md`; Verilator rules → `.claude/rules/oeda-verilator.md`; apb_master details → `docs/modules/apb_master.md`).
+**TOC** (section numbers are frozen per R6 — never renumber, only append; physical order preserved; logical reading order below): §0 module/architecture state → §1 maintenance rules R1–R7 → §5 two-flow closed loop → §3 block-level conventions → §7 system bring-up checklist (blocked) → §6 deferred items → §8 multi-agent deployment → §9 open development gaps. §2 and §4 are retired and their numbers are not reused (content moved 2026-11-18: machine setup → `docs/ops/oeda_local_setup.md`; Verilator rules → `.claude/rules/oeda-verilator.md`; apb_master details → `docs/modules/apb_master.md`).
 
 ---
 
@@ -54,6 +54,12 @@ Architecture state, standing rules and lessons for developing this verify tree. 
 - **Anchors:** section numbers in this file are frozen once referenced elsewhere — never renumber, only append (the §6/§7 historical order is kept on purpose; the header TOC gives the logical view). When a policy changes: edit the canonical home first, then sync the summaries.
 - **Why:** the dual-track property policy (2026-11-17/18) required 7–8 synchronized edits; §-number references already drifted once (§7/§6 ordering).
 - **Check:** before editing a rule, find its canonical home via the doc map (ops §4); grep the old wording afterwards to catch missed summaries.
+
+
+### R7. New project values are registered in `script/new_project/vars.json` (2026-11-23)
+- **Rule:** any new value a project must define (a `flow_env.sh` setting, a top-level config knob, a filelist the user fills, an identity token in docs) is added to `vars.json` in the same change, with its target, prompt, validation and deferrability; files a new chip must carry or reset go into `manifest.txt`.
+- **Why:** `/new-project` interviews exactly what the registry lists - an unregistered value is silently skipped and the new project inherits the old chip's value.
+- **Check:** bootstrap into a scratch dir under `sim/`, `new_project.py set/apply/check`, `--guvc` one module, one oEDA smoke.
 
 ---
 

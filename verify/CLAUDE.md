@@ -53,7 +53,7 @@ bash ../verify/script/file_manage.sh     # deploys sim/wsim_oeda next to sim/wsi
   - `adapter_type`: `""` = no adapter; non-empty generates the `reg2<bus>` adapter and requires the module's `enable_ral: true`.
   - `enable_ral` (default true): false drops the RAL from block-level files. A top-level `enable_ral: false` requires every module `enable_ral: false` and `adapter_type: ""` — the system flow builds ONE chip model from the whole reg table. Both rules are generator-enforced.
 - **Module-private files are generated once, never overwritten**: `gen_uvm_env.py` skips existing `uvc/<mod>/`, `<mod>_seq/test.sv`, `<mod>_block_base_*`, `json/case/<mod>.json`, `tb_top_<mod>.sv`, `uvm_blk_<mod>.f`, `tb_top_<mod>.f`, `<mod>_if_conn*`.
-- **Assembly files are template-pure, rewritten on every run**: top_env, top_vseqr, top_pkg, vif_declare, base_seq/test, soc_sequence_lib, uvm.f, tb_define, tb_top_soc. Never hand-edit them; lift changes into the `script/gen_uvm_env.py` templates.
+- **Assembly files are template-pure, rewritten on every run**: top_env, top_vseqr, top_pkg, top_if/top_if_pc, base_seq/test, soc_sequence_lib, `json/module.json`, uvm.f, tb_define, tb_top_soc, and `tb_top/component/` (vif_declare, dump_wave, if_conn, tb_sdf). Never hand-edit them; lift changes into the `script/gen_uvm_env.py` templates.
 - Commit (or be ready to `git checkout --`) before regenerating; afterwards check `git diff` + one smoke run (`./wsim_oeda -c apb_master_smoke_block_test`).
 - Module add/remove (`--guvc`, then `--prune [--yes]` for orphans) and its doc sync: json2env_agent charter + arch R1/R2.
 - `--guvc` also emits inert `<mod>_smoke_test`/`_seq` (and `_smoke_block_` for block level) — a runnable starting point, not a real test.
@@ -101,4 +101,4 @@ python gen_uvm_env.py -c ... --prune [--yes]         # list/delete files of modu
 
 - The main session is the **leader**: it schedules the `.claude/agents/` subagents (spec2json/json2env/dev/debug/deliver/review; one dev/debug instance per module) and never edits code. Rules (roles, tiered confirmation, scheduling, passrate/coverage, hooks, doc map): `docs/ops/multi_agent_ops.md`; deployment record: arch §8.
 - Hard rails (path_guard hook, ops §6): agents write only under `verify/`, `deliver_bridge/`, `sim/`; sub-agent edits of source-of-truth files and new reference models need the user (prompt in default mode, blocked in auto mode); only the leader commits, with a `COMMIT_APPROVED=1` prefix after user approval.
-- On a brand-new verification request the leader runs the intake procedure (ops §8, `/new-verification`).
+- On a brand-new verification request the leader runs the intake procedure (ops §8, `/new-verification`). A new chip project is bootstrapped by `script/new_project/bootstrap.sh` and parameterized with `/new-project` first.

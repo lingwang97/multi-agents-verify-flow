@@ -40,12 +40,17 @@ SOT_FILES = {
     "env/top_env.sv",
     "env/top_vseqr.sv",
     "env/top_pkg.sv",
+    "env/top_if.sv",
+    "env/top_if_pc.sv",
     "test/base_test.sv",
     "seq/base_seq.sv",
     "seq/soc_sequence_lib.sv",
     "tb_top/tb_top/tb_top_soc.sv",
     "tb_top/macro/tb_define.sv",
     "tb_top/component/vif_declare.sv",
+    "tb_top/component/dump_wave.sv",
+    "tb_top/component/if_conn.sv",
+    "tb_top/component/tb_sdf.sv",
 }
 SOT_GLOBS = ("tb_top/filelist/*.f",)
 SOT_GLOB_EXCEPT = ("tb_top/filelist/uvm_blk_*.f", "tb_top/filelist/tb_top_*.f")
