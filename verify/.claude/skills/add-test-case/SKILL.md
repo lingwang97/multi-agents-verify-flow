@@ -21,7 +21,7 @@ python3 .claude/skills/add-test-case/add_test_case.py \
   [--macro-opt "+EXTRA_DEFINE"] [--plusargs-opt "+EXTRA_PLUSARG"]
 ```
 
-Examples actually run and verified in this session:
+Examples:
 
 ```bash
 # system-level
@@ -50,10 +50,12 @@ The script refuses (clear error, no partial edits) if: the module name is invali
 
 ## After running
 
-The generated seq's `body()` is a `// TODO: real stimulus...` stub — same as every other leaf sequence in this repo today. Fill it in, then:
+The generated seq's `body()` is a `// TODO: real stimulus...` stub. Fill it in (apb_master's block seqs show real stimulus via `apb_write`/`apb_read`/`apb_idle`), then:
 
 ```bash
-# from sim/
+# from the repo-root sim/, locally inside WSL (oEDA; block-level cases):
+./wsim_oeda -c <module>_<function>_test -seed 1
+# on the Linux VCS server (sign-off):
 ./wsim -c <module>_<function>_test -uvm
 ```
 
@@ -63,6 +65,10 @@ A clean run (no `UVM_ERROR`/`UVM_FATAL`) doesn't yet mean much until the scorebo
 
 - **Block-level works for `efuse` and `apb_master` today.** Each has a complete block base pair (`test/<mod>_block_base_test.sv` / `seq/<mod>_block_base_seq.sv`) and a `tb_top/filelist/uvm_blk_<mod>.f`; the VCS Makefile (`script/sflow/Makefile`) and the local `script/sflow/wsim_oeda` derive that filelist from the `<MOD>_BLOCK_TEST` define, so no per-module flow-script branch is needed and a missing filelist stops with a clear error. `uart`, `reg` and `ro` have no block filelist and no block base pair. The script detects missing base-class files and refuses with this explanation rather than guessing; it does not touch the Makefile or `wsim_oeda`.
 - **apb_master naming:** existing apb_master block tests are named `apb_master_<fp>_block_test`, so pass `--function <fp>_block` to keep the `_block_` infix (the script itself builds `<module>_<function>_test`). apb_master block seqs get stimulus via the `apb_write/apb_read/apb_idle` helpers in `apb_master_block_base_seq`; the generated `body()` TODO stub must be filled in with those.
+- **`stage1`/`stage2` default to mutually exclusive**, matching every existing entry in the JSON files (smoke tests are `stage1`-only, regression tests are `stage2`-only). If you only pass one, the script infers the other rather than leaving both `"true"`. Pass both explicitly if you genuinely want a test in both groups.
+- **The target `json/case/<module>.json` gets fully re-serialized** (via Python's `json` module, 4-space indent) when a new entry is added, not surgically patched — the JSON stays valid and semantically identical, but the file's original slightly-irregular tab/space formatting is normalized. This is expected, not a bug.
+- **Duplicate-safe, not idempotent-safe.** Running the same `--module`/`--function`/`--level` twice fails on the second run (class/key already exists) rather than silently overwriting — this is intentional.
+- **No new files are created for leaf classes** — the script always appends into the existing per-module file, because that's the exact filename already `` `include``-d by `env/top_pkg.sv` (system tests), `seq/soc_sequence_lib.sv` (system seqs), or the fixed path in a block `.f` filelist (block level). Creating a *new* file per test case would additionally require editing those manifests — out of scope for "add a test case."
 
 ## Adding a new module (keep this skill in sync)
 
@@ -72,10 +78,6 @@ Whenever a module is added to (or removed from) the environment — `script/uvm_
 2. Every module enumeration in this SKILL.md: the frontmatter `description`, the intro sentence, the `--module <...>` usage line, the Gotchas block-level support list, and the Troubleshooting table row.
 3. Check whether the module has a working block base pair + `tb_top/filelist/uvm_blk_<mod>.f` (the flow scripts derive the filelist from `<MOD>_BLOCK_TEST`); if so list it under the block-level Gotcha, otherwise add it to the "not supported" list.
 4. Run the script with the new module once (e.g. a throwaway `--function`) or at least confirm `--module <new>` is accepted, then revert any scratch test it generated.
-- **`stage1`/`stage2` default to mutually exclusive**, matching every existing entry in the JSON files (smoke tests are `stage1`-only, regression tests are `stage2`-only). If you only pass one, the script infers the other rather than leaving both `"true"`. Pass both explicitly if you genuinely want a test in both groups.
-- **The target `json/case/<module>.json` gets fully re-serialized** (via Python's `json` module, 4-space indent) when a new entry is added, not surgically patched — the JSON stays valid and semantically identical, but the file's original slightly-irregular tab/space formatting is normalized. This is expected, not a bug.
-- **Duplicate-safe, not idempotent-safe.** Running the same `--module`/`--function`/`--level` twice fails on the second run (class/key already exists) rather than silently overwriting — this is intentional.
-- **No new files are created for leaf classes** — the script always appends into the existing per-module file, because that's the exact filename already `` `include``-d by `env/top_pkg.sv` (system tests), `seq/soc_sequence_lib.sv` (system seqs), or the fixed path in a block `.f` filelist (block level). Creating a *new* file per test case would additionally require editing those manifests — out of scope for "add a test case."
 
 ## Troubleshooting
 

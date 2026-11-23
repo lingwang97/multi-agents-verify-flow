@@ -23,7 +23,7 @@ Leader duties: analyze user needs, schedule and manage the other agents, analyze
 Sub-agents cannot ask the user mid-run, so file confirmation is tiered:
 
 - **Sub-agents may edit directly** (rollbackable artifacts): their own module's module-private files (`uvc/<mod>/`, `<mod>_seq/test`, `<mod>_block_base_*`, `json/case/<mod>.json`, `tb_top_<mod>.sv`, `uvm_blk_<mod>.f`, `<mod>_if_conn*`), newly written test/seq/coverage code, `docs/features/`, `docs/review/`, agent memories under `docs/memory/`, `deliver_bridge/` reports. Exception: a new reference model (`uvc/<mod>/src/<mod>_ref_model.sv`) is approval-gated — plan first, develop only after user approval (dev_agent charter).
-- **Change plan + user approval required first**: anything under `script/` (generators/flow), `script/uvm_env_config_template.json`, `tb_top/filelist/*.f`, assembly/base template-pure files, `CLAUDE.md`, `.claude/rules/`, rule-bearing entries of `arch_memory.md`, cross-module shared files.
+- **Change plan + user approval required first**: anything under `script/` (generators/flow), `script/uvm_env_config_template.json`, `tb_top/filelist/*.f`, assembly/base template-pure files, `CLAUDE.md`, `.claude/rules/`, rule-bearing entries of `arch_memory.md`, cross-module shared files. Sub-agent Write/Edit of these paths (except `arch_memory.md`) is gated by path_guard (§6: prompt in default mode, block in auto-like modes); Bash-side writes stay advisory.
 - **git commit always requires user approval**: agents never commit (hook-hard-blocked); the leader compiles the impact analysis → user approves → the leader runs `COMMIT_APPROVED=1 git commit ...` (the hook's only escape hatch, leader-only).
 
 ## 2. Scheduling discipline
@@ -60,7 +60,7 @@ Retrieval entry point: **look up this table first** to find the canonical home o
 | `docs/features/<mod>/` | dev_agent | feature list (`proposed` status requires user confirmation) + PROGRESS |
 | `docs/review/` | review_agent | review report archive |
 | `.claude/agents/*.md` | each agent | charter: role/flow/inline constraints/report format (enforcement subset of the canons) |
-| `.claude/skills/` (add-test-case, conv-report) | skills | ops manuals (open gaps: arch_memory §9) |
+| `.claude/skills/` (add-test-case, conv-report, new-verification) | skills | ops manuals and the intake procedure (open gaps: arch_memory §9) |
 | `docs/sys_function_splits.md` | spec2json | level-partition plan (exists once produced) |
 | `docs/reports/` | reports | verification campaign reports (`report_template.md` outline + conventions; one per campaign, append-only; leader compiles from agent outputs) |
 | `deliver_bridge/README.md` | interface | design↔verification directory conventions |
@@ -85,7 +85,7 @@ Retrieval entry point: **look up this table first** to find the canonical home o
 | Locate any document | this map + the key-entries list above |
 | Change the multi-agent process | this file (ops) — then sync the charter summaries |
 
-Entry format everywhere: **date / change (or symptom) / reason / impact**. The leader may read all memories; agents cross-reference as needed (review_agent must read dev/debug memories; deliver_agent reads debug memories and features progress). To change a rule: edit the canon first, sync the summaries, then grep the old wording for missed spots (R6).
+Entry format everywhere: **date / change (or symptom) / reason / impact**. The leader may read all memories; agents cross-reference as needed (review_agent must read dev/debug memories; deliver_agent reads debug memories and features progress). To change a rule: edit the canon first, sync the summaries, then grep the old wording for missed spots (R6); after changing `CLAUDE.md` or anything under `.claude/`, run `/doctor prompt-audit` in an interactive session (read-only report; default scope = CLAUDE.md + `.claude/` rules/skills/agents, pass `docs/` to cover the docs tree) and route its findings through the normal approval.
 
 ## 5. Escalation paths (agent never decides alone)
 
@@ -98,9 +98,13 @@ Entry format everywhere: **date / change (or symptom) / reason / impact**. The l
 
 ## 6. Hook guardrails
 
-- **path_guard** (`.claude/hooks/path_guard.py`): Write/Edit outside `verify/`, `deliver_bridge/`, `sim/` → hard block (`~/.claude/projects` is whitelisted for session/memory state); Bash/PowerShell `git commit` without `COMMIT_APPROVED=1` → hard block. The hook applies to the main session too — the leader's legitimate commits must carry the approval prefix.
-- File-path writes inside Bash/PowerShell are advisory only (string-level checks misfire too often): discipline comes from the agent charters + leader review; out-of-root file changes are done by the user, or on explicit user instruction.
-- `arch_memory_check.sh` keeps its original duty (R1/R2 module-sync reminders), independent of this flow.
+- **path_guard** (`.claude/hooks/path_guard.py`; a call is a sub-agent call when the hook input carries `agent_id`):
+  - Write/Edit outside `verify/`, `deliver_bridge/`, `sim/` → hard block for everyone (`~/.claude/projects` is whitelisted for session/memory state).
+  - `git commit` from a sub-agent → hard block, even with `COMMIT_APPROVED=1`; from the main session → blocked unless the command carries `COMMIT_APPROVED=1` (leader-only, after user approval).
+  - Tiered confirmation (§1), enforced 2026-11-23: a sub-agent Write/Edit of a source-of-truth file (`script/**`, `.claude/**`, `utils/**`, `CLAUDE.md`, `json/module.json`, `tb_top/filelist/*.f` except module-private `uvm_blk_*`/`tb_top_*`, the template-pure assembly files) or the creation of `uvc/<mod>/src/<mod>_ref_model.sv` needs the user, and the hook decides by the session's permission mode: **default/plan** → permission prompt in the main session naming the agent (the user's answer is the approval; even with a leader-relayed approval the user is asked once more — intended); **auto/acceptEdits/bypassPermissions/dontAsk** → hard block, because those modes settle prompts without a human (verified live 2026-11-23: in auto mode an `ask` went through unprompted). After such a block the agent stops and reports; the user switches to default mode (Shift+Tab) and the leader re-dispatches. `arch_memory.md` stays advisory (rule vs state entries cannot be told apart).
+  - After any edit of the hook run `python .claude/hooks/test_path_guard.py` (decision matrix; a syntax error makes the hook fail open silently).
+- File-path writes inside Bash/PowerShell (generators, sed, scripts) are advisory only (string-level checks misfire too often): discipline comes from the agent charters + leader review; out-of-root file changes are done by the user, or on explicit user instruction.
+- `arch_memory_check.sh` (PreToolUse/Bash) keeps its original duty, the R1/R2 module-sync reminder, independent of this flow: it fires once per state when `script/uvm_env_config_template.json`, `json/module.json` or `script/gen_uvm_env.py` have uncommitted changes, or when `MODULES` in `add_test_case.py` differs from `json/module.json`. It only injects a reminder (nothing is edited until the user confirms); state is kept in `.git/arch_memory_hook.state` (delete it to re-trigger).
 
 ## 7. Standard leader dispatch input
 

@@ -1,7 +1,7 @@
 # fw_env_memory (json2env_agent)
 
 Environment framework build & update log. Entry format: date / change / reason / impact.
-The current environment state (module table, generation rules) lives in `arch_memory.md` §0; the generation-rules canon is `verify/CLAUDE.md` ("Regenerating the environment"). Per R6: framework changes are logged **here** — arch's Last-updated chain records only rule/doc changes.
+The current environment state (module table, generation rules) lives in `arch_memory.md` §0; the generation-rules canon is `verify/CLAUDE.md` ("Regenerating the environment"). Per R6: framework changes are logged **here**; rule/doc change history is the git log (arch keeps only a Last-updated date).
 
 ## 2026-11-17 Initialization
 - Change: multi-agent flow deployed; this memory created. No environment change.

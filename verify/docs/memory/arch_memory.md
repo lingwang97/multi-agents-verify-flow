@@ -30,17 +30,16 @@ Architecture state, standing rules and lessons for developing this verify tree. 
   3. the block-level support list (does the module have `test/<mod>_block_base_test.sv` + `seq/<mod>_block_base_seq.sv` + `tb_top/filelist/uvm_blk_<mod>.f`? The flow scripts need no per-module branch, see §3).
 - **Why:** the jls → apb_master migration left the skill stale; the script rejected apb_master and its test cases were hand-written instead of scaffolded.
 - **Check:** `python .claude/skills/add-test-case/add_test_case.py --module <new> ...` must be accepted; the old module must be rejected.
-- **Automatic reminder:** the project hook `.claude/hooks/arch_memory_check.sh` (wired in `.claude/settings.json`, `PreToolUse`/`Bash`) fires once per state when `script/uvm_env_config_template.json`, `json/module.json` or `script/gen_uvm_env.py` have uncommitted changes, or when `MODULES` in `add_test_case.py` differs from the modules in `json/module.json`. It only injects a reminder to evaluate this file, the skill (`add_test_case.py`, `SKILL.md`, `test_case_dev_manual.md`) and `CLAUDE.md`; nothing is edited until the user confirms. State is kept in `.git/arch_memory_hook.state` (delete it to re-trigger).
+- **Automatic reminder:** the `arch_memory_check.sh` hook (triggers and state: ops §6) injects a once-per-state reminder to run this sync; nothing is edited until the user confirms.
 
 ### R2. Adding or removing a module → sync CLAUDE.md, the dev manual and §0 above
 - **Rule:** also update `verify/CLAUDE.md` and `.claude/rules/` (any module names they mention), `.claude/skills/add-test-case/test_case_dev_manual.md` (module list; lives inside the skill directory since 2026-11-09), the module table in §0 and the open-gap list in §9 of this file.
 - **Why:** these are the first documents a new session reads; stale module names mislead tooling and people.
-- **Status:** the manual's former §7 gap table moved to §9 here on 2026-11-23 (it had already drifted: it listed an apb_master adapter that was deleted long before). Re-verify §9 whenever RAL, adapters, block-level flow or JSON placeholders change.
+- **Check:** re-verify §9 whenever RAL, adapters, block-level flow or JSON placeholders change.
 
 ### R3. Prefer the skill over hand-writing leaf test cases
 - **Rule:** create new leaf tests/seqs/JSON entries with `add-test-case` (`python .claude/skills/add-test-case/add_test_case.py --module <mod> --function <name> --level system|block ...`), then fill in the `body()` TODO.
 - **apb_master naming:** existing block tests are `apb_master_<fp>_block_test`, so pass `--function <fp>_block`. Extra compile defines go through `--macro-opt` (e.g. `+APB_SRAM_EN_WAIT`); the script prepends `+<MODULE>_BLOCK_TEST`.
-- **Note:** the apb_master block tests/seqs in this repo were hand-written (script did not know the module yet); they follow the same structure as the skill templates, except the test class uses `uvm_component_utils_begin/_end` + `report_id` like the existing smoke class.
 
 ### R5. Regeneration is safe only through the template-pure assembly rule
 - **Rule:** canon is `verify/CLAUDE.md` "Regenerating the environment" (module-private files skip-if-exists; assembly files are template-pure and rewritten on every regen — never hand-edit, lift changes into `gen_uvm_env.py` templates). The enforcement subset is inlined in the json2env_agent charter.
@@ -89,26 +88,20 @@ Naming: the open-source flow is **oEDA** (script `wsim_oeda`, scratch `sim/uvm_s
 2. The real register-table CSV is provided at the `WSIM_REG_TABLE` location (`verify/script/sflow/flow_env.sh`; or repoint the variable — location confirmed via the spec2json intake gate; placing a file under `hdl/` is the user's action) -> triggers RalGen real model AND the derived-width validation (section 5 item 4: check `verify/ral/ral_reg_width` covers the real widest register, especially sliced registers).
 3. `tb_top/config/Makefile.initreg.cfg` is referenced by the VCS Makefile but does not exist - create it when register init is first needed.
 4. DUT-to-UVC wiring in `intf/<mod>_if_conn.sv` skeletons (hand work per DUT).
-5. System smoke stimuli: the `reg/uart/efuse_smoke_test` classes exist but are inert; fill bodies (add-test-case skill covers scaffolding).
+5. System smoke stimuli: the `reg/ro/uart/efuse_smoke_test` classes exist but are inert; fill bodies (add-test-case skill covers scaffolding).
 6. Replace the fake tokens (`+DEFINE1...`) still present in reg/ro/uart/efuse case JSONs when real system cases are added.
 
 ## 6. Deferred items
 
-- SVA protocol assertions: the 2026-11-11 deferral was lifted (2026-11-17/18) — property checks are **dual-tracked**; the mechanism canon is `.claude/rules/oeda-verilator.md`, summaries in ops §3 and §8. Status note kept here because this section tracks deferred items: Verilator must never see SVA outside the guard.
+- SVA protocol assertions: the 2026-11-11 deferral was lifted (2026-11-17/18) — property checks are **dual-tracked**; the mechanism canon is `.claude/rules/oeda-verilator.md`, summary in ops §3. Status note kept here because this section tracks deferred items: Verilator must never see SVA outside the guard.
 - Width-macro alignment: see item 4 in section 5.
 - Full compile cache (native-FS scratch, hash-keyed obj_dir): superseded by obj_dir reuse for as long as the primary environment is server Linux; revisit only if the WSL box becomes the primary debug environment again.
 
-- Stale system-level path: `top_env.sv` sets `ral.set_hdl_path_root("tb_top.C[0].btnode.btc")` - a pre-apb_master chip hierarchy. Harmless while the placeholder RAL is unused, but it MUST be updated to the real hierarchy before any backdoor register access in the revived system flow.
+- Stale system-level path: `top_env.sv` sets `ral.set_hdl_path_root("tb_top.C[0].btnode.btc")` - a pre-apb_master chip hierarchy. Harmless while no system-level RAL model exists, but it MUST be updated to the real hierarchy before any backdoor register access in the revived system flow.
 
 ## 8. Multi-agent verification flow (deployed 2026-11-17)
 
-Roles defined in `.claude/agents/` (spec2json = opus; json2env/dev/debug/deliver/review = sonnet); **the main session is the leader** — runbook `docs/ops/multi_agent_ops.md` (the original spec `docs/multi_agent_flow.txt` was absorbed into the agents/runbook and removed on 2026-11-18). User decisions baked into the deployment:
-
-- **Tiered confirmation**: sub-agents edit module-private/rollbackable files directly; source-of-truth files need a user-approved change plan; commits are leader-only with `COMMIT_APPROVED=1` after user approval — full rules: ops §1.
-- **Writable roots** `verify/` + `deliver_bridge/` + `sim/`, enforced by the `path_guard` hook (`.claude/hooks/path_guard.py`, wired in `.claude/settings.json` PreToolUse; Bash/PowerShell path writes stay advisory — only the `git commit` rule is hard there).
-- **VCS-first**: the VCS flow is the next setup item and will be deployed on Linux by the user; simulations run server-side (no local parallel cap). oEDA stays the local fast-iteration flow; passrate ≥ 80% (pass = exit 0 + no UVM_ERROR/FATAL) gates the VCS stage; VCS results are returned by the user into `sim/vcs_results/<date>/` for debug_agent analysis + conv-report.
-- **Coverage split (decided 2026-11-17/18)**: property checks dual-tracked, function covergroups VCS-only — canon: `.claude/rules/oeda-verilator.md`; summaries: ops §3, §6 above.
-- **Memories/taskboard**: `docs/memory/fw_env_memory.md` (json2env), `docs/modules/<mod>.md` (cross-agent per-module canon, R6 promotion; first instance apb_master), `docs/memory/dev|debug|deliver/<mod>.md` (per-agent logs, from `_template.md`), `docs/memory/leader_taskboard.md` (leader), features in `docs/features/<mod>/`, reviews in `docs/review/`; `deliver_bridge/` recreated with a README (interface conventions).
+Roles live in `.claude/agents/` (spec2json = opus; json2env/dev/debug/deliver/review = sonnet); **the main session is the leader**. The process canon — tiered confirmation, writable roots and hook guardrails, VCS-first scheduling, passrate gate, coverage split, memory/taskboard map — is `docs/ops/multi_agent_ops.md` (§1–§4, §6). The original spec `docs/multi_agent_flow.txt` was absorbed into the charters/runbook and removed on 2026-11-18.
 
 ## 9. Open development gaps (canonical since 2026-11-23)
 

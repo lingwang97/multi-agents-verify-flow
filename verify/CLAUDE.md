@@ -100,5 +100,5 @@ python gen_uvm_env.py -c ... --prune [--yes]         # list/delete files of modu
 ## Multi-agent verification flow
 
 - The main session is the **leader**: it schedules the `.claude/agents/` subagents (spec2json/json2env/dev/debug/deliver/review; one dev/debug instance per module) and never edits code. Rules (roles, tiered confirmation, scheduling, passrate/coverage, hooks, doc map): `docs/ops/multi_agent_ops.md`; deployment record: arch §8.
-- Hard rails (hooks): agents write only under `verify/`, `deliver_bridge/`, `sim/`; only the leader commits, with a `COMMIT_APPROVED=1` prefix after user approval.
+- Hard rails (path_guard hook, ops §6): agents write only under `verify/`, `deliver_bridge/`, `sim/`; sub-agent edits of source-of-truth files and new reference models need the user (prompt in default mode, blocked in auto mode); only the leader commits, with a `COMMIT_APPROVED=1` prefix after user approval.
 - On a brand-new verification request the leader runs the intake procedure (ops §8, `/new-verification`).
