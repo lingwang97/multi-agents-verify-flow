@@ -19,7 +19,7 @@ paths:
 
 - **Project-level** (one value for everyone): only in `script/sflow/flow_env.sh`, assigned directly and sourced by `wsim`/`wsim_oeda` (not deployed, not shell-overridable): `WSIM_REG_TABLE`, plus the VCS-server site section `WSIM_PYTHON`, `WSIM_LSF_QUEUE`, `WSIM_LSF_HOSTS_FILE`, `WSIM_DPO_DB` and the LSF policy `WSIM_LSF_ENABLE` (master switch), `WSIM_LSF_SUBMIT_HOSTS` (host-name fragments allowed to submit; empty = any host), `WSIM_LSF_EXEC_HOST_REGEX` (execution hosts in the hosts file), `WSIM_LSF_QUEUE_SED` (host-group → queue name). Review the site section at the Linux migration. Changing a value is a source-of-truth change.
 - `wsim` forwards `WSIM_PYTHON`/`DPO_DATABASE_DIR` to the Makefile on the make command line; the Makefile holds no copies and warns when run without `wsim`.
-- **Machine-level** (differs per install): `UVM_HOME`, the OSS CAD Suite `environment`, `VERDI_HOME`, the WSL `/usr/bin/python3` openpyxl fallback — environment variables with in-script defaults; never pin them in `flow_env.sh`.
+- **Machine-level** (differs per install): `UVM_HOME`, the OSS CAD Suite `environment`, `VERDI_HOME`, `/usr/bin/python3` (RalGen fallback when `WSIM_PYTHON` has no openpyxl) — environment variables with in-script defaults; never pin them in `flow_env.sh`.
 - `wsim` holds no site literals: every server-specific value comes from `flow_env.sh`. Keep it that way — a new site value goes into `flow_env.sh` (and the new-project variable registry), never into the script.
 
 ## Gotchas

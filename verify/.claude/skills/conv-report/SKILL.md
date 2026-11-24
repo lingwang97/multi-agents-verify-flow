@@ -15,7 +15,7 @@ python3 .claude/skills/conv-report/conv_report.py --case apb       # substring f
 python3 .claude/skills/conv-report/conv_report.py -o conv_report.txt   # + write sim/conv_report.txt
 ```
 
-The script resolves the repo-root `sim/` from its own location, so it runs from any cwd, on Linux servers and inside WSL (paths are plain filesystem, no simulator needed).
+The script resolves the repo-root `sim/` from its own location, so it runs from any cwd, on Linux servers and on local oEDA hosts (WSL included) (paths are plain filesystem, no simulator needed).
 
 ## Output columns
 

@@ -33,6 +33,7 @@ carry verify/docs/memory/debug/_template.md
 carry verify/docs/memory/deliver/_template.md
 
 reset verify/script/uvm_env_config_template.json config
+reset verify/script/sflow/flow_env.sh flow_env
 reset verify/docs/memory/arch_memory.md arch
 reset verify/docs/memory/fw_env_memory.md fw_env
 reset verify/docs/memory/leader_taskboard.md taskboard

@@ -40,7 +40,7 @@ Sub-agents cannot ask the user mid-run, so file confirmation is tiered:
 
 - Parallel agents **≤ 6**.
 - One dev/debug instance per module at a time (avoids file-conflict surface); cross-module parallelism is fine.
-- Simulations mainly run on the Linux-server VCS (no parallel quota once deployed); local WSL/Verilator is for oEDA fast iteration only (heavy compiles — batch loops for consecutive cases).
+- Simulations mainly run on the Linux-server VCS (no parallel quota once deployed); the local Verilator (oEDA) flow is for fast iteration only (heavy compiles — batch loops for consecutive cases).
 
 ## 3. Dual-flow and coverage policy
 
@@ -60,7 +60,7 @@ Retrieval entry point: **look up this table first** to find the canonical home o
 | `verify/CLAUDE.md` | whole project (loaded every session) | overview/commands/stable conventions; **canon of oEDA usage and pass criterion, regeneration/config-knob rules, RalGen/reg-table behaviour** |
 | `.claude/rules/*.md` | whole project (path-scoped, load when matching files are opened) | **canon of Verilator/OPEN_EDA coding rules + dual-track property mechanism** (`oeda-verilator.md`), flow settings/deploy/script gotchas (`flow-scripts.md`), filelist conventions (`filelists.md`); assembly-file reminder (`generated-assembly.md`, summary of the CLAUDE.md regen canon) |
 | `docs/ops/multi_agent_ops.md` | leader | **process canon**: roles/tiered confirmation/scheduling/passrate/hooks/this table |
-| `docs/ops/oeda_local_setup.md` | environment | local WSL2/Verilator machine setup and Windows invocation pitfalls (machine-specific ops manual) |
+| `docs/ops/oeda_local_setup.md` | environment | local oEDA (Verilator) machine setup and invocation pitfalls (machine-specific ops manual) |
 | `docs/memory/arch_memory.md` | whole project (spec2json owns the verification-strategy parts) | **architecture state §0, maintenance rules R1-R7, two-flow closed loop §5, deployment history §8** (section numbers frozen, header TOC) |
 | `docs/modules/<mod>.md` | cross-agent | **per-module DUT-knowledge canon** (instance: apb_master); stable facts distilled from process logs are promoted here per R6 |
 | `docs/memory/fw_env_memory.md` | json2env_agent | environment framework change log |
@@ -150,7 +150,9 @@ Every value the procedure needs is a registry variable of stage `verification` (
 
 **After stage 1 (config + register table)** — AskUserQuestion on spec2json's config proposal, including the top-level `enable_ral` / `has_top_if_cfg` (registry owner spec2json). If `enable_ral` is true, ask `reg_table`: candidates from `new_project.py scan` (CSVs carrying the RalGen columns), current value, "defer"; `set reg_table=...` and `apply --stage verification` (writes `WSIM_REG_TABLE`). spec2json then writes the approved config; `check --stage verification` compares the top-level values.
 
-**Stage 2b — design inputs (leader, after json2env's `--guvc` created `tb_top/`)** — `new_project.py scan --markdown`, then per list variable present the scan suggestion with its reasons and confidence and, on a rerun, the +added/-removed diff against the current list (option previews). Round A: `rtl_files` (a design-side filelist referenced with `-f` vs the explicit scanned list), `include_dirs`, `rtl_define_files`, `ip_files`, `rtl_tops`. Round B (gate level, default "defer"): `gate_files`, `gate_ip_files`, `std_libs`, `gpls_libs`. Summary table → confirm → `apply --stage verification` → `check --stage verification --lint` (Verilator lint of the lists; on a Windows box run the printed command in WSL) → deferred items become taskboard rows, one fw_env entry. These lists are user-maintained skeletons — later `--guvc` runs keep them. The scan reads structure only (file, module, package, include names); it is not RTL behaviour reading, so the §1 RTL-access rule does not apply — in doc mode its hierarchy output feeds the file lists and the tb_top DUT wiring, not the spec analysis.
+**After stage 2 (json2env), when modules were added or removed** — the R1/R2 sync rewrote instruction text (add-test-case SKILL.md, CLAUDE.md module mentions) and arch §0: ask the user to run `/doctor prompt-audit` and `/doctor prompt-audit docs/` (user-typed); findings are fixed with approval. Not needed when only design lists changed. (`/new-project` asks for the same audit once, before this intake.)
+
+**Stage 2b — design inputs (leader, after json2env's `--guvc` created `tb_top/`)** — `new_project.py scan --markdown`, then per list variable present the scan suggestion with its reasons and confidence and, on a rerun, the +added/-removed diff against the current list (option previews). Round A: `rtl_files` (a design-side filelist referenced with `-f` vs the explicit scanned list), `include_dirs`, `rtl_define_files`, `ip_files`, `rtl_tops`. Round B (gate level, default "defer"): `gate_files`, `gate_ip_files`, `std_libs`, `gpls_libs`. Summary table → confirm → `apply --stage verification` → `check --stage verification --lint` (Verilator lint of the lists; where Verilator is not on PATH, run the printed command where it is) → deferred items become taskboard rows, one fw_env entry. These lists are user-maintained skeletons — later `--guvc` runs keep them. The scan reads structure only (file, module, package, include names); it is not RTL behaviour reading, so the §1 RTL-access rule does not apply — in doc mode its hierarchy output feeds the file lists and the tb_top DUT wiring, not the spec analysis.
 
 **Recording** — write the decision + final plan to `docs/memory/leader_taskboard.md` and update it at every stage transition.
 

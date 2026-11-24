@@ -11,7 +11,7 @@ The leader (main session) runs this. Every value lives in the registry `script/n
 ## 0. Preconditions
 
 - `script/new_project/answers.json` must contain `bootstrapped_from`. If it does not, this is the framework repo itself: stop and tell the user to run, by hand, `bash verify/script/new_project/bootstrap.sh <new-repo-root>` (optionally `--with apb-master`), then start Claude Code in `<new-repo-root>/verify` and rerun `/new-project`. `apply --stage project` refuses to run here anyway.
-- On a Windows box with Git Bash, prefix `NP set` with `MSYS_NO_PATHCONV=1` when a value is an absolute POSIX path (Git Bash would rewrite it into a Windows path).
+- On Windows with Git Bash, prefix `NP set` with `MSYS_NO_PATHCONV=1` when a value is an absolute POSIX path (Git Bash would rewrite it into a Windows path).
 - The bootstrapped repo has no `tb_top/` yet - the first `--guvc` (in `/new-verification`) generates it.
 
 ## 1. Interview (phases P1-P4)
@@ -20,7 +20,7 @@ The leader (main session) runs this. Every value lives in the registry `script/n
 2. Go phase by phase, skipping variables already answered unless the user asked to revisit a phase (`$ARGUMENTS`):
    - **P1 identity + design root**: `project_name`, `pid`, `design_root` - the root of the design database (RTL, IP, netlists, register table), repo-root relative or absolute. The repo's `hdl/` is only a placeholder: always ask, offering the directories `detect` found (with their HDL file counts) and "Other" for a path that does not exist yet (allowed; check warns until it lands).
    - **P2 machine tools**: `uvm_home`, `verilator`, `vcs`, `verdi_home` are check-only - report what was found and, for a missing tool, the hint from `docs/ops/oeda_local_setup.md`, with "fix later" as an option. Then ask `oeda_platform`.
-   - **P3 VCS server**: `wsim_python`, `lsf_enable`, `lsf_queue`, `lsf_hosts_file`, `lsf_submit_hosts`, `lsf_exec_host_regex`, `lsf_queue_sed`, `dpo_db`. Values carried from the source project belong to the old server - say so when offering "keep current".
+   - **P3 VCS server**: `wsim_python`, `lsf_enable`, `lsf_queue`, `lsf_hosts_file`, `lsf_submit_hosts`, `lsf_exec_host_regex`, `lsf_queue_sed`, `dpo_db`. Bootstrap resets this section (`WSIM_PYTHON=python3`, LSF off, the rest empty) - no old-server value survives; offer the detected candidates.
    - **P4 language**: `reply_language`, `file_language`.
 3. Ask with AskUserQuestion, at most 4 questions per call. Options in this order: detected candidates (say in the description where each came from), the value currently in the target ("keep current"), the registry default, "defer" for deferrable variables; free text through "Other".
 4. Record each answered round right away: `NP set id=value ...`, `NP set --defer id` for deferrals (the call validates; on an error re-ask). Answers survive an interrupted session.
@@ -29,7 +29,7 @@ The leader (main session) runs this. Every value lives in the registry `script/n
 
 1. Show one summary table: phase, variable, new value, current value, deferred items. AskUserQuestion: apply / revise a phase / stop. These targets are source-of-truth files; this confirmation is the user approval (ops §1).
 2. `NP apply --stage project --dry-run`, show the planned changes, then `NP apply --stage project`. A `WARN ... snippet not found` line means an expected text was edited by hand - show it and fix that spot with the user.
-3. `NP check --stage project`. FAIL items must be resolved; PENDING and WARN items are reported, not blockers.
+3. `NP check --stage project`. FAIL items must be resolved; PENDING and WARN items are reported, not blockers. A `platform` WARN lists file:line spots still describing the other oEDA platform - fix them (usually by rewording platform-neutral) and register a snippet in `vars.json` if the text must stay platform-specific.
 
 ## 3. Record
 
@@ -39,7 +39,9 @@ The leader (main session) runs this. Every value lives in the registry `script/n
 
 ## 4. Next stage
 
-Ask (AskUserQuestion) whether to start the verification intake now: yes → invoke the `new-verification` skill with the chip as the requirement; no → stop and say `/new-verification` starts it later. Tell the user what comes there: specification/RTL inputs, module partition and config (spec2json), register table, `--guvc`, then the design-input step that scans the design root and proposes the file lists for confirmation. Do not continue without the answer.
+First ask the user to run `/doctor prompt-audit` (user-typed - Claude cannot invoke it): `apply` just rewrote CLAUDE.md, the charters, rules and the ops runbook, and this is the cheapest moment to catch leftovers of the old project (`check` already covers the platform phrases). Fix its findings with the user's approval.
+
+Then ask (AskUserQuestion) whether to start the verification intake now: yes → invoke the `new-verification` skill with the chip as the requirement; no → stop and say `/new-verification` starts it later. Tell the user what comes there: specification/RTL inputs, module partition and config (spec2json), register table, `--guvc`, then the design-input step that scans the design root and proposes the file lists for confirmation. Do not continue without the answer.
 
 Commit only after the user approves (leader, `COMMIT_APPROVED=1`), including `answers.json` - the project's record of these values.
 

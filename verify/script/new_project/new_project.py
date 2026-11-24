@@ -810,7 +810,20 @@ def cmd_check(root, stage, markdown, lint, top):
                 res.append(("WARN", "wsim_python", "%s not found on this machine" % py))
             elif _run([py, "-c", "import openpyxl"])[0] != 0:
                 res.append(("WARN", "wsim_python", "%s has no openpyxl (RalGen needs it)" % py))
+        # platform residue: text that still describes the other oEDA platform
+        for v in stage_vars(reg, "project"):
+            chosen = ans.get(v["id"]) or a["applied"].get(v["id"])
+            for phrase in (v.get("residue") or {}).get(chosen or "", []):
+                for pat in reg.get("residue_files", []):
+                    for f in sorted(glob.glob(os.path.join(root, pat))):
+                        for n, line in enumerate(read_text(f)[0].split("\n"), 1):
+                            if phrase in line:
+                                res.append(("WARN", "platform", "%s:%d still says '%s' (%s=%s)"
+                                            % (repo_rel(root, f), n, phrase, v["id"], chosen)))
         if ans.get("lsf_enable") == "TRUE":
+            for k in ("lsf_queue", "lsf_hosts_file"):
+                if k in a["deferred"] or not ans.get(k):
+                    res.append(("WARN", "lsf_enable", "LSF is on but %s is not set - wsim cannot dispatch" % k))
             hf = ans.get("lsf_hosts_file")
             if hf and not os.path.isfile(hf):
                 res.append(("WARN", "lsf_hosts_file", "%s not found on this machine" % hf))
@@ -946,6 +959,15 @@ def _reset(kind, src_text, ctx):
         cfg = json.loads(src_text)
         cfg["modules"] = []
         return json.dumps(cfg, indent=2, ensure_ascii=False) + "\n"
+    if kind == "flow_env":
+        # site values belong to the old server: neutral values until /new-project sets them
+        neutral = {"WSIM_REG_TABLE": "", "WSIM_PYTHON": "python3", "WSIM_LSF_ENABLE": "FALSE",
+                   "WSIM_LSF_QUEUE": "", "WSIM_LSF_HOSTS_FILE": "", "WSIM_LSF_SUBMIT_HOSTS": "",
+                   "WSIM_LSF_EXEC_HOST_REGEX": "", "WSIM_LSF_QUEUE_SED": "", "WSIM_DPO_DB": ""}
+        out = src_text
+        for k, v in neutral.items():
+            out = re.sub(r"^%s=.*$" % k, lambda m, k=k, v=v: '%s="%s"' % (k, v), out, flags=re.M)
+        return out
     if kind == "arch":
         pre, secs = _sections(src_text)
         pre = re.sub(r"Last updated [^\n]*", "Last updated %s (bootstrapped from %s @ %s; change history: git log)."

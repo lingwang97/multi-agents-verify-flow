@@ -53,7 +53,7 @@ The script refuses (clear error, no partial edits) if: the module name is invali
 The generated seq's `body()` is a `// TODO: real stimulus...` stub. Fill it in (apb_master's block seqs show real stimulus via `apb_write`/`apb_read`/`apb_idle`), then:
 
 ```bash
-# from the repo-root sim/, locally inside WSL (oEDA; block-level cases):
+# from the repo-root sim/, local oEDA run (block-level cases):
 ./wsim_oeda -c <module>_<function>_test -seed 1
 # on the Linux VCS server (sign-off):
 ./wsim -c <module>_<function>_test -uvm

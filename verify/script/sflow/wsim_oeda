@@ -95,9 +95,14 @@ function RalGen() {
     if [ ! -f "$output" ] || [ "$csv_input" -nt "$output" ] || [ "$reg_script" -nt "$output" ] \
        || [ "$(cat "$stamp" 2>/dev/null)" != "$OPTS_COV_TYPE" ]; then
         echo "****$me****: generating RAL model ($OPTS_COV_TYPE coverage)"
-        # OSS CAD Suite bundles its own python3 without openpyxl; use system python for RalGen
+        # RalGen needs openpyxl: the project python (WSIM_PYTHON, flow_env.sh) first, then the
+        # system python; OSS CAD Suite's bundled python3 has no openpyxl.
         local py3=python3
-        /usr/bin/python3 -c 'import openpyxl' 2>/dev/null && py3=/usr/bin/python3
+        if [ -n "$WSIM_PYTHON" ] && "$WSIM_PYTHON" -c 'import openpyxl' 2>/dev/null; then
+            py3="$WSIM_PYTHON"
+        elif /usr/bin/python3 -c 'import openpyxl' 2>/dev/null; then
+            py3=/usr/bin/python3
+        fi
         "$py3" "$reg_script" -i "$csv_input" -cov "$OPTS_COV_TYPE" -o "$output" || die "RAL generation failed"
         echo "$OPTS_COV_TYPE" > "$stamp"
     fi
