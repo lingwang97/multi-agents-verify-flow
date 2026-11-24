@@ -21,6 +21,7 @@
 carry .gitignore
 carry deliver_bridge/README.md
 carry verify/CLAUDE.md
+carry verify/README.md
 carry verify/.claude/**
 carry verify/script/**
 carry verify/docs/ops/multi_agent_ops.md

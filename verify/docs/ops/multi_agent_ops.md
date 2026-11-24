@@ -56,6 +56,7 @@ Retrieval entry point: **look up this table first** to find the canonical home o
 
 | File | Owner | Content (canonical level) |
 |---|---|---|
+| `verify/README.md` | people | quick start for engineers (setup, run, flow diagrams, checkpoints) - summary + pointers only, no canon |
 | `verify/CLAUDE.md` | whole project (loaded every session) | overview/commands/stable conventions; **canon of oEDA usage and pass criterion, regeneration/config-knob rules, RalGen/reg-table behaviour** |
 | `.claude/rules/*.md` | whole project (path-scoped, load when matching files are opened) | **canon of Verilator/OPEN_EDA coding rules + dual-track property mechanism** (`oeda-verilator.md`), flow settings/deploy/script gotchas (`flow-scripts.md`), filelist conventions (`filelists.md`); assembly-file reminder (`generated-assembly.md`, summary of the CLAUDE.md regen canon) |
 | `docs/ops/multi_agent_ops.md` | leader | **process canon**: roles/tiered confirmation/scheduling/passrate/hooks/this table |
