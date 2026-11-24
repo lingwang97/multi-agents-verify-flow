@@ -16,7 +16,7 @@ Roles are defined in `verify/.claude/agents/`; this runbook targets the **leader
 | deliver_agent | `.claude/agents/deliver_agent.md` | sonnet | leader auto-dispatch |
 | review_agent | `.claude/agents/review_agent.md` | sonnet | leader dispatch after user confirmation |
 
-Leader duties: analyze user needs, schedule and manage the other agents, analyze returned results and compile reports, execute commits after approval. **The leader never edits code**; the other agents may edit code but never commit.
+Leader duties: analyze user needs, schedule and manage the other agents, analyze returned results and compile reports, execute commits after approval. **The leader never edits code** — the one exception is writing registry values through `new_project.py apply` after the user confirms them (§1); the other agents may edit code but never commit.
 
 ## 1. Tiered confirmation mode
 
@@ -80,7 +80,7 @@ Retrieval entry point: **look up this table first** to find the canonical home o
 
 - `verify/CLAUDE.md`: Commands (wsim usage, pass criterion) · oEDA section (wsim_oeda usage, pass criterion, block-level flow) · "Regenerating the environment" (R5 canon: skip-if-exists vs template-pure, config knobs + generator-enforced rules) · "Flow scripts and the register table" (RalGen gating) · Architecture (non-obvious UVC/base facts) · Multi-agent section (leader pointer).
 - `docs/memory/arch_memory.md`: §0 module/state table · R1/R2 module-sync rules (hook-referenced) · R3 skill preference · R6 doc governance · §5 two-flow closed loop · §6 deferred status · §7 system bring-up checklist · §8 deployment history · §9 open development gaps.
-- `docs/ops/multi_agent_ops.md`: §0 roles · §1 tiered confirmation · §2 scheduling · §3 passrate/coverage · §4 this map · §5 escalation · §6 hooks · §7 dispatch input · §8 new-requirement intake.
+- `docs/ops/multi_agent_ops.md`: §0 roles · §1 tiered confirmation + RTL access · §2 scheduling · §3 passrate/coverage · §4 this map · §5 escalation · §6 hooks · §7 dispatch input · §8 new-requirement intake.
 - `docs/modules/<mod>.md`: DUT details/quirks/case macros per module (first instance: apb_master).
 
 **Task routing** (what am I trying to do → where to look):

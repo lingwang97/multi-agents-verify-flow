@@ -20,7 +20,7 @@ paths:
 
 The files matched here are **template-pure**: `gen_uvm_env.py --guvc` rewrites them on every run (canon: `verify/CLAUDE.md` "Regenerating the environment").
 
-- Do not hand-edit them — the next regeneration silently drops the change. Lift the change into the matching template in `script/gen_uvm_env.py`, regenerate, then check `git diff` + one smoke run (`./wsim_oeda -c apb_master_smoke_block_test`).
+- Do not hand-edit them — the next regeneration silently drops the change. Lift the change into the matching template in `script/gen_uvm_env.py`, regenerate, then check `git diff` + one smoke run (`./wsim_oeda -c <mod>_smoke_block_test` for a block-capable module).
 - When a generated file already carries a needed fix (e.g. the `OPEN_EDA` guards in `top_pkg`, `tb_top_*`, `dump_wave`, `vif_declare`), fix the template and the generated file together, otherwise a regeneration drops the oEDA support.
 - Templates are Python strings: an SV escape such as `"\n"` must be written `\\n` in the template, or the generated file gets a raw line break inside a string literal (Verilator: syntax error).
 - Commit (or be ready to `git checkout --`) before regenerating.

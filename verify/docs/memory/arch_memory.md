@@ -90,8 +90,8 @@ Naming: the open-source flow is **oEDA** (script `wsim_oeda`, scratch `sim/uvm_s
 
 ## 7. System-level bring-up checklist (blocked on SoC RTL; do not start early)
 
-1. SoC RTL lands in `hdl/` and is listed in `tb_top/filelist/rtl_file_lst.f` (system top `tb_top_soc.sv` already has clk/rst from the template; DUT/stub instantiation is hand work, not generatable).
-2. The real register-table CSV is provided at the `WSIM_REG_TABLE` location (`verify/script/sflow/flow_env.sh`; or repoint the variable — location confirmed via the spec2json intake gate; placing a file under `hdl/` is the user's action) -> triggers RalGen real model AND the derived-width validation (section 5 item 4: check `verify/ral/ral_reg_width` covers the real widest register, especially sliced registers).
+1. SoC RTL lands under the design root and is listed in `tb_top/filelist/rtl_file_lst.f` through the `/new-verification` design-input step (ops §8 stage 2b) (system top `tb_top_soc.sv` already has clk/rst from the template; DUT/stub instantiation is hand work, not generatable).
+2. The real register-table CSV is provided at the `WSIM_REG_TABLE` location (`verify/script/sflow/flow_env.sh`; the location is asked in the `/new-verification` register-table step and written through `new_project.py set/apply`; placing the file is the user's action) -> triggers RalGen real model AND the derived-width validation (section 5 item 4: check `verify/ral/ral_reg_width` covers the real widest register, especially sliced registers).
 3. `tb_top/config/Makefile.initreg.cfg` is referenced by the VCS Makefile but does not exist - create it when register init is first needed.
 4. DUT-to-UVC wiring in `intf/<mod>_if_conn.sv` skeletons (hand work per DUT).
 5. System smoke stimuli: the `reg/ro/uart/efuse_smoke_test` classes exist but are inert; fill bodies (add-test-case skill covers scaffolding).
