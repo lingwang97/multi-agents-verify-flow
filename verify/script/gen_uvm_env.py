@@ -858,9 +858,10 @@ def get_top_ral_snippets(enable_ral, env_name='top'):
                                chr(10) +
                                '        uvm_config_db#(RAL_PKG::ral_gen_main)::set(uvm_root::get(), "*", "ral", ral);',
             "top_ral_connect": "vseqr_h.ral = this.ral;",
-            "vsqr_ral_decl":   "  RAL_PKG::ral_gen_main " + chr(9) + "ral;",
-            "bseq_ral_decl":   "    RAL_PKG::ral_gen_main ral;",
-            "bseq_ral_assign": "        ral = " + env_name + "_env_h.ral;",
+            # no leading indentation: the template placeholders carry it
+            "vsqr_ral_decl":   "RAL_PKG::ral_gen_main " + chr(9) + "ral;",
+            "bseq_ral_decl":   "RAL_PKG::ral_gen_main ral;",
+            "bseq_ral_assign": "ral = " + env_name + "_env_h.ral;",
             "bseq_reg_import": chr(10) + "import reg_mdl_pkg::*;",
             "flist_ral":       "../../../verify/utils/reg/reg_mdl_pkg.sv" + chr(10) +
                                "../../../verify/ral/ral_reg_model.sv",
@@ -1713,13 +1714,15 @@ def get_vif_declare():
 {vif_declare}
 // Other Vitual Interface Declare 
 
-{vif_init}
-// Other Vitual Interface Initialization 
-
-// TB Top set inteface
+// Vif assignment and config_db set run in one initial block: the handles must
+// be assigned before they are published, independent of initial-block order.
 initial begin
+{vif_init}
+	// Other Vitual Interface Initialization
+
+	// TB Top set inteface
 {vif_set}
-    //Other Vitual Interface Setting 
+    //Other Vitual Interface Setting
 
 end
 
@@ -2265,7 +2268,7 @@ def generate_tb_top(config, output_dir):
     if(config['has_top_if_cfg']):
         if_instance.append(f"top_if\ttop_pif();")
         vif_declare.append(f"virtual\ttop_if\ttop_vif;")
-        vif_init.append(f"initial\ttop_vif = top_pif;")
+        vif_init.append(f"\ttop_vif = top_pif;")
         vif_set.append(f"\tuvm_config_db#(virtual interface top_if)::set(null,\"*\", \"top_vif\",top_vif);")
 
         include_if.append(f"\t\t`include \"top_if_conn.sv\"")
@@ -2277,7 +2280,7 @@ def generate_tb_top(config, output_dir):
         
         if_instance.append(f"{module_name}_if\t{module_name}_pif();")
         vif_declare.append(f"virtual\t{module_name}_if\t{module_name}_vif;")
-        vif_init.append(f"initial\t{module_name}_vif = {module_name}_pif;")
+        vif_init.append(f"\t{module_name}_vif = {module_name}_pif;")
         vif_set.append(f"\tuvm_config_db#(virtual interface {module_name}_if)::set(null,\"*\", \"{module_name}_vif\",{module_name}_vif);")
 
         include_if.append(f"\t\t`include \"{module_name}_if_conn.sv\"")
@@ -2390,34 +2393,19 @@ def generate_tb_top(config, output_dir):
     print(f"Generated: {filepath}")
 
 
-    ## generate  cfg 
+    ## generate  cfg  (user-maintained skeletons: written once, never overwritten)
     cfg_dir = os.path.join(tb_dir, 'config')
     os.makedirs(cfg_dir, exist_ok=True)
     
-    filepath = os.path.join(cfg_dir,  'xprop.cfg')
-    with open(filepath, 'w', encoding='utf-8') as f:
-        f.write("merge = xmerge;")
-    print(f"Generated: {filepath}")
+    write_new(os.path.join(cfg_dir, 'xprop.cfg'), "merge = xmerge;")
     
-    filepath = os.path.join(cfg_dir,  'initreg.cfg')
-    with open(filepath, 'w', encoding='utf-8') as f:
-        f.write("modtree tb_top 0 random;")
-    print(f"Generated: {filepath}")
+    write_new(os.path.join(cfg_dir, 'initreg.cfg'), "modtree tb_top 0 random;")
 
-    filepath = os.path.join(cfg_dir,  'coverage.cfg')
-    with open(filepath, 'w', encoding='utf-8') as f:
-        f.write("+tree tb_top")
-    print(f"Generated: {filepath}")
+    write_new(os.path.join(cfg_dir, 'coverage.cfg'), "+tree tb_top")
 
-    filepath = os.path.join(cfg_dir,  'specify.cfg')
-    with open(filepath, 'w', encoding='utf-8') as f:
-        f.write("//tree {xx} {noSpecify};\n//instance {TB.xx} {noSpecify};")
-    print(f"Generated: {filepath}")
+    write_new(os.path.join(cfg_dir, 'specify.cfg'), "//tree {xx} {noSpecify};\n//instance {TB.xx} {noSpecify};")
     
-    filepath = os.path.join(cfg_dir,  'async_lst.cfg')
-    with open(filepath, 'w', encoding='utf-8') as f:
-        f.write("//timing.cfg\n//instance {tb_top.xx} {noTiming};")
-    print(f"Generated: {filepath}")
+    write_new(os.path.join(cfg_dir, 'async_lst.cfg'), "//timing.cfg\n//instance {tb_top.xx} {noTiming};")
 
 
 
@@ -2450,23 +2438,16 @@ def generate_tb_top(config, output_dir):
             content = rtl_file_lst.format(kind="IP NETLIST")
 
 
-        filepath = os.path.join(filelist, ls+'.f')
-        with open(filepath, 'w', encoding='utf-8') as f:
-            f.write(content)
-        print(f"Generated: {filepath}")
+        # user-maintained file lists (RTL/IP/netlist sources): skeleton written once,
+        # never overwritten - a regeneration must not wipe the design sources
+        write_new(os.path.join(filelist, ls+'.f'), content)
 
     lib_lst = get_lib_lst()
     for ls in ["lib_lst","gpls_lib_lst"]:
-        filepath = os.path.join(filelist,  ls+'.f')
-        with open(filepath, 'w', encoding='utf-8') as f:
-            f.write(lib_lst)
-        print(f"Generated: {filepath}")
+        write_new(os.path.join(filelist, ls+'.f'), lib_lst)
 
     inclue_dir = get_inclue_dir()
-    filepath = os.path.join(filelist,  'include.f')
-    with open(filepath, 'w', encoding='utf-8') as f:
-        f.write(inclue_dir)
-    print(f"Generated: {filepath}")
+    write_new(os.path.join(filelist, 'include.f'), inclue_dir)
 
     glb_uvm_f = get_glb_uvm_f()
     content = glb_uvm_f.format(module_uvm_f='\n'.join(module_uvm_f),pid=pid,
@@ -2505,10 +2486,7 @@ def generate_tb_top(config, output_dir):
 
     rtl_define = get_rtl_define()
                       
-    filepath = os.path.join(macro_dir, 'rtl_define.f')
-    with open(filepath, 'w', encoding='utf-8') as f:
-        f.write(rtl_define)
-    print(f"Generated: {filepath}")
+    write_new(os.path.join(macro_dir, 'rtl_define.f'), rtl_define)   # user-maintained, written once
 
     filepath = os.path.join(macro_dir,  'README')
     with open(filepath, 'w', encoding='utf-8') as f:
@@ -3121,8 +3099,10 @@ def main():
     
 
 def write_new(filepath, content):
-    """Module-private files are generated once and then hand-extended; never overwrite
-    an existing one (assembly files are template-pure and are rewritten unconditionally)."""
+    """Module-private files and the user-maintained skeletons (tb_top/config/*.cfg, the
+    tb_top/filelist source lists + include.f, macro/rtl_define.f) are generated once and then
+    hand-maintained; never overwrite an existing one (assembly files are template-pure and
+    are rewritten unconditionally)."""
     if os.path.exists(filepath):
         print("Skipped (exists): %s" % filepath)
         return

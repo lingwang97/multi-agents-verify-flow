@@ -63,7 +63,7 @@ class top_env extends uvm_env;
         ral  = RAL_PKG::ral_gen_main::type_id::create("ral", this);
         ral.configure(null, "");
         ral.build();
-        ral.set_coverage(UVM_CVR_ALL);	
+        ral.set_coverage(UVM_CVR_ALL);
         ral.lock_model();
         ral.reset();
         ral.set_hdl_path_root("tb_top.C[0].btnode.btc"); //need to be updated
