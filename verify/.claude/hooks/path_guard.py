@@ -18,6 +18,15 @@ Enforces the rules from docs/ops/multi_agent_ops.md §1/§6:
    gate (verified live 2026-11-23: auto mode let it through), so the call
    is blocked instead. The main session is not affected.
 
+4. RTL access (2026-11-24, ops §1): in doc mode (the intake's spec_dir is a
+   real directory) a subagent Read/Grep/Glob of the design database -
+   the design root, anything inside it, or a search rooted above it - is
+   blocked unless the leader recorded a per-task grant for that agent and
+   path in .claude/state/rtl_access.json (written via
+   .claude/hooks/rtl_access.py after the user approved the request).
+   Pre-research mode (spec_dir none/unset) reads freely. Bash reads stay
+   advisory, like Bash writes.
+
 A call comes from a subagent when the hook input carries `agent_id`
 (Claude Code common hook input field).
 
@@ -155,6 +164,65 @@ def _check_write(path, data, tool):
               "Per the dev_agent charter this needs a user-approved development plan." % (agent, rel), data)
 
 
+def _rtl_context():
+    """(doc_mode, design_root_abs) from script/new_project/answers.json."""
+    proj = _project_dir()
+    a = {}
+    try:
+        with open(os.path.join(proj, "script", "new_project", "answers.json"), encoding="utf-8") as f:
+            a = json.load(f)
+    except (OSError, ValueError):
+        pass
+    ans, app = a.get("answers") or {}, a.get("applied") or {}
+    spec = (ans.get("spec_dir") or "").strip()
+    droot = ans.get("design_root") or app.get("design_root") or "hdl"
+    droot = _winpath(droot)
+    if not os.path.isabs(droot):
+        droot = os.path.join(os.path.dirname(proj), droot)
+    return bool(spec) and spec.lower() != "none", os.path.abspath(droot)
+
+
+def _rtl_grants():
+    try:
+        with open(os.path.join(_project_dir(), ".claude", "state", "rtl_access.json"), encoding="utf-8") as f:
+            return json.load(f).get("grants") or []
+    except (OSError, ValueError):
+        return []
+
+
+def _check_rtl_read(target, data):
+    """Block a subagent's read of the design database in doc mode without a grant."""
+    if not data.get("agent_id") or not target:
+        return
+    doc_mode, droot = _rtl_context()
+    if not doc_mode:
+        return
+    ap = os.path.normcase(_abs(target, data.get("cwd")))
+    dr = os.path.normcase(droot)
+    inside = ap == dr or ap.startswith(dr + os.sep)
+    above = dr.startswith(ap + os.sep)
+    if not (inside or above):
+        return
+    agent = data.get("agent_type") or "subagent"
+    repo = os.path.dirname(_project_dir())
+    rel = os.path.relpath(_abs(target, data.get("cwd")), repo).replace("\\", "/")
+    for g in _rtl_grants():
+        if g.get("agent") not in (agent, "*"):
+            continue
+        for pat in g.get("paths") or []:
+            pat = pat.replace("\\", "/").rstrip("/")
+            if fnmatch.fnmatch(rel, pat) or rel == pat or rel.startswith(pat + "/") \
+                    or (pat.endswith("/**") and (rel == pat[:-3] or rel.startswith(pat[:-2]))):
+                return
+    sys.stderr.write(
+        "[path_guard] BLOCKED: %s reading the design database (%s) - doc mode, no RTL-access grant.\n"
+        "Stop and put an RTL ACCESS REQUEST in your report (ops §1): category (spec ambiguity / "
+        "suspected issue / gray-box), the exact question, the smallest file/module scope, how the answer "
+        "is used, and the no-RTL alternative (ask the design side). The leader asks the user.%s\n"
+        % (agent, rel, " A search rooted above the design root also needs a grant - narrow the path to verify/." if above else ""))
+    sys.exit(2)
+
+
 def main():
     try:
         data = json.load(sys.stdin)
@@ -162,6 +230,16 @@ def main():
         return
     tool = (data.get("tool_name") or "").lower()
     ti = data.get("tool_input") or {}
+
+    if tool == "read":
+        _check_rtl_read(ti.get("file_path") or "", data)
+        return
+    if tool in ("grep", "glob"):
+        _check_rtl_read(ti.get("path") or data.get("cwd") or os.getcwd(), data)
+        pat = ti.get("pattern") if tool == "glob" else None
+        if pat and (os.path.isabs(_winpath(pat)) or pat.startswith("..")):
+            _check_rtl_read(pat.split("*")[0] or pat, data)
+        return
 
     if tool in ("write", "edit", "multiedit"):
         path = ti.get("file_path") or ti.get("path") or ""

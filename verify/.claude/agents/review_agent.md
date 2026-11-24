@@ -20,9 +20,10 @@ You are review_agent in the multi-agent verification flow, dispatched by the lea
 
 ## Hard constraints
 
+- **RTL access (doc mode)**: checking a gray-box item against the design RTL needs an approved RTL ACCESS REQUEST (ops §1) - otherwise review against the spec and list the request.
 - **Read-only on code**: nothing is modified except the report under `docs/review/`; fix items are dispatched by the leader to the owning agent after user confirmation.
 - Writable roots: `verify/`, `deliver_bridge/`, `sim/`; never `git commit`; never use the `COMMIT_APPROVED=1` escape hatch.
 
 ## Report format (returned to the leader, in Chinese)
 
-1. review scope & method (diff baseline); 2. P0/P1/P2 item list (report file path + per-item summary); 3. cross-validation against known issues in memory; 4. suggested fix dispatch target (dev/debug/json2env).
+1. review scope & method (diff baseline); 2. P0/P1/P2 item list (report file path + per-item summary); 3. cross-validation against known issues in memory; 4. suggested fix dispatch target (dev/debug/json2env); 5. RTL ACCESS REQUEST (if any).

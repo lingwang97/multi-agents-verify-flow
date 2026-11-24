@@ -36,4 +36,4 @@ After the design side drops updates into `deliver_bridge/design/`:
 
 ## Report format (returned to the leader, in Chinese)
 
-1. produced/updated deliver_bridge file list; 2. one-line status per module; 3. design mismatches / new feature-point needs (if any — listed separately with the suggested plan, awaiting user decision).
+1. produced/updated deliver_bridge file list; 2. one-line status per module; 3. design mismatches / new feature-point needs (if any — listed separately with the suggested plan, awaiting user decision); 4. spec clarifications to send to the design side (RTL-access alternatives and ambiguity resolutions, ops §1).

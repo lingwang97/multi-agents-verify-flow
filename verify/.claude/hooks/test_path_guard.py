@@ -81,8 +81,54 @@ def main():
     run("sub: PowerShell commit", "deny", "PowerShell", {"command": "git commit -m x"}, True, "auto")
     run("sub: other bash", "allow", "Bash", {"command": "git status"}, True, "auto")
     run("malformed input", "allow", "", {}, raw="not json")
+    rtl_cases()
     print("FAILS: %d" % fails)
     sys.exit(1 if fails else 0)
+
+
+def rtl_cases():
+    """RTL-access gate, on a throw-away project (answers.json + grants) - the real tree is untouched."""
+    global ENV
+    import shutil
+    import tempfile
+    tmp = tempfile.mkdtemp(prefix="pg_rtl_")
+    proj = os.path.join(tmp, "verify")
+    os.makedirs(os.path.join(proj, "script", "new_project"))
+    os.makedirs(os.path.join(proj, ".claude", "state"))
+    os.makedirs(os.path.join(tmp, "design", "rtl", "uart"))
+    rtl = os.path.join(tmp, "design", "rtl", "uart", "uart.v")
+    other = os.path.join(tmp, "design", "rtl", "spi.v")
+    saved = ENV
+    ENV = dict(os.environ, CLAUDE_PROJECT_DIR=proj)
+
+    def answers(spec):
+        with open(os.path.join(proj, "script", "new_project", "answers.json"), "w") as f:
+            json.dump({"answers": {"design_root": "design", "spec_dir": spec}, "applied": {}}, f)
+
+    def grants(g):
+        with open(os.path.join(proj, ".claude", "state", "rtl_access.json"), "w") as f:
+            json.dump({"grants": g}, f)
+    try:
+        answers("none")
+        grants([])
+        run("rtl: pre-research, sub Read RTL", "allow", "Read", W(rtl), True, "auto")
+        answers("docs/spec")
+        run("rtl: doc mode, sub Read RTL, no grant", "deny", "Read", W(rtl), True, "auto")
+        run("rtl: doc mode, main session Read RTL", "allow", "Read", W(rtl), False, "auto")
+        run("rtl: doc mode, sub Read verify file", "allow", "Read", W(os.path.join(proj, "CLAUDE.md")), True, "auto")
+        run("rtl: doc mode, sub Grep in design root", "deny", "Grep", {"pattern": "x", "path": os.path.join(tmp, "design")}, True, "auto")
+        run("rtl: doc mode, sub Grep repo root (above)", "deny", "Grep", {"pattern": "x", "path": tmp}, True, "auto")
+        run("rtl: doc mode, sub Grep verify/", "allow", "Grep", {"pattern": "x", "path": proj}, True, "auto")
+        run("rtl: doc mode, sub Glob abs pattern in RTL", "deny", "Glob", {"pattern": os.path.join(tmp, "design", "**", "*.v"), "path": proj}, True, "auto")
+        grants([{"task": "T1", "agent": "dev_agent", "paths": ["design/rtl/uart/**"], "category": "gray-box", "reason": "r"}])
+        run("rtl: granted agent, granted path", "allow", "Read", W(rtl), True, "auto")
+        run("rtl: granted agent, other path", "deny", "Read", W(other), True, "auto")
+        run("rtl: granted path, other agent", "deny", "Read", W(rtl), True, "auto", {"agent_type": "review_agent"})
+        grants([{"task": "T2", "agent": "*", "paths": ["design/rtl/spi.v"], "category": "spec-ambiguity", "reason": "r"}])
+        run("rtl: wildcard agent, exact file", "allow", "Read", W(other), True, "auto", {"agent_type": "debug_agent"})
+    finally:
+        ENV = saved
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 if __name__ == "__main__":
