@@ -3,6 +3,7 @@
 UVM-1.2 (SystemVerilog) verification environment for the SoC `soc` (project id `PID 003`). Mostly generated from JSON by Python scripts, then hand-extended: per-module UVCs, a top env that assembles them, and the `wsim` shell/Makefile flow (VCS + Verdi, LSF dispatch, DPO).
 
 - Launch Claude Code from `verify/` (this directory). Hooks, settings, agents, skills and rules all live in `verify/.claude/`; the repo root has no Claude config.
+- Design database (RTL, IP, netlists, register table): repo-root relative (design root: `hdl`); a new project records its own with `/new-project`.
 - `verify/` is the single UVM tree in the repo. Module list/state, standing rules and lessons: `docs/memory/arch_memory.md` — read it before structural changes (new module, flow branch, skill/script edit) and append new rules there.
 - Path-scoped rules in `.claude/rules/` load when you open matching files: `oeda-verilator.md` (`*.sv`), `generated-assembly.md` (template-pure assembly files), `filelists.md` (`*.f`), `flow-scripts.md` (`script/sflow`, deploy, `utils/`).
 
@@ -54,7 +55,7 @@ bash ../verify/script/file_manage.sh     # deploys sim/wsim_oeda next to sim/wsi
   - `enable_ral` (default true): false drops the RAL from block-level files. A top-level `enable_ral: false` requires every module `enable_ral: false` and `adapter_type: ""` — the system flow builds ONE chip model from the whole reg table. Both rules are generator-enforced.
 - **Module-private files are generated once, never overwritten**: `gen_uvm_env.py` skips existing `uvc/<mod>/`, `<mod>_seq/test.sv`, `<mod>_block_base_*`, `json/case/<mod>.json`, `tb_top_<mod>.sv`, `uvm_blk_<mod>.f`, `tb_top_<mod>.f`, `<mod>_if_conn*`.
 - **Assembly files are template-pure, rewritten on every run**: top_env, top_vseqr, top_pkg, top_if/top_if_pc, base_seq/test, soc_sequence_lib, `json/module.json`, uvm.f, tb_define, tb_top_soc, and `tb_top/component/` (vif_declare, dump_wave, if_conn, tb_sdf). Never hand-edit them; lift changes into the `script/gen_uvm_env.py` templates.
-- **User-maintained skeletons are generated once, never overwritten**: `tb_top/filelist/` source lists (`rtl_file_lst.f`, `ip_file_lst.f`, `gate_file_lst.f`, `gate_ip_file_lst.f`, `lib_lst.f`, `gpls_lib_lst.f`, `include.f`), `tb_top/macro/rtl_define.f` and `tb_top/config/*.cfg`. The generator only writes the empty skeleton; the content (design sources, include dirs, defines, VCS configs) is maintained by hand or by `/new-project`.
+- **User-maintained skeletons are generated once, never overwritten**: `tb_top/filelist/` source lists (`rtl_file_lst.f`, `ip_file_lst.f`, `gate_file_lst.f`, `gate_ip_file_lst.f`, `lib_lst.f`, `gpls_lib_lst.f`, `include.f`), `tb_top/macro/rtl_define.f` and `tb_top/config/*.cfg`. The generator only writes the empty skeleton; the design content (sources, include dirs, defines) is filled by the `/new-verification` design-input step (scan → suggestions → user confirms), VCS configs by hand.
 - Commit (or be ready to `git checkout --`) before regenerating; afterwards check `git diff` + one smoke run (`./wsim_oeda -c apb_master_smoke_block_test`).
 - Module add/remove (`--guvc`, then `--prune [--yes]` for orphans) and its doc sync: json2env_agent charter + arch R1/R2.
 - `--guvc` also emits inert `<mod>_smoke_test`/`_seq` (and `_smoke_block_` for block level) — a runnable starting point, not a real test.

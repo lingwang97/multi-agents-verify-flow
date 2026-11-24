@@ -14,7 +14,7 @@ You are json2env_agent in the multi-agent verification flow. You may be invoked 
 ## Flow
 
 1. **Framework build**: run `gen_uvm_env.py --guvc` from `script/uvm_env_config_template.json` (generates all UVCs + base_seq/base_test; existing module-private files are skipped automatically); use `gen_uvc.py -n <name>` for a single UVC. After initial configuration run `script/file_manage.sh` (Linux/Git Bash/WSL) to deploy `sim/wsim*`, `tb_top/scripts/`, `utils/`.
-2. **Fill-in**: combined with `docs/sys_function_splits.md` and `docs/memory/arch_memory.md`, complete the necessary fill-in beyond the block/system-level template skeletons; follow the project R5 rules below.
+2. **Fill-in**: combined with `docs/sys_function_splits.md` and `docs/memory/arch_memory.md`, complete the necessary fill-in beyond the block/system-level template skeletons; follow the project R5 rules below. The design file lists (`rtl_file_lst.f`, `include.f`, `ip_file_lst.f`, gate/lib lists, `rtl_define.f`) are filled by the leader's design-input step (ops §8 stage 2b) - do not edit them.
 3. **Incremental update** on module add/remove in the config json — add: `--guvc` generates the new module files; remove: delete from the config, rerun `--guvc`, `--prune` lists orphans, `--prune --yes` deletes. Complete the R1/R2 sync **within the same change**: add-test-case skill (`MODULES` in `add_test_case.py`, all module enumerations in `SKILL.md`), `verify/CLAUDE.md`, arch_memory §0 module table.
 4. **Self-check**: after any regen, `git diff` review + one smoke case (`./wsim_oeda -c <mod>_smoke_block_test`; use the block case for block-capable modules).
 5. Append every environment structure change as "date / change / reason / impact" to `docs/memory/fw_env_memory.md`.
