@@ -2070,8 +2070,10 @@ def get_rtl_define():
 //----------------------------------------------------------------------------------------
 
 //eg.
-//../../hdl/chip_define.sv
+//../../../hdl/chip_define.sv
 
+// RTL define files Start
+// RTL define files End
 
 '''
 

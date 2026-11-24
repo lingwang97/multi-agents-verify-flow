@@ -7,12 +7,16 @@
 #   with:<flag> <glob>          carried only when bootstrap gets --with-<flag>
 #   exclude <glob>              never copied (wins over carry)
 #
-# Not listed = not copied. That covers everything gen_uvm_env.py --guvc or
-# file_manage.sh regenerates (env/, test/, seq/, intf/, json/, uvc/<mod>/,
-# tb_top/tb_top/*, tb_top/component/*, tb_top/filelist/uvm*.f + tb_top_*.f +
-# README, tb_top/data/README, tb_top/macro/README, tb_define.sv, tb_top/scripts/*, utils/, sim/*, verify/ral/) and the
-# chip-specific state (hdl/, docs/modules/, docs/features/<mod>/,
-# docs/review/, docs/reports/<reports>, root README.md).
+# Not listed = not copied. That covers:
+# - everything gen_uvm_env.py --guvc or file_manage.sh produces: env/, test/,
+#   seq/, intf/, json/, uvc/<mod>/, the whole tb_top/ tree (assembly files,
+#   module-private files and the user-maintained skeletons - filelists,
+#   include.f, rtl_define.f, config/*.cfg - which the first --guvc writes
+#   from the generator templates), utils/, sim/*, verify/ral/;
+# - the chip-specific state: the design database (hdl/ is only a placeholder;
+#   the real root is the design_root answer of /new-project), docs/modules/,
+#   docs/features/<mod>/, docs/review/, docs/reports/<reports>, root README.md.
+# The design file lists are filled by the /new-verification design-input step.
 
 carry .gitignore
 carry deliver_bridge/README.md
@@ -26,19 +30,7 @@ carry verify/docs/features/README.md
 carry verify/docs/memory/dev/_template.md
 carry verify/docs/memory/debug/_template.md
 carry verify/docs/memory/deliver/_template.md
-carry verify/tb_top/config/*.cfg        # user-maintained (--guvc writes them only when absent)
-carry verify/tb_top/coverage/README
-carry verify/tb_top/data/README
-carry verify/tb_top/scripts/README
 
-reset verify/tb_top/filelist/rtl_file_lst.f filelist
-reset verify/tb_top/filelist/ip_file_lst.f filelist
-reset verify/tb_top/filelist/include.f filelist
-reset verify/tb_top/filelist/lib_lst.f filelist
-reset verify/tb_top/filelist/gate_file_lst.f filelist
-reset verify/tb_top/filelist/gate_ip_file_lst.f filelist
-reset verify/tb_top/filelist/gpls_lib_lst.f filelist
-reset verify/tb_top/macro/rtl_define.f filelist
 reset verify/script/uvm_env_config_template.json config
 reset verify/docs/memory/arch_memory.md arch
 reset verify/docs/memory/fw_env_memory.md fw_env
@@ -52,4 +44,5 @@ with:apb-master verify/docs/modules/apb_master.md
 exclude **/__pycache__/**
 exclude **/*.pyc
 exclude verify/.claude/settings.local.json
+exclude verify/.claude/state/**
 exclude verify/script/new_project/answers.json
