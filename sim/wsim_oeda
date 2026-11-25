@@ -217,12 +217,27 @@ function src_stamp() {
     } | sort -u | while read -r f; do [ -f "$f" ] && stat -c '%n %Y %s' "$f"; done | cksum
 }
 
+# Project id: the `define PID line of the deployed sim/project_name (the file the
+# VCS flow compiles), else of its source verify/script/sflow/project_name.
+function project_pid() {
+    local f
+    for f in "$database_path/sim/project_name" "$database_path/verify/script/sflow/project_name"; do
+        if [ -f "$f" ]; then
+            tr -d '\r' < "$f" | sed -n 's/^`define[[:space:]]\{1,\}PID[[:space:]]\{1,\}\([A-Za-z0-9_]\{1,\}\).*/\1/p' | head -1
+            return
+        fi
+    done
+}
+
 function compile() {
     local trace_opts=""
     local cov_opts=""
     local build_key
+    local pid
+    pid="$(project_pid)"
+    [ -n "$pid" ] || die "no \`define PID in sim/project_name or verify/script/sflow/project_name - run file_manage.sh (the value is set by /new-project)"
     # any source edit changes the key, so obj_dir is reused only for an unchanged build
-    build_key="$(verilator --version)|$WL_DEFINES|$OPTS_DUMPWAVE|$OPTS_COVRPT|$(cksum "$scratch_dir/uvm_oeda.f" 2>/dev/null)|$(cd "$scratch_dir" && src_stamp)"
+    build_key="$(verilator --version)|PID=$pid|$WL_DEFINES|$OPTS_DUMPWAVE|$OPTS_COVRPT|$(cksum "$scratch_dir/uvm_oeda.f" 2>/dev/null)|$(cd "$scratch_dir" && src_stamp)"
     if [ -x "$scratch_dir/obj_dir/simv" ] && [ "$(cat "$scratch_dir/.build_key" 2>/dev/null)" == "$build_key" ]; then
         echo "****$me****: build inputs unchanged, reusing obj_dir"
         return 0
@@ -236,7 +251,7 @@ function compile() {
         -Wno-fatal \
         +define+OPEN_EDA \
         +define+UVM_NO_DPI \
-        +define+PID=003 \
+        +define+PID="$pid" \
         $WL_DEFINES \
         +incdir+"$UVM_HOME/src" \
         "$UVM_HOME/src/uvm_pkg.sv" \

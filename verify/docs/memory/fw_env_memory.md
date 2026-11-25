@@ -86,3 +86,8 @@ The current environment state (module table, generation rules) lives in `arch_me
 - Reason: the key held only tool version, defines, flags and the filelist checksum, so an edited source with an unchanged filelist reused the old `simv` and reported a stale PASS (hit while verifying the OPEN_EDA isolation).
 - Impact: any source edit forces a rebuild; unchanged builds still reuse obj_dir. Verified on apb_master_smoke_block_test: first run compiles, unchanged rerun reuses, after `touch` of a UVC source it recompiles, next rerun reuses - all PASS. Deployed with `file_manage.sh`.
 
+## 2026-11-25 wsim_oeda reads the project id from project_name
+- Change: `wsim_oeda` no longer hard-codes `+define+PID=003`; `project_pid` reads the `` `define PID `` line of the deployed `sim/project_name` (the file the VCS flow compiles), falling back to `verify/script/sflow/project_name`, and dies with a `file_manage.sh` hint when neither has one. The PID is part of the build key. `vars.json` pid prompt names wsim_oeda as a reader.
+- Reason: a project parameterized by `/new-project` (pid rewritten in `project_name`) still compiled PID=003 on oEDA; `audit` missed it because only the CLAUDE.md wording of the pid was registered.
+- Impact: one source for the project id on both flows. Verified: parsing of missing / CRLF source-only / deployed-wins cases; apb_master_smoke_block_test rebuilds (key changed) and PASS with PID=003.
+

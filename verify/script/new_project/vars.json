@@ -75,7 +75,7 @@
       "kind": "text_file",
       "file": "script/sflow/project_name",
       "template": "`define PID {v}",
-      "prompt": "Project id (deployed as sim/project_name; read by wsim, the Makefile and testjson2lst).",
+      "prompt": "Project id (deployed as sim/project_name; read by wsim, wsim_oeda, the Makefile and testjson2lst).",
       "validate": "^[A-Za-z0-9_]+$",
       "rewrites": [
         {
