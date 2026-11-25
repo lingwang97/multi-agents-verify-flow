@@ -1,5 +1,5 @@
-################################################################################
 #!/bin/bash
+################################################################################
 ## -----------------------------------------------------------------------------
 ## HEADER_MSG    WSIM simulation start-up script
 ## HEADER_MSG    Author: Mr Wang
@@ -441,10 +441,26 @@ function buildUvmCase()
         cp $rtdbgfile_name ./
         cp $initregfile_name ./Makefile.initreg.cfg
         cp $coverfile_name ./Makefile.coverage.cfg
-        ln -s ../$comp_dir/simv ./simv
-        ln -s ../$comp_dir/csrc ./csrc
-        ln -s ../$comp_dir/simv.daidir ./simv.daidir
-        ln -s ../$comp_dir/ucli.key ./ucli.key
+        # link the compile outputs; simv and simv.daidir are required - a missing one
+        # fails the case here, with the comp dir listing, instead of a later "Command not found"
+        local missing=""
+        for f in simv simv.daidir csrc ucli.key; do
+            ln -sfn ../$comp_dir/$f ./$f
+            if [[ ! -e ../$comp_dir/$f ]]; then
+                if [[ $f == "simv" || $f == "simv.daidir" ]]; then
+                    missing+=" $f"
+                else
+                    echo "WARNING: ../$comp_dir/$f not found (link left dangling)"
+                fi
+            fi
+        done
+        if [[ -n $missing ]]; then
+            echo "ERROR: compile outputs missing in $comp_dir:$missing"
+            ls -la ../$comp_dir
+            echo "$testname			sim_setup_error" >> ${sim_dir}/result.txt
+            cd $wsim_dir_path
+            exit 1
+        fi
 
     fi
     
@@ -669,7 +685,6 @@ function buildUvmCase()
         print_result $folder $testname  | tee -a sim.log | tee -a $simlog_dir
         #go back to dir
         cd $wsim_dir_path
-        break
     fi
 
 }

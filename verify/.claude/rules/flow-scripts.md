@@ -13,7 +13,7 @@ paths:
 
 - `script/` is the source of truth. `script/file_manage.sh` (Linux / Git Bash / WSL) or `script/file_manage.ps1` (native Windows) deploys it: repo-root `sim/` (`wsim`, `wsim_oeda`, `project_name`), `tb_top/scripts/` (`Makefile*`, `testjson2lst.py`) and the whole `utils/` tree (identical copy of `script/utils/`). Both scripts are cwd-independent.
 - Never edit the deployed copies; edit under `script/` and rerun the deploy.
-- `wsim` is a CRLF file — normalize line endings before string-matching edits, restore CRLF afterwards.
+- `wsim`, `wsim_oeda`, the Makefiles and `*.sh` are LF, pinned by the repo-root `.gitattributes` (a CRLF copy fails on Linux with `bash\r: bad interpreter`). A script's `#!` line must be line 1 - otherwise csh runs `./wsim` as a csh script.
 
 ## Flow settings: two kinds, never mixed
 
@@ -26,4 +26,5 @@ paths:
 
 - Makefile: keep `$(error ...)` inside conditionals space-indented; a tab-indented one is parsed as a recipe line ("recipe commences before first target").
 - When a Python/shell patch writes a trailing backslash (line continuation), avoid `\"`-style escapes in heredocs — a mis-escaped backslash leaves a dangling quote and `bash -n` reports "unexpected EOF while looking for matching ...".
+- Makefile recipes call `./simv`, `./simv_cmd`, `./com_cmd` - never rely on `.` in `PATH`.
 - Validate edits with `bash -n` locally; `wsim`/Makefile behaviour on VCS/LSF can only be checked on the Linux server.

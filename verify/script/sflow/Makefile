@@ -561,7 +561,7 @@ cmpr:
 sim:
 	make simv_echo; make covsim; echo current SEED is $(SEED);
 covsim:
-	simv +vcs+lic+wait -ucli -l sim.log +ntb_stop_on_constraint_solver_error=1 -assert quiet+report \
+	./simv +vcs+lic+wait -ucli -l sim.log +ntb_stop_on_constraint_solver_error=1 -assert quiet+report \
 	$(dump_simv) $(fsdb_force) $(uvm_para) $(gui_option) +ntb_random_seed=$(SEED) $(cm_para_sim) $(fgp_para) \
 	$(simv_opt) $(vip_sim_para)$(xprop_sim) $(init_reg_cfg) $(dpo_sim_para)
 show:
@@ -599,7 +599,7 @@ com_var = vcs $(VCS_MACRO_OPT) -timescale=1ns/10ps  +v2k -sverilog $(fgp_compile
 	$(vip_comp_para) \
 	-top tb_top
 
-simv_var = simv +vcs+lic+wait -ucli -l sim.log +ntb_stop_on_constraint_solver_error=1 -assert quiet+report \
+simv_var = ./simv +vcs+lic+wait -ucli -l sim.log +ntb_stop_on_constraint_solver_error=1 -assert quiet+report \
 	$(dump_simv) $(fsdb_force) $(uvm_para) $(gui_option) +ntb_random_seed=$(SEED) $(cm_para_sim) $(fgp_para) \
 	$(simv_opt) $(vip_sim_para)$(xprop_sim) $(init_reg_cfg) $(dpo_sim_para)
 
@@ -609,7 +609,7 @@ simv_echo:
 	echo -e "#!/bin/bash\n\n"  $(simv_var) > simv_cmd; chmod +x simv_cmd
 
 run_com:
-	com_cmd | tee compile.log
+	./com_cmd | tee compile.log
 
 run_simv:
-	simv_cmd | tee sim.log
+	./simv_cmd | tee sim.log

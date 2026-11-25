@@ -91,3 +91,8 @@ The current environment state (module table, generation rules) lives in `arch_me
 - Reason: a project parameterized by `/new-project` (pid rewritten in `project_name`) still compiled PID=003 on oEDA; `audit` missed it because only the CLAUDE.md wording of the pid was registered.
 - Impact: one source for the project id on both flows. Verified: parsing of missing / CRLF source-only / deployed-wins cases; apb_master_smoke_block_test rebuilds (key changed) and PASS with PID=003.
 
+## 2026-11-25 VCS flow fixes from the uart_test server run (F1-F4)
+- Change: F1 `wsim` `#!/bin/bash` moved to line 1 (csh ran `./wsim` as a csh script); repo-root `.gitattributes` pins LF for `wsim`, `wsim_oeda`, the sflow and deployed `tb_top/scripts` Makefiles and `*.sh` (carried by bootstrap). F2 Makefile `covsim`, `simv_var`, `run_com`, `run_simv` call `./simv` / `./com_cmd` / `./simv_cmd` (the old server had `.` in `PATH`). F3 the sim scene links compile outputs with `ln -sfn` and checks them: missing `simv` / `simv.daidir` fails the case as `sim_setup_error` with the comp-dir listing, missing `csrc` / `ucli.key` warns. F4 a stray `break` outside any loop in `buildUvmCase` removed. `flow-scripts.md` gotchas updated.
+- Reason: on the uart_test Linux server VCS simulation never started (`simv: Command not found`, scene dir held only the `csrc` link).
+- Impact: `bash -n` clean; `make -n` shows the `./` calls; deployed copies identical to the sources. Behaviour on VCS/LSF is verified on the server only. F3 root cause still open - needs `ls -la comp_<case>/` and the scene dir from the server; the new check reports it on the next run.
+

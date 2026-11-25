@@ -16,6 +16,7 @@
 # the design database itself lives under the design_root answer of /new-project.
 
 carry .gitignore
+carry .gitattributes
 carry deliver_bridge/README.md
 carry verify/CLAUDE.md
 carry verify/README.md
