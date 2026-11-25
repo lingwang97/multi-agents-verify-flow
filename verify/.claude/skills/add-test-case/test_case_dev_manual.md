@@ -20,7 +20,17 @@ This is a task-oriented guide for engineers writing a new test case in this `ver
 
 **Writing a test for a template module means filling in real content at every layer**, not just adding a JSON entry to something that already works end-to-end.
 
-**Reference UVC.** The framework repo carries one fully customised module, `apb_master` (APB3 master for an SRAM slave): real interface signals, a negedge FSM driver, a monitor that reconstructs transfers and runs procedural protocol checks, a shadow-memory scoreboard, real coverage bins, sequence helpers `apb_write/apb_read/apb_idle` in its block base seq, and real JSON entries. A new chip project has it only when bootstrapped with `--with apb-master` (its DUT facts: `docs/modules/apb_master.md`). Copy its structure when customising a UVC.
+**Customising a UVC** - what a finished module typically has (patterns that worked in practice):
+
+- **Interface**: the real protocol signals, plus the generated `checks_enable` / `coverage_enable` hooks.
+- **Driver**: a small FSM per transfer; drive on the edge opposite to the DUT's sampling edge when the DUT uses blocking assignments, insert the idle cycles the protocol requires, and return a response (`item_done(rsp)`) when sequences need read data.
+- **Monitor**: reconstructs complete transfers from the pins, forwards them to the scoreboard/coverage, and holds the oEDA-side procedural protocol checks (`` `ifdef OPEN_EDA ``) mirroring the SVA in `*_if_pc.sv`.
+- **Scoreboard**: a real model of the expected behaviour (e.g. a shadow memory for a storage DUT), derived from the spec - never from the RTL.
+- **Coverage**: bins on protocol state and data classes (boundaries, errors, wait states), crosses where they matter.
+- **Sequences**: reusable helpers (`<mod>_write/<mod>_read/<mod>_idle`-style) in the block base seq or `comm_<mod>_methods.sv`; helpers that need read data call `get_response`.
+- **JSON**: one entry per scenario with only the macros the case needs.
+
+Record the module's DUT facts, quirks and case macros in `docs/modules/<mod>.md`.
 
 ## 3. Step-by-step: writing a new leaf test class
 

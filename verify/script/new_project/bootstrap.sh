@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bootstrap.sh <new-repo-root> [--with apb-master] [--force]
+# bootstrap.sh <new-repo-root> [--force]
 #
 # Copy this verification framework into a new chip repo: framework files are
 # carried, chip-specific state is reset, everything --guvc regenerates is left
@@ -10,7 +10,7 @@ set -e
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 py="$(command -v python3 || command -v python)" || { echo "bootstrap: python3 is required" >&2; exit 1; }
 if [ $# -lt 1 ]; then
-    echo "usage: $0 <new-repo-root> [--with apb-master] [--force]" >&2
+    echo "usage: $0 <new-repo-root> [--force]" >&2
     exit 1
 fi
 dst="$1"; shift

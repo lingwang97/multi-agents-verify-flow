@@ -62,7 +62,7 @@ Retrieval entry point: **look up this table first** to find the canonical home o
 | `docs/ops/multi_agent_ops.md` | leader | **process canon**: roles/tiered confirmation/scheduling/passrate/hooks/this table |
 | `docs/ops/oeda_local_setup.md` | environment | local oEDA (Verilator) machine setup and invocation pitfalls (machine-specific ops manual) |
 | `docs/memory/arch_memory.md` | whole project (spec2json owns the verification-strategy parts) | **architecture state §0, maintenance rules R1-R7, two-flow closed loop §5, deployment history §8** (section numbers frozen, header TOC) |
-| `docs/modules/<mod>.md` | cross-agent | **per-module DUT-knowledge canon** (instance: apb_master); stable facts distilled from process logs are promoted here per R6 |
+| `docs/modules/<mod>.md` | cross-agent | **per-module DUT-knowledge canon**; stable facts distilled from process logs are promoted here per R6 |
 | `docs/memory/fw_env_memory.md` | json2env_agent | environment framework change log |
 | `docs/memory/dev/<mod>.md` | dev_agent | module development log (copy-create from `dev/_template.md`) |
 | `docs/memory/debug/<mod>.md` | debug_agent | issue & fix log (copy-create from `debug/_template.md`) |
@@ -82,7 +82,7 @@ Retrieval entry point: **look up this table first** to find the canonical home o
 - `verify/CLAUDE.md`: Commands (wsim usage, pass criterion) · oEDA section (wsim_oeda usage, pass criterion, block-level flow) · "Regenerating the environment" (R5 canon: skip-if-exists vs template-pure, config knobs + generator-enforced rules) · "Flow scripts and the register table" (RalGen gating) · Architecture (non-obvious UVC/base facts) · Multi-agent section (leader pointer).
 - `docs/memory/arch_memory.md`: §0 module/state table · R1 module-agnostic instruction files · R2 module state sync (hook-referenced) · R3 skill preference · R6 doc governance · §5 two-flow closed loop · §6 deferred status · §7 system bring-up checklist · §8 deployment history · §9 open development gaps.
 - `docs/ops/multi_agent_ops.md`: §0 roles · §1 tiered confirmation + RTL access · §2 scheduling · §3 passrate/coverage · §4 this map · §5 escalation · §6 hooks · §7 dispatch input · §8 new-requirement intake.
-- `docs/modules/<mod>.md`: DUT details/quirks/case macros per module (first instance: apb_master).
+- `docs/modules/<mod>.md`: DUT details/quirks/case macros per module.
 
 **Task routing** (what am I trying to do → where to look):
 
@@ -126,7 +126,7 @@ A sub-agent task prompt must contain: target module/scope, spec basis (doc paths
 
 ## 8. New-requirement intake procedure (leader, on every brand-new verification request)
 
-**Trigger test** — run this only when the request starts a NEW verification effort (new module, new feature set, new level). A continuation request ("continue debugging apb_master") gets only a next-step proposal, never the full pipeline. Before proposing, the leader does a light state check: arch §0 (does the module exist? block support?), taskboard (in-flight work), `docs/features/<mod>/` (existing feature lists), relevant memories.
+**Trigger test** — run this only when the request starts a NEW verification effort (new module, new feature set, new level). A continuation request ("continue debugging <mod>") gets only a next-step proposal, never the full pipeline. Before proposing, the leader does a light state check: arch §0 (does the module exist? block support?), taskboard (in-flight work), `docs/features/<mod>/` (existing feature lists), relevant memories.
 
 Every value the procedure needs is a registry variable of stage `verification` (`script/new_project/vars.json`), read with `new_project.py detect|scan`, recorded with `set` and written with `apply --stage verification` only after the user confirms. Interview style everywhere: AskUserQuestion, at most 4 questions per call, options = detected/scanned candidates (with where they came from), "keep current", default, "defer"; free text through "Other".
 

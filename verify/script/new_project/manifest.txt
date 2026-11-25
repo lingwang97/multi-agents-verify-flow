@@ -40,9 +40,6 @@ reset verify/docs/memory/leader_taskboard.md taskboard
 reset verify/docs/ops/oeda_local_setup.md oeda_setup
 reset verify/script/new_project/answers.json answers
 
-with:apb-master verify/uvc/apb_master/**
-with:apb-master verify/docs/modules/apb_master.md
-
 exclude **/__pycache__/**
 exclude **/*.pyc
 exclude verify/.claude/settings.local.json

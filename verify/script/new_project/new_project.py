@@ -1065,7 +1065,7 @@ def main():
     sub = ap.add_subparsers(dest="cmd")  # required= is 3.7+; checked below
     b = sub.add_parser("bootstrap")
     b.add_argument("--dst", required=True, help="new repo root")
-    b.add_argument("--with", dest="withs", action="append", default=[], help="optional manifest group, e.g. apb-master")
+    b.add_argument("--with", dest="withs", action="append", default=[], help="optional manifest group (a with:<flag> line in manifest.txt)")
     b.add_argument("--force", action="store_true")
     for name in ("detect", "status"):
         x = sub.add_parser(name)

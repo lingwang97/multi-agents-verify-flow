@@ -25,7 +25,7 @@ Architecture state, standing rules and lessons for developing this verify tree. 
 
 ### R1. Instruction files stay module-agnostic
 - **Rule:** no instruction file (CLAUDE.md, `.claude/rules/`, `.claude/agents/`, the add-test-case skill and its manual) names the chip's modules - examples use `<mod>` / `<case>`. The add-test-case script reads the valid modules from `json/module.json` and detects block-level support from the block base files, so adding or removing a module needs no instruction-file edit.
-- **Why:** the jls → apb_master migration left the skill's hard-coded module list stale (the script rejected apb_master), and a bootstrapped chip inherited the previous chip's module names in every instruction file.
+- **Why:** a module rename once left the skill's hard-coded module list stale (the script rejected the new module), and a bootstrapped chip inherited the previous chip's module names in every instruction file.
 - **Check:** `python .claude/skills/add-test-case/add_test_case.py --module <new> ...` is accepted right after `--guvc`; `grep` for the module names over the instruction files finds nothing.
 
 ### R2. Adding or removing a module → update the state documents
@@ -36,7 +36,7 @@ Architecture state, standing rules and lessons for developing this verify tree. 
 
 ### R3. Prefer the skill over hand-writing leaf test cases
 - **Rule:** create new leaf tests/seqs/JSON entries with `add-test-case` (`python .claude/skills/add-test-case/add_test_case.py --module <mod> --function <name> --level system|block ...`), then fill in the `body()` TODO.
-- **apb_master naming:** existing block tests are `apb_master_<fp>_block_test`, so pass `--function <fp>_block`. Extra compile defines go through `--macro-opt` (e.g. `+APB_SRAM_EN_WAIT`); the script prepends `+<MODULE>_BLOCK_TEST`.
+- **Naming:** follow the module's existing leaf naming (e.g. block tests named `<mod>_<fp>_block_test` → `--function <fp>_block`; per-module conventions in `docs/modules/<mod>.md`). Extra compile defines go through `--macro-opt`; the script prepends `+<MOD>_BLOCK_TEST`.
 
 ### R5. Regeneration is safe only through the template-pure assembly rule
 - **Rule:** canon is `verify/CLAUDE.md` "Regenerating the environment" (module-private files skip-if-exists; assembly files are template-pure and rewritten on every regen — never hand-edit, lift changes into `gen_uvm_env.py` templates). The enforcement subset is inlined in the json2env_agent charter.
@@ -83,7 +83,7 @@ Naming: the open-source flow is **oEDA** (script `wsim_oeda`, scratch `sim/uvm_s
 4. Width macros are **derived from the register table** (since 2026-11-12): RalGen (`gen_reg_model.py`) parses the CSV (field `BitEnd+1`, `Label REG_<n>`, byte span `(EndAddr-OffsetAddr+1)*8` - max of all three per register) and writes `verify/ral/ral_reg_width`; `testjson2lst.py` injects `max(64, derived)` into BOTH flows, and `wsim_oeda` no longer filters them. The old `chip_define.sv` + CORE_NUM parsing is gone (that file also no longer exists). Residual check when the real register table lands: confirm the derived value covers the real design's widest register - sliced registers depend on the Label/EndAddr columns being populated per slice; if they are not, the derivation undercounts and the number must be revisited.
 5. Gate/post-layout (`-l gate|post`) and DPO flows are VCS-only.
 
-**Local batch loop (no dedicated tool):** `wsim_oeda` keeps `comp_<case>/obj_dir` across runs and skips verilator when the build key (verilator version + defines + uvm_oeda.f hash + wave/cov flags) is unchanged, so a plain shell loop is enough for a local pre-regression: `for c in apb_master_smoke_block_test apb_master_wait_block_test; do ./wsim_oeda -c "$c" -seed 1 -nowave; done` - only the first case pays the full compile; per-run artifacts (run_iter*, result.txt) are cleared each run.
+**Local batch loop (no dedicated tool):** `wsim_oeda` keeps `comp_<case>/obj_dir` across runs and skips verilator when the build key (verilator version + defines + uvm_oeda.f hash + wave/cov flags) is unchanged, so a plain shell loop is enough for a local pre-regression: `for c in <mod>_smoke_block_test <mod>_<fp>_block_test; do ./wsim_oeda -c "$c" -seed 1 -nowave; done` - only the first case pays the full compile; per-run artifacts (run_iter*, result.txt) are cleared each run.
 
 ## 7. System-level bring-up checklist (blocked on SoC RTL; do not start early)
 

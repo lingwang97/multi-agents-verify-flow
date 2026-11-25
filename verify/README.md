@@ -52,7 +52,7 @@ flowchart TD
 
 ```bash
 # ① copy the framework into a new repo (chip-specific state is left behind)
-bash verify/script/new_project/bootstrap.sh <new-repo>      # add --with apb-master for the reference UVC
+bash verify/script/new_project/bootstrap.sh <new-repo>
 cd <new-repo>/verify && claude                              # start Claude Code here
 
 # ② and ③ inside Claude Code

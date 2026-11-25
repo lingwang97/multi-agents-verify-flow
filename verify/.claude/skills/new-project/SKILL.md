@@ -10,7 +10,7 @@ The leader (main session) runs this. Every value lives in the registry `script/n
 
 ## 0. Preconditions
 
-- `script/new_project/answers.json` must contain `bootstrapped_from`. If it does not, this is the framework repo itself: stop and tell the user to run, by hand, `bash verify/script/new_project/bootstrap.sh <new-repo-root>` (optionally `--with apb-master`), then start Claude Code in `<new-repo-root>/verify` and rerun `/new-project`. `apply --stage project` refuses to run here anyway.
+- `script/new_project/answers.json` must contain `bootstrapped_from`. If it does not, this is the framework repo itself: stop and tell the user to run, by hand, `bash verify/script/new_project/bootstrap.sh <new-repo-root>`, then start Claude Code in `<new-repo-root>/verify` and rerun `/new-project`. `apply --stage project` refuses to run here anyway.
 - On Windows with Git Bash, prefix `NP set` with `MSYS_NO_PATHCONV=1` when a value is an absolute POSIX path (Git Bash would rewrite it into a Windows path).
 - The bootstrapped repo has no `tb_top/` yet - the first `--guvc` (in `/new-verification`) generates it.
 
