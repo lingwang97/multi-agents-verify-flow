@@ -81,3 +81,8 @@ The current environment state (module table, generation rules) lives in `arch_me
 - Reason: uart_test (Verilator 5.040) failed on `uvm_config_db #(uart_pkg::uart_base_cfg)::get/set` (syntax error) and on the monitor's `extern function` without a return type; the local 5.053 accepts both. User decision: tool-compatibility differences are isolated with `OPEN_EDA`, the VCS form stays untouched.
 - Impact: the VCS view of every changed file is byte-identical to before (checked by expanding the guards); fresh generation equals the hand edits. Guard comments start with `// oEDA:` (a comment starting with `verilator` is a lint pragma, BADVLTPRAGMA). Verified: forced oEDA rebuild of apb_master_smoke_block_test PASS on 5.053. Projects already generated (uart_test) need the same edit in their module-private files after the next sync (or delete the untouched generated files and rerun `--guvc`).
 
+## 2026-11-25 wsim_oeda: obj_dir reuse keyed on the sources too
+- Change: the build key adds `src_stamp` - a checksum of path + mtime + size of every source listed in `uvm_oeda.f`, every file directly in a listed `+incdir` (the `` `include ``d UVC sources) and `tb_define.sv` / `dpi_func.c`. arch §5 batch-loop note updated.
+- Reason: the key held only tool version, defines, flags and the filelist checksum, so an edited source with an unchanged filelist reused the old `simv` and reported a stale PASS (hit while verifying the OPEN_EDA isolation).
+- Impact: any source edit forces a rebuild; unchanged builds still reuse obj_dir. Verified on apb_master_smoke_block_test: first run compiles, unchanged rerun reuses, after `touch` of a UVC source it recompiles, next rerun reuses - all PASS. Deployed with `file_manage.sh`.
+

@@ -203,11 +203,26 @@ PYEOF
 ################################################################################
 # Compile with Verilator. --coverage is added only for -covrpt runs (coverage.dat is unused otherwise).
 ################################################################################
+# Fingerprint of the sources: path + mtime + size of every listed file, of every
+# file directly in a listed +incdir (`include targets such as uvc/<mod>/src/*.sv)
+# and of the two files passed outside the filelist. Run from the compile cwd.
+function src_stamp() {
+    {
+        grep -v '^+incdir+' "$scratch_dir/uvm_oeda.f"
+        grep '^+incdir+' "$scratch_dir/uvm_oeda.f" | sed 's/^+incdir+//' | while read -r d; do
+            [ -d "$d" ] && find "$d" -maxdepth 1 -type f
+        done
+        echo "$database_path/verify/tb_top/macro/tb_define.sv"
+        echo "$database_path/verify/utils/dpi_func.c"
+    } | sort -u | while read -r f; do [ -f "$f" ] && stat -c '%n %Y %s' "$f"; done | cksum
+}
+
 function compile() {
     local trace_opts=""
     local cov_opts=""
     local build_key
-    build_key="$(verilator --version)|$WL_DEFINES|$OPTS_DUMPWAVE|$OPTS_COVRPT|$(cksum "$scratch_dir/uvm_oeda.f" 2>/dev/null)"
+    # any source edit changes the key, so obj_dir is reused only for an unchanged build
+    build_key="$(verilator --version)|$WL_DEFINES|$OPTS_DUMPWAVE|$OPTS_COVRPT|$(cksum "$scratch_dir/uvm_oeda.f" 2>/dev/null)|$(cd "$scratch_dir" && src_stamp)"
     if [ -x "$scratch_dir/obj_dir/simv" ] && [ "$(cat "$scratch_dir/.build_key" 2>/dev/null)" == "$build_key" ]; then
         echo "****$me****: build inputs unchanged, reusing obj_dir"
         return 0
@@ -280,7 +295,7 @@ function run_one() {
 get_case_info "$OPTS_TESTCASE_NAME"
 echo "****$me****: case=$OPTS_TESTCASE_NAME module=$WL_MODULE test=$WL_TESTNAME iter=$WL_ITER"
 
-# keep comp_<case>/obj_dir across runs (P2-lite build reuse); clear only per-run artifacts
+# keep comp_<case>/obj_dir across runs (reused only while the build key - tool, defines, flags, filelist and source fingerprint - is unchanged); clear only per-run artifacts
 rm -rf "$sim_dir"/run_iter* "$sim_dir"/result.txt "$sim_dir"/cov_report 2>/dev/null
 mkdir -p "$sim_dir"
 # compile cwd must sit three levels below the repo root (like VCS's comp_<test>/):

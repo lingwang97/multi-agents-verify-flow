@@ -389,10 +389,6 @@ function buildUvmCase()
 	    make_option+=" fpg_verbose=1"
     fi
 
-    host_pre=$(env | grep "^HOST=" | head -n 1 | cut -d '-' -f 1)
-    if [[ $host_pre == *"sinh1"* ]]; then
-	    make_option+=" host=sinh1"
-    fi
     
     if [[ -n $OPTS_TIMEOUT ]]; then
 	    timeout_option="timeout $OPTS_TIMEOUT"
@@ -455,9 +451,19 @@ function buildUvmCase()
     host=$(env | grep "^HOST=" | head -n 1 | cut -d '-' -f 3)
     echo ----------------------LSF_INFO-------------------------
     echo -e "\tThe host is : ${host}"
-    if [[ $host != *"cch"* && $host != *"gat0"* ]]; then
-	    OPTS_LSF="FALSE"
-        echo -e "OPTS_LSF is $OPTS_LSF due to host is not gs02"
+    # LSF policy is project-level (flow_env.sh): master switch + allowed submit hosts
+    if [[ $WSIM_LSF_ENABLE != "TRUE" ]]; then
+        OPTS_LSF="FALSE"
+        echo -e "OPTS_LSF is $OPTS_LSF due to WSIM_LSF_ENABLE=$WSIM_LSF_ENABLE (flow_env.sh)"
+    elif [[ -n $WSIM_LSF_SUBMIT_HOSTS ]]; then
+        lsf_host_ok=0
+        for frag in $WSIM_LSF_SUBMIT_HOSTS; do
+            if [[ $host == *"$frag"* ]]; then lsf_host_ok=1; fi
+        done
+        if [[ $lsf_host_ok == 0 ]]; then
+            OPTS_LSF="FALSE"
+            echo -e "OPTS_LSF is $OPTS_LSF due to host ${host} not in WSIM_LSF_SUBMIT_HOSTS (${WSIM_LSF_SUBMIT_HOSTS})"
+        fi
     fi
 
 
@@ -469,7 +475,7 @@ function buildUvmCase()
         host_file="$WSIM_LSF_HOSTS_FILE"
         lines=$(grep "$WSIM_LSF_QUEUE" ${host_file})
         queue_names=($(grep "$WSIM_LSF_QUEUE" ${host_file} | head -3 | cut -d ' ' -f 1))
-        lsf_queue_name=($(grep "$WSIM_LSF_QUEUE" ${host_file} | head -3 | cut -d ' ' -f 1 | sed 's/amd/a/g'))
+        lsf_queue_name=($(grep "$WSIM_LSF_QUEUE" ${host_file} | head -3 | cut -d ' ' -f 1 | sed "$WSIM_LSF_QUEUE_SED"))
         queue_number=${#queue_names[@]}
         lsf_host_name=(0 0 0)
         lsf_host_slot=(0 0 0)
@@ -477,7 +483,7 @@ function buildUvmCase()
         for((i=0;i<queue_number;i+=1));do
             queue=${queue_names[i]}
             echo -e "\tThe queue is : ${queue}"
-            temp=$(grep $queue ${host_file} | grep -Eo "kulh1-a[0-9a-zA-Z]+-cch[0-9]+")
+            temp=$(grep $queue ${host_file} | grep -Eo "$WSIM_LSF_EXEC_HOST_REGEX")
             temp1=($temp)
             tmp_line=""
             for tmp in "${temp1[@]}";do
