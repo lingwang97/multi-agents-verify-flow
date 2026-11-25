@@ -72,7 +72,7 @@ Retrieval entry point: **look up this table first** to find the canonical home o
 | `docs/review/` | review_agent | review report archive |
 | `.claude/agents/*.md` | each agent | charter: role/flow/inline constraints/report format (enforcement subset of the canons) |
 | `.claude/skills/` (add-test-case, conv-report, new-verification, new-project) | skills | ops manuals, the intake procedure and the new-chip setup (open gaps: arch_memory §9) |
-| `script/new_project/` | leader | new-chip bootstrap: `manifest.txt` (carry/reset/regen/state/exclude classification of every tracked file), `vars.json` (registry of every project value), `new_project.py` (+ `scan`: design-source suggestions, `check --lint`; `audit`: framework self-check - manifest/module-name/doc-map/registry coverage) and `bootstrap.sh`, `answers.json` (this project's recorded values) |
+| `script/new_project/` | leader | new-chip bootstrap: `manifest.txt` (carry/reset/regen/state/exclude classification of every tracked file), `vars.json` (registry of every project value), `new_project.py` (+ `scan`: design-source suggestions, `check --lint`; `audit`: framework self-check - manifest/module-name/doc-map/registry coverage; `resync`: pull a newer framework into a project) and `bootstrap.sh`, `answers.json` (this project's recorded values) |
 | `docs/sys_function_splits.md` | spec2json | level-partition plan (exists once produced) |
 | `docs/reports/` | reports | verification campaign reports (`report_template.md` outline + conventions; one per campaign, append-only; leader compiles from agent outputs) |
 | `deliver_bridge/README.md` | interface | design↔verification directory conventions |
@@ -158,4 +158,4 @@ Every value the procedure needs is a registry variable of stage `verification` (
 
 **Explicit invocation** — `/new-verification <requirement>` (skill `.claude/skills/new-verification/`) runs this procedure with the given requirement.
 
-**New chip** — a new chip project is first bootstrapped (`script/new_project/bootstrap.sh`, run by the user) and parameterized with `/new-project` (project stage: identity, design root, tools, server settings, language); that skill ends by asking whether to start this intake.
+**New chip** — a new chip project is first bootstrapped (`script/new_project/bootstrap.sh`, run by the user) and parameterized with `/new-project` (project stage: identity, design root, tools, server settings, language); that skill ends by asking whether to start this intake. A newer framework version is pulled into an existing project with `/new-project sync <framework-repo>` (3-way per carried file, conflicts to `<file>.fw-new`, each deletion confirmed; only new variables interviewed).

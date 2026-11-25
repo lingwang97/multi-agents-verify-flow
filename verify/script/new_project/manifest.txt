@@ -65,6 +65,7 @@ state verify/docs/memory/deliver/**
 
 exclude **/__pycache__/**
 exclude **/*.pyc
+exclude **/*.fw-new
 exclude verify/.claude/settings.local.json
 exclude verify/.claude/state/**
 exclude verify/script/new_project/answers.json

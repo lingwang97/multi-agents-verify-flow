@@ -1,10 +1,12 @@
 ---
 name: new-project
-description: Guided framework migration for a new chip project bootstrapped from this verification framework - interviews the user for the project-level values (project identity and design-database root, machine tools, VCS/LSF server settings, agent language), writes them and checks readiness. Design inputs, register table and file lists come later in /new-verification. Use right after `script/new_project/bootstrap.sh`, or when the user invokes /new-project or asks to re-parameterize the project.
-argument-hint: "[phase number to revisit]"
+description: Guided framework migration for a new chip project bootstrapped from this verification framework - interviews the user for the project-level values (project identity and design-database root, machine tools, VCS/LSF server settings, agent language), writes them and checks readiness. Design inputs, register table and file lists come later in /new-verification. Use right after `script/new_project/bootstrap.sh`, or when the user invokes /new-project or asks to re-parameterize the project. With `sync <framework-repo>` it pulls a newer framework version into this project (3-way per carried file, project values kept, only new variables interviewed).
+argument-hint: "[phase number to revisit] | sync <framework-repo>"
 ---
 
 # New project setup (project stage: interview → apply → check)
+
+`$ARGUMENTS` starting with `sync` → skip to "Sync mode" at the end; otherwise run sections 0-4.
 
 The leader (main session) runs this. Every value lives in the registry `script/new_project/vars.json` (stage `project`); every write goes through `script/new_project/new_project.py` (alias `NP` below = `python script/new_project/new_project.py`, run from `verify/`). Never edit the target files by hand during this procedure. Questions to the user are in the conversation language; files stay in the project file language.
 
@@ -45,8 +47,22 @@ Then ask (AskUserQuestion) whether to start the verification intake now: yes →
 
 Commit only after the user approves (leader, `COMMIT_APPROVED=1`), including `answers.json` - the project's record of these values.
 
+## Sync mode (`/new-project sync <framework-repo>`)
+
+Pulls the framework's committed HEAD into this project. Only carried files and the framework part of two reset files (arch_memory §1 rules, `flow_env.sh`) are touched; generated files and chip state never are. Alias `FW` = `python <framework-repo>/verify/script/new_project/new_project.py --root .` (run from this `verify/`) - always the FRAMEWORK's script: this project's copy may predate sync, and the sync replaces it.
+
+1. **Preconditions**: `answers.json` has `bootstrapped_from`; the project's working tree is committed (or the user accepts syncing onto uncommitted edits); `<framework-repo>` is a git repo - ask for its path if `$ARGUMENTS` has none.
+2. **Plan**: `FW resync --dry-run --markdown`; show the table and the NOTE lines. Actions: `take` (framework change, untouched here), `merge` (both changed, merged cleanly), `add` (new framework file), `keep` (changed here only), `conflict` (framework version will be written to `<file>.fw-new`, the project file stays), `delete?` (removed in the framework, unchanged here), `removed-modified` (removed there, edited here - kept). Every file is shown with the project's own values already applied, so identity tokens never show up as differences.
+3. **Confirm**: AskUserQuestion - sync / stop. These are source-of-truth files; this confirmation is the user approval (ops §1). Then ask about **each** `delete?` file separately (delete / keep; at most 4 per call) - never delete in bulk.
+4. **Run**: `FW resync --delete <file> ...` (one `--delete` per confirmed file). It records `synced_from` (framework commit, date, its values) in `answers.json`; the next sync compares against that commit.
+5. **Conflicts**: for each `<file>.fw-new`: show `git diff --no-index <file> <file>.fw-new`, propose the merged text (keep the project's own edits, take the framework's), apply it after the user agrees, delete the `.fw-new`. A `removed-modified` file: ask keep or delete.
+6. **New variables** (NOTE line): interview only those, by their phase (section 1 of this skill), then `NP set` / `NP apply --stage project` / `NP check --stage project` with this project's (now synced) `NP`.
+7. **Follow-ups** from the NOTE lines: flow scripts changed → `bash script/file_manage.sh`; generator/templates changed → propose a json2env dispatch (commit first, `--guvc`, `git diff`, one smoke run); new config keys → part of that dispatch.
+8. **Record**: `docs/memory/fw_env_memory.md` entry (date / synced framework `<old>` → `<new>` / take-merge-add-delete counts, conflicts and how resolved / follow-ups); taskboard rows for open follow-ups. Ask the user to run `/doctor prompt-audit`, then commit with approval (`COMMIT_APPROVED=1`, including `answers.json`).
+
 ## Gotchas
 
 - A new framework value must be registered in `vars.json` (with its `stage`) in the same change that introduces it (arch_memory R7), otherwise no interview asks it.
 - `project_name`, `pid` and `design_root` rewrite identity tokens in docs/rules/the path guard (`rewrites` in the registry); `apply` does it, never hand-edit those tokens.
 - Module-level values and everything under `tb_top/` belong to `/new-verification`.
+- Sync takes the framework's last commit, not its uncommitted edits (a NOTE says so). If the recorded base commit is gone from the framework repo (rewritten history), every difference becomes a conflict - pass `--base <sha>` when the user knows the right one.

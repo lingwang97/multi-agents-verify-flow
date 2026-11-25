@@ -10,6 +10,9 @@ Subcommands (run from anywhere; --root selects the target verify/ dir):
   set id=value ... [--defer id] [--from answers.json]   record answers (validated)
   apply    [--stage S] [--dry-run]   write the answers into their target files (idempotent)
   check    [--stage S] [--markdown] [--lint [--top T]]   readiness report
+  audit    [--markdown]         framework self-audit (run in the framework repo)
+  resync   [--dry-run] [--delete F] [--base SHA]   pull this framework's HEAD into the
+                                project at --root (3-way per carried file, conflicts -> .fw-new)
 
 Stages: project (/new-project: framework migration) and verification
 (/new-verification: inputs, config top level, register table, design file lists).
@@ -52,8 +55,8 @@ def write_text(path, text, nl="\n"):
         f.write(text.replace("\n", nl))
 
 
-def registry():
-    with open(os.path.join(HERE, "vars.json"), encoding="utf-8") as f:
+def registry(here=None):
+    with open(os.path.join(here or HERE, "vars.json"), encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -827,7 +830,8 @@ def cmd_check(root, stage, markdown, lint, top):
             scan.update(glob.glob(os.path.join(root, pat)))
         texts = [(repo_rel(root, f), read_text(f)[0].split("\n")) for f in sorted(scan) if os.path.isfile(f)]
         seen = set()
-        for i, old in sorted((bf.get("source_values") or {}).items()):
+        olds = [(i, o) for src in (bf, a.get("synced_from") or {}) for i, o in sorted((src.get("source_values") or {}).items())]
+        for i, old in olds:
             v = var_by_id(reg).get(i)
             new = ans.get(i, a["applied"].get(i))
             if not v or not v.get("rewrites") or not isinstance(old, str) or not old or old == new:
@@ -951,9 +955,9 @@ def _glob_re(pat):
     return re.compile("^" + out + "$")
 
 
-def _manifest(full=False):
+def _manifest(full=False, here=None):
     carry, reset, withs, excl, regen, state = [], [], {}, [], [], []
-    for line in open(os.path.join(HERE, "manifest.txt"), encoding="utf-8"):
+    for line in open(os.path.join(here or HERE, "manifest.txt"), encoding="utf-8"):
         line = "" if line.lstrip().startswith("#") else line.split("#", 1)[0].strip()
         if not line:
             continue
@@ -1254,6 +1258,287 @@ def cmd_bootstrap(dst, with_flags, force):
           "  cd verify && start Claude Code here, then run /new-project" % dst)
 
 
+# ----------------------------------------------------------------------- resync
+SYNC_RESET = ("verify/docs/memory/arch_memory.md", "verify/script/sflow/flow_env.sh")   # reset files with a framework part
+GEN_PREFIXES = ("verify/script/gen_uvm_env.py", "verify/script/gen_uvc.py", "verify/script/base_uvc/", "verify/script/utils/")
+DEPLOY_PREFIXES = ("verify/script/sflow/", "verify/script/file_manage")
+
+
+def _git_bytes(repo, args, timeout=120):
+    try:
+        r = subprocess.run(["git", "-C", repo, "-c", "core.autocrlf=false"] + args,
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
+        return r.returncode, r.stdout
+    except (OSError, subprocess.SubprocessError):
+        return 1, b""
+
+
+def _materialize(repo, commit, dst):
+    """Framework tree of <commit> (verify/, deliver_bridge/, .gitignore) under dst; LF line ends."""
+    import io as _io
+    import tarfile
+    rc, out = _git_bytes(repo, ["ls-tree", "--name-only", commit])
+    tops = [t for t in out.decode("utf-8", "replace").split() if t in ("verify", "deliver_bridge", ".gitignore")]
+    rc, out = _git_bytes(repo, ["archive", "--format=tar", commit, "--"] + tops)
+    if rc != 0:
+        die("git archive %s failed in %s" % (commit, repo))
+    with tarfile.open(fileobj=_io.BytesIO(out)) as tf:
+        members = [m for m in tf.getmembers() if m.isfile()]
+        for m in members:
+            p = os.path.join(dst, m.name)
+            os.makedirs(os.path.dirname(p), exist_ok=True)
+            with open(p, "wb") as fh:
+                fh.write(tf.extractfile(m).read())
+            if m.mode & 0o111:
+                os.chmod(p, os.stat(p).st_mode | 0o111)
+    return sorted(m.name for m in members)
+
+
+def _fw_values(reg, vroot):
+    """Project values a framework tree carries in its files (what bootstrap records as 'applied')."""
+    out = {}
+    for v in reg["vars"]:
+        if v.get("rewrites") or v["kind"] == "choice_rewrite":
+            cv = infer_from_rewrites(v, vroot) if v["kind"] == "record_only" else current_value(v, vroot)
+            if cv:
+                out[v["id"]] = cv
+    return out
+
+
+def _render(tree, proj_root, pa):
+    """Apply the project's values to a materialized framework tree, in place; returns the framework values."""
+    here = os.path.join(tree, "verify", "script", "new_project")
+    if not os.path.isfile(os.path.join(here, "vars.json")):
+        return {}
+    reg = registry(here)
+    vroot = os.path.join(tree, "verify")
+    fw = _fw_values(reg, vroot)
+    applied, log = dict(fw), []
+    for v in reg["vars"]:
+        v = dict(v)
+        v.pop("owner", None)
+        if v["kind"] == "sh_var":
+            pv = current_value(v, proj_root)
+            fe = os.path.join(vroot, v["file"])
+            if pv is None or not os.path.isfile(fe) or _sh_get(read_text(fe)[0], v["var"]) is None:
+                continue
+        elif v.get("rewrites") or v["kind"] == "choice_rewrite":
+            pv = pa.get(v["id"])
+            if not pv or v["id"] not in fw:
+                continue
+            if v["kind"] == "json_field":
+                v["kind"] = "record_only"     # its target is the reset config; only the rewrites matter here
+        else:
+            continue
+        _apply_var(v, pv, vroot, applied, False, log)
+    return fw
+
+
+def _merge3(ours, base, theirs):
+    """git merge-file on three texts -> (merged text, conflict count)."""
+    import tempfile
+    d = tempfile.mkdtemp(prefix="np_merge_")
+    try:
+        paths = []
+        for n, t in (("ours", ours), ("base", base), ("theirs", theirs)):
+            p = os.path.join(d, n)
+            with open(p, "w", encoding="utf-8", newline="") as fh:
+                fh.write(t)
+            paths.append(p)
+        r = subprocess.run(["git", "merge-file", "-p", "-L", "project", "-L", "base", "-L", "framework"] + paths,
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if r.returncode < 0:
+            return None, -1
+        return r.stdout.decode("utf-8", "replace"), r.returncode
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def _read_opt(path):
+    if not os.path.isfile(path):
+        return None
+    try:
+        with open(path, "rb") as fh:
+            raw = fh.read()
+        return raw.decode("utf-8").replace("\r\n", "\n")
+    except UnicodeDecodeError:
+        return raw          # binary: compared as bytes, never merged
+
+
+def _arch_rules(text):
+    """(prefix, §1 section, suffix) of arch_memory; §1 holds the framework rules R1-Rn."""
+    m = re.search(r"(?ms)^## 1\..*?(?=^## )", text or "")
+    return (text[:m.start()], m.group(0), text[m.end():]) if m else (text, None, "")
+
+
+def cmd_resync(root, dry, deletes, base_override, markdown):
+    root = os.path.abspath(root)
+    if os.path.normcase(root) == os.path.normcase(SRC_VERIFY):
+        die("--root is the framework itself; run this framework's new_project.py with --root <project>/verify")
+    a = load_answers(root)
+    if "bootstrapped_from" not in a:
+        die("%s was not bootstrapped from this framework (answers.json has no 'bootstrapped_from')" % root)
+    proj = repo_of(root)
+    prev = a.get("synced_from") or a["bootstrapped_from"]
+    base = base_override or prev.get("commit")
+    rc, head = _run(["git", "-C", SRC_REPO, "rev-parse", "--short", "HEAD"])
+    head = head.strip()
+    if rc != 0:
+        die("the framework at %s is not a git repo" % SRC_REPO)
+    has_base = bool(base) and _git_bytes(SRC_REPO, ["cat-file", "-e", base + "^{commit}"])[0] == 0
+    withs = (a["bootstrapped_from"] or {}).get("with") or []
+    pa = dict(a["applied"])
+    pa.update({k: v for k, v in a["answers"].items() if isinstance(v, str)})
+
+    tmp = os.path.join(proj, "sim", "_np_resync")
+    shutil.rmtree(tmp, ignore_errors=True)
+    rows, notes = [], []
+    try:
+        tb, tt = os.path.join(tmp, "base"), os.path.join(tmp, "theirs")
+        files_t = set(_materialize(SRC_REPO, "HEAD", tt))
+        files_b = set(_materialize(SRC_REPO, base, tb)) if has_base else set()
+        fw_t = _render(tt, root, pa)
+        if has_base:
+            _render(tb, root, pa)
+        mt = _manifest(full=True, here=os.path.join(tt, "verify", "script", "new_project"))
+        mb_here = os.path.join(tb, "verify", "script", "new_project")
+        mb = _manifest(full=True, here=mb_here) if os.path.isfile(os.path.join(mb_here, "manifest.txt")) else None
+
+        def synced(f, m):
+            if m is None:
+                return False
+            c = classify(f, m)
+            return c == "carry" or (c or "").startswith("with:") and c[5:] in withs or f in SYNC_RESET
+
+        cand = sorted({f for f in files_t if synced(f, mt)} | {f for f in files_b if synced(f, mb)})
+        changed_fw = []
+        for f in cand:
+            O = _read_opt(os.path.join(proj, f))
+            B = _read_opt(os.path.join(tb, f)) if f in files_b and synced(f, mb) else None
+            T = _read_opt(os.path.join(tt, f)) if f in files_t and synced(f, mt) else None
+            if B != T:
+                changed_fw.append(f)
+            pre = suf = None
+            if f.endswith("arch_memory.md"):
+                # only the rules section is framework text; the rest is this chip's state
+                pre, O, suf = _arch_rules(O)
+                B, T = _arch_rules(B)[1], _arch_rules(T)[1]
+                if O is None:
+                    continue
+            if T == O:
+                continue
+            if T is None:
+                if B is None:
+                    continue
+                if O is None:
+                    continue
+                if f in SYNC_RESET or f.endswith("arch_memory.md"):
+                    rows.append(("keep", f, "framework dropped it from sync; kept"))
+                elif O == B:
+                    if f in deletes:
+                        rows.append(("delete", f, "removed in the framework; deleted (confirmed)"))
+                        if not dry:
+                            os.remove(os.path.join(proj, f))
+                    else:
+                        rows.append(("delete?", f, "removed in the framework, unchanged here - confirm with --delete %s" % f))
+                else:
+                    rows.append(("removed-modified", f, "removed in the framework but edited here - kept, decide by hand"))
+                continue
+            out = None
+            if O is None:
+                act, out, why = "add", T, "new framework file"
+            elif B == T:
+                rows.append(("keep", f, "changed here only"))
+                continue
+            elif O == B:
+                act, out, why = "take", T, "framework change, untouched here"
+            elif isinstance(O, bytes) or isinstance(T, bytes) or B is None or isinstance(B, bytes):
+                act, why = "conflict", "changed on both sides" if B is not None else "differs and no base to compare"
+            else:
+                merged, n = _merge3(O, B, T)
+                if n == 0 and merged is not None:
+                    act, out, why = "merge", merged, "both sides changed, merged cleanly"
+                else:
+                    act, why = "conflict", "%d conflicting hunk(s)" % n if n > 0 else "merge failed"
+            dst = os.path.join(proj, f)
+            if act == "conflict":
+                full_t = T if pre is None else pre + T + suf
+                rows.append(("conflict", f, why + " - framework version in %s.fw-new" % os.path.basename(f)))
+                if not dry:
+                    if isinstance(full_t, bytes):
+                        with open(dst + ".fw-new", "wb") as fh:
+                            fh.write(full_t)
+                    else:
+                        write_text(dst + ".fw-new", full_t, read_text(dst)[1] if os.path.isfile(dst) else "\n")
+                continue
+            rows.append((act, f, why if pre is None else why + " (section 1 rules only)"))
+            if dry:
+                continue
+            if pre is not None:
+                out = pre + out + suf
+            if isinstance(out, bytes):
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                with open(dst, "wb") as fh:
+                    fh.write(out)
+            else:
+                write_text(dst, out, read_text(dst)[1] if os.path.isfile(dst) else "\n")
+            src = os.path.join(tt, f)
+            if act == "add" and os.path.isfile(src) and os.stat(src).st_mode & 0o111:
+                os.chmod(dst, os.stat(dst).st_mode | 0o111)
+
+        # what else the user must know
+        reg_t = registry(os.path.join(tt, "verify", "script", "new_project"))
+        known = set(a["answers"]) | set(a["deferred"]) | set(a["applied"])
+        base_ids = {x["id"] for x in registry(mb_here)["vars"]} if os.path.isfile(os.path.join(mb_here, "vars.json")) else set()
+        new_vars = [v["id"] for v in reg_t["vars"] if v["id"] not in known and v["kind"] != "detect_only"
+                    and v["id"] not in base_ids]
+        if new_vars:
+            notes.append("new registered variables (pending, interview them): " + ", ".join(new_vars))
+        try:
+            with open(os.path.join(tt, "verify", reg_t["config_file"]), encoding="utf-8") as fh:
+                kt = set(json.load(fh))
+            with open(os.path.join(root, reg_t["config_file"]), encoding="utf-8") as fh:
+                kp = set(json.load(fh))
+            if kt - kp:
+                notes.append("config top-level keys new in the framework: %s (json2env adds them)" % ", ".join(sorted(kt - kp)))
+        except (OSError, ValueError):
+            pass
+        if any(f.startswith(GEN_PREFIXES) for f in changed_fw):
+            notes.append("generator/templates changed - dispatch json2env: commit first, then --guvc + git diff + one smoke")
+        if any(f.startswith(DEPLOY_PREFIXES) for f in changed_fw):
+            notes.append("flow scripts changed - redeploy: bash verify/script/file_manage.sh")
+        rc, st = _run(["git", "-C", SRC_REPO, "status", "--porcelain", "--", "verify", "deliver_bridge"])
+        if rc == 0 and st.strip():
+            notes.append("the framework has uncommitted changes - only its HEAD (%s) is synced" % head)
+        if not has_base:
+            notes.append("base commit %r not found in the framework - 2-way compare, every difference is a conflict" % base)
+        if not dry:
+            for v in reg_t["vars"]:      # a framework value now in the files of a value this project never set
+                if v["id"] in fw_t and v["id"] not in a["applied"] and v["id"] not in a["answers"]:
+                    a["applied"][v["id"]] = fw_t[v["id"]]
+            a["synced_from"] = {"repo": _posix(SRC_REPO), "commit": head, "date": TODAY,
+                                "base": base if has_base else None, "source_values": fw_t}
+            save_answers(root, a)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+    order = ["conflict", "removed-modified", "delete?", "delete", "add", "take", "merge", "keep"]
+    rows.sort(key=lambda r: (order.index(r[0]), r[1]))
+    print("resync %s: framework %s -> %s (base %s)%s" % (proj, prev.get("commit"), head, base if has_base else "none",
+                                                       " - DRY RUN, nothing written" if dry else ""))
+    if markdown:
+        print("\n| Action | File | Detail |\n|---|---|---|")
+        for r in rows:
+            print("| %s | `%s` | %s |" % r)
+    else:
+        for r in rows:
+            print("%-17s %-60s %s" % r)
+    for n in notes:
+        print("NOTE: " + n)
+    counts = {k: sum(1 for r in rows if r[0] == k) for k in order}
+    print("\nsummary: " + ", ".join("%s %d" % (k, c) for k, c in counts.items() if c) if rows else "\nsummary: already in sync")
+
+
 # ------------------------------------------------------------------------- main
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -1283,6 +1568,11 @@ def main():
     c.add_argument("--top", help="top module for --lint (default: rtl_tops answer)")
     au = sub.add_parser("audit", help="framework self-audit (run in the framework repo before committing framework changes)")
     au.add_argument("--markdown", action="store_true")
+    rs = sub.add_parser("resync", help="pull this framework's HEAD into the project at --root (run THIS repo's script)")
+    rs.add_argument("--dry-run", action="store_true")
+    rs.add_argument("--delete", action="append", default=[], help="repo-relative file removed in the framework: delete it (user-confirmed)")
+    rs.add_argument("--base", help="framework commit the project last synced to (default: answers.json synced_from / bootstrapped_from)")
+    rs.add_argument("--markdown", action="store_true")
     args = ap.parse_args()
     if not args.cmd:
         ap.print_help()
@@ -1304,6 +1594,8 @@ def main():
         cmd_check(root, args.stage, args.markdown, args.lint, args.top)
     elif args.cmd == "audit":
         cmd_audit(args.markdown)
+    elif args.cmd == "resync":
+        cmd_resync(root, args.dry_run, set(args.delete), args.base, args.markdown)
 
 
 if __name__ == "__main__":

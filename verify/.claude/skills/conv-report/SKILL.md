@@ -11,7 +11,7 @@ Read-only report over the repo-root `sim/` scratch trees. No simulation is run.
 
 ```bash
 python3 .claude/skills/conv-report/conv_report.py                  # all cases
-python3 .claude/skills/conv-report/conv_report.py --case apb       # substring filter
+python3 .claude/skills/conv-report/conv_report.py --case <mod>     # substring filter
 python3 .claude/skills/conv-report/conv_report.py -o conv_report.txt   # + write sim/conv_report.txt
 ```
 

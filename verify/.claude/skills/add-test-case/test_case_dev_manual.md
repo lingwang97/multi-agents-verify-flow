@@ -105,7 +105,7 @@ These assume every register handle is named `reg_<regname>` under a block named 
 
 ### 3.5 Fill in per-module helpers
 
-Put reusable tasks (register read/write wrappers, wait-for-signal helpers, etc.) in `seq/comm_<mod>_methods.sv`. It is `` `include ``-d inside `base_seq`'s class body, so anything defined there becomes a member task of `base_seq` and every `<mod>_base_seq` subclass — no import needed. Block-level helpers can live in the module's block base seq instead (the reference UVC does that); a helper that waits for the driver's response must call `get_response` when the driver does `item_done(rsp)`.
+Put reusable tasks (register read/write wrappers, wait-for-signal helpers, etc.) in `seq/comm_<mod>_methods.sv`. It is `` `include ``-d inside `base_seq`'s class body, so anything defined there becomes a member task of `base_seq` and every `<mod>_base_seq` subclass — no import needed. Block-level helpers can live in the module's block base seq instead; a helper that waits for the driver's response must call `get_response` when the driver does `item_done(rsp)`.
 
 ### 3.6 Wire the interface/driver/monitor/scoreboard/coverage for the real protocol
 

@@ -62,6 +62,8 @@ cd <new-repo>/verify && claude                              # start Claude Code 
 
 Every value is **proposed from what the tools detect, then confirmed by you** — nothing is written before you approve the summary. Answers are recorded in `script/new_project/answers.json`.
 
+**Later framework updates** — in the project, run `/new-project sync <framework-repo>`: each carried file is compared three ways (the framework version the project last took, the framework's latest commit, the project's file) with the project's own values applied first. Untouched files take the update, edits on both sides are merged, a real conflict leaves the framework version in `<file>.fw-new` for you to resolve, and every file the framework deleted is confirmed one by one. Generated files and chip state are never touched.
+
 ## 4. Quick start B — run a case
 
 ```bash
@@ -133,6 +135,7 @@ Hooks enforce the hard rails: agents write only under `verify/`, `deliver_bridge
 | Command | Purpose |
 |---|---|
 | `/new-project` | set the project-level values after a bootstrap |
+| `/new-project sync <framework-repo>` | pull a newer framework version into this project |
 | `/new-verification <req>` | start a verification effort (intake → pipeline) |
 | add-test-case *(ask Claude)* | scaffold test + sequence + JSON entry |
 | `/conv-report` | oEDA vs VCS convergence report |
@@ -180,4 +183,6 @@ flowchart LR
 | `[path_guard] BLOCKED … permission mode 'auto'` | switch to default mode (Shift+Tab) to approve source-of-truth edits, then re-dispatch |
 | oEDA compile fails after a regeneration | check `git diff` on assembly files; template escapes (`\\n`) in `gen_uvm_env.py` |
 | Edited a hook | run `python .claude/hooks/test_path_guard.py` before committing |
+| `<file>.fw-new` after a sync | a framework change collided with a local edit: compare (`git diff --no-index <file> <file>.fw-new`), merge by hand, delete the `.fw-new` |
+| Project bootstrapped before sync existed | ask Claude to follow the *Sync mode* section of `<framework-repo>/verify/.claude/skills/new-project/SKILL.md` (the project's own copy has none until the first sync) |
 | `bootstrap: the framework audit failed` | in the source repo run `python script/new_project/new_project.py audit` and fix each FAIL (classify the file in `manifest.txt`, reword a module name, add a doc-map row, register the value in `vars.json`) |
