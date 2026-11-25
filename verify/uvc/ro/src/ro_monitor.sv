@@ -11,7 +11,11 @@ class ro_monitor extends base_monitor;
 
   extern task monitor_trans();
   extern task collect_coverage();
+`ifdef OPEN_EDA
+  extern function void print_monitor_status();   // oEDA: explicit return type
+`else
   extern function print_monitor_status();
+`endif
   function new(string name="ro_monitor" , uvm_component parent=null);
     super.new(name , parent);
     ro_monitor_main_ap = new("ro_monitor_main_ap", this);
@@ -67,7 +71,11 @@ endclass : ro_monitor
   endtask
 
   // Print monitor status of cov_enable & checks_enable
+`ifdef OPEN_EDA
+  function void ro_monitor::print_monitor_status();
+`else
   function ro_monitor::print_monitor_status();
+`endif
 		`uvm_info(get_type_name(), $sformatf("ro_monitor status as following:"), UVM_MEDIUM)
 		if(checks_enable)begin
 			`uvm_info(get_type_name(), $sformatf("ro_monitor check switch ON"), UVM_MEDIUM)

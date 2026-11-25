@@ -13,7 +13,11 @@ class apb_master_monitor extends base_monitor;
   localparam int MON_PH_ACCESS = 2;
 
   extern task monitor_trans();
+`ifdef OPEN_EDA
+  extern function void print_monitor_status();   // oEDA: explicit return type
+`else
   extern function print_monitor_status();
+`endif
   function new(string name="apb_master_monitor" , uvm_component parent=null);
     super.new(name , parent);
     apb_master_monitor_main_ap = new("apb_master_monitor_main_ap", this);
@@ -143,7 +147,11 @@ endclass : apb_master_monitor
   endtask
 
   // Print monitor status of cov_enable & checks_enable
+`ifdef OPEN_EDA
+  function void apb_master_monitor::print_monitor_status();
+`else
   function apb_master_monitor::print_monitor_status();
+`endif
 		`uvm_info(get_type_name(), $sformatf("apb_master_monitor status as following:"), UVM_MEDIUM)
 		if(checks_enable)begin
 			`uvm_info(get_type_name(), $sformatf("apb_master_monitor check switch ON"), UVM_MEDIUM)

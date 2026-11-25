@@ -17,6 +17,9 @@ class apb_master_block_base_test extends uvm_test;
 
     // Config declarations
     apb_master_pkg::apb_master_base_cfg apb_master_cfg_h;
+`ifdef OPEN_EDA
+    typedef apb_master_pkg::apb_master_base_cfg apb_master_cfg_t;   // oEDA: no pkg-scoped type as a class-parameter argument
+`endif
 
     // randomize declarations
     extern virtual function void apb_master_cfg_randomize();
@@ -64,7 +67,11 @@ class apb_master_block_base_test extends uvm_test;
         apb_master_cfg_h = apb_master_pkg::apb_master_base_cfg::type_id::create("apb_master_cfg_h", this);
         // Set all config objects
         `uvm_info(get_type_name(),"****** Setting All base_cfg class ******",UVM_LOW);
+`ifdef OPEN_EDA
+        uvm_config_db #(apb_master_cfg_t)::set(uvm_root::get(),"*", "apb_master_cfg", apb_master_cfg_h);
+`else
         uvm_config_db #(apb_master_pkg::apb_master_base_cfg)::set(uvm_root::get(),"*", "apb_master_cfg", apb_master_cfg_h);
+`endif
 
         // Set other objects
 

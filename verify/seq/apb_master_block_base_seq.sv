@@ -8,6 +8,9 @@ class apb_master_block_base_seq extends uvm_sequence;
 
     // Config declarations
     apb_master_pkg::apb_master_base_cfg apb_master_cfg_h;
+`ifdef OPEN_EDA
+    typedef apb_master_pkg::apb_master_base_cfg apb_master_cfg_t;   // oEDA: no pkg-scoped type as a class-parameter argument
+`endif
 
     // no RAL: register front-door/backdoor not used
 
@@ -33,7 +36,11 @@ class apb_master_block_base_seq extends uvm_sequence;
             `uvm_error("APB_MASTER_VIF:ERROR", "VIF apb_master_vif is missing from config_db")
         // Get other vitual interface
 
+`ifdef OPEN_EDA
+        if (!uvm_config_db #(apb_master_cfg_t)::get(m_sequencer, "", "apb_master_cfg", apb_master_cfg_h))begin
+`else
         if (!uvm_config_db #(apb_master_pkg::apb_master_base_cfg)::get(m_sequencer, "", "apb_master_cfg", apb_master_cfg_h))begin
+`endif
             `uvm_warning("APB_MASTER_CFG:WARNING", "CFG apb_master_cfg is missing from config_db,using default")
             apb_master_cfg_h = new();
         end

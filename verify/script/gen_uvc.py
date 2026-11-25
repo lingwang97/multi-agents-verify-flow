@@ -294,7 +294,11 @@ endclass
 
   extern task monitor_trans();
   extern task collect_coverage();
+`ifdef OPEN_EDA
+  extern function void print_monitor_status();   // oEDA: explicit return type
+`else
   extern function print_monitor_status();
+`endif
   function new(string name="{name}_monitor" , uvm_component parent=null);
     super.new(name , parent);
     {name}_monitor_main_ap = new("{name}_monitor_main_ap", this);
@@ -350,7 +354,11 @@ endclass : {name}_monitor
   endtask
 
   // Print monitor status of cov_enable & checks_enable
+`ifdef OPEN_EDA
+  function void {name}_monitor::print_monitor_status();
+`else
   function {name}_monitor::print_monitor_status();
+`endif
 		`uvm_info(get_type_name(), $sformatf("{name}_monitor status as following:"), UVM_MEDIUM)
 		if(checks_enable)begin
 			`uvm_info(get_type_name(), $sformatf("{name}_monitor check switch ON"), UVM_MEDIUM)

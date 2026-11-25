@@ -17,6 +17,9 @@ class efuse_block_base_test extends uvm_test;
 
     // Config declarations
     efuse_pkg::efuse_base_cfg efuse_cfg_h;
+`ifdef OPEN_EDA
+    typedef efuse_pkg::efuse_base_cfg efuse_cfg_t;   // oEDA: no pkg-scoped type as a class-parameter argument
+`endif
 
     // randomize declarations
     extern virtual function void efuse_cfg_randomize();
@@ -65,7 +68,11 @@ class efuse_block_base_test extends uvm_test;
         efuse_cfg_h = efuse_pkg::efuse_base_cfg::type_id::create("efuse_cfg_h", this);
         // Set all config objects
         `uvm_info(get_type_name(),"****** Setting All base_cfg class ******",UVM_LOW);
+`ifdef OPEN_EDA
+        uvm_config_db #(efuse_cfg_t)::set(uvm_root::get(),"*", "efuse_cfg", efuse_cfg_h);
+`else
         uvm_config_db #(efuse_pkg::efuse_base_cfg)::set(uvm_root::get(),"*", "efuse_cfg", efuse_cfg_h);
+`endif
 
         // Set other objects
 

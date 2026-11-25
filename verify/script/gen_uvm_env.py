@@ -121,6 +121,9 @@ class {name}_block_base_seq extends uvm_sequence;
 
     // Config declarations
     {name}_pkg::{name}_base_cfg {name}_cfg_h;
+`ifdef OPEN_EDA
+    typedef {name}_pkg::{name}_base_cfg {name}_cfg_t;   // oEDA: no pkg-scoped type as a class-parameter argument
+`endif
 
     {seq_ral_decl}
 
@@ -146,7 +149,11 @@ class {name}_block_base_seq extends uvm_sequence;
             `uvm_error("{name_upper}_VIF:ERROR", "VIF {name}_vif is missing from config_db")    
         // Get other vitual interface
 
+`ifdef OPEN_EDA
+        if (!uvm_config_db #({name}_cfg_t)::get(m_sequencer, "", "{name}_cfg", {name}_cfg_h))begin
+`else
         if (!uvm_config_db #({name}_pkg::{name}_base_cfg)::get(m_sequencer, "", "{name}_cfg", {name}_cfg_h))begin
+`endif
             `uvm_warning("{name_upper}_CFG:WARNING", "CFG {name}_cfg is missing from config_db,using default")
             {name}_cfg_h = new();
         end
@@ -952,6 +959,9 @@ class {name}_block_base_test extends uvm_test;
 
     // Config declarations
     {name}_pkg::{name}_base_cfg {name}_cfg_h;
+`ifdef OPEN_EDA
+    typedef {name}_pkg::{name}_base_cfg {name}_cfg_t;   // oEDA: no pkg-scoped type as a class-parameter argument
+`endif
 
     // randomize declarations
     extern virtual function void {name}_cfg_randomize();
@@ -999,7 +1009,11 @@ class {name}_block_base_test extends uvm_test;
         {name}_cfg_h = {name}_pkg::{name}_base_cfg::type_id::create("{name}_cfg_h", this);
         // Set all config objects
         `uvm_info(get_type_name(),"****** Setting All base_cfg class ******",UVM_LOW);
+`ifdef OPEN_EDA
+        uvm_config_db #({name}_cfg_t)::set(uvm_root::get(),"*", "{name}_cfg", {name}_cfg_h);
+`else
         uvm_config_db #({name}_pkg::{name}_base_cfg)::set(uvm_root::get(),"*", "{name}_cfg", {name}_cfg_h);
+`endif
 
         // Set other objects
 
@@ -2661,7 +2675,12 @@ def generate_base_sequence(config, output_dir):
         
         if module.get('has_config', True):
             cfg_declarations.append(f"    {module_name}_pkg::{module_name}_base_cfg {module_name}_cfg_h;")
+            cfg_declarations += ["`ifdef OPEN_EDA", f"    typedef {module_name}_pkg::{module_name}_base_cfg {module_name}_cfg_t;   // oEDA: no pkg-scoped type as a class-parameter argument", "`endif"]
+            cfg_get.append("`ifdef OPEN_EDA")
+            cfg_get.append(f"        if (!uvm_config_db #({module_name}_cfg_t)::get(m_sequencer, \"\", \"{module_name}_cfg\", {module_name}_cfg_h))begin")
+            cfg_get.append("`else")
             cfg_get.append(f"        if (!uvm_config_db #({module_name}_pkg::{module_name}_base_cfg)::get(m_sequencer, \"\", \"{module_name}_cfg\", {module_name}_cfg_h))begin")
+            cfg_get.append("`endif")
             cfg_get.append(f"            `uvm_warning(\"{module_name.upper()}_CFG:WARNING\", \"CFG {module_name}_cfg is missing from config_db,using default\")")
             cfg_get.append(f"            {module_name}_cfg_h = new();")
             cfg_get.append(f"        end")
@@ -2778,10 +2797,12 @@ def generate_base_test(config, output_dir):
         
         if module.get('has_config', True):
             cfg_declarations.append(f"    {module_name}_pkg::{module_name}_base_cfg {module_name}_cfg_h;")
+            cfg_declarations += ["`ifdef OPEN_EDA", f"    typedef {module_name}_pkg::{module_name}_base_cfg {module_name}_cfg_t;   // oEDA: no pkg-scoped type as a class-parameter argument", "`endif"]
             randomize_declaration.append(f"    extern virtual function void {module_name}_cfg_randomize();")
             cfg_override_declarations.append(f"    extern virtual function void set_{module_name}_cfg_type(input string {module_name}_cfg_override, bit replace=1);")
             cfg_create.append(f"        {module_name}_cfg_h = {module_name}_pkg::{module_name}_base_cfg::type_id::create(\"{module_name}_cfg_h\", this);")
-            cfg_set.append(f"        uvm_config_db #({module_name}_pkg::{module_name}_base_cfg)::set(uvm_root::get(),\"*\", \"{module_name}_cfg\", {module_name}_cfg_h);")
+            cfg_set += ["`ifdef OPEN_EDA", f"        uvm_config_db #({module_name}_cfg_t)::set(uvm_root::get(),\"*\", \"{module_name}_cfg\", {module_name}_cfg_h);", "`else",
+                        f"        uvm_config_db #({module_name}_pkg::{module_name}_base_cfg)::set(uvm_root::get(),\"*\", \"{module_name}_cfg\", {module_name}_cfg_h);", "`endif"]
             
             randomize_calls.append(f"        {module_name}_cfg_randomize();")
             # generate  random function

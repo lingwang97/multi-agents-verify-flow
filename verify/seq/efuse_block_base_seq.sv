@@ -7,6 +7,9 @@ class efuse_block_base_seq extends uvm_sequence;
 
     // Config declarations
     efuse_pkg::efuse_base_cfg efuse_cfg_h;
+`ifdef OPEN_EDA
+    typedef efuse_pkg::efuse_base_cfg efuse_cfg_t;   // oEDA: no pkg-scoped type as a class-parameter argument
+`endif
 
     // RAL_model-relative declarations
     RAL_PKG::ral_gen_main ral;
@@ -35,7 +38,11 @@ class efuse_block_base_seq extends uvm_sequence;
             `uvm_error("EFUSE_VIF:ERROR", "VIF efuse_vif is missing from config_db")    
         // Get other vitual interface
 
+`ifdef OPEN_EDA
+        if (!uvm_config_db #(efuse_cfg_t)::get(m_sequencer, "", "efuse_cfg", efuse_cfg_h))begin
+`else
         if (!uvm_config_db #(efuse_pkg::efuse_base_cfg)::get(m_sequencer, "", "efuse_cfg", efuse_cfg_h))begin
+`endif
             `uvm_warning("EFUSE_CFG:WARNING", "CFG efuse_cfg is missing from config_db,using default")
             efuse_cfg_h = new();
         end

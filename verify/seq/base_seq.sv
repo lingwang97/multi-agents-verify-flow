@@ -19,10 +19,25 @@ class base_seq extends uvm_sequence;
 
     // Config declarations
     reg_pkg::reg_base_cfg reg_cfg_h;
+`ifdef OPEN_EDA
+    typedef reg_pkg::reg_base_cfg reg_cfg_t;   // oEDA: no pkg-scoped type as a class-parameter argument
+`endif
     apb_master_pkg::apb_master_base_cfg apb_master_cfg_h;
+`ifdef OPEN_EDA
+    typedef apb_master_pkg::apb_master_base_cfg apb_master_cfg_t;   // oEDA: no pkg-scoped type as a class-parameter argument
+`endif
     ro_pkg::ro_base_cfg ro_cfg_h;
+`ifdef OPEN_EDA
+    typedef ro_pkg::ro_base_cfg ro_cfg_t;   // oEDA: no pkg-scoped type as a class-parameter argument
+`endif
     uart_pkg::uart_base_cfg uart_cfg_h;
+`ifdef OPEN_EDA
+    typedef uart_pkg::uart_base_cfg uart_cfg_t;   // oEDA: no pkg-scoped type as a class-parameter argument
+`endif
     efuse_pkg::efuse_base_cfg efuse_cfg_h;
+`ifdef OPEN_EDA
+    typedef efuse_pkg::efuse_base_cfg efuse_cfg_t;   // oEDA: no pkg-scoped type as a class-parameter argument
+`endif
 
     // RAL_model-relative declarations
     RAL_PKG::ral_gen_main ral;
@@ -64,23 +79,43 @@ class base_seq extends uvm_sequence;
         // Get other vitual interface
 
 
+`ifdef OPEN_EDA
+        if (!uvm_config_db #(reg_cfg_t)::get(m_sequencer, "", "reg_cfg", reg_cfg_h))begin
+`else
         if (!uvm_config_db #(reg_pkg::reg_base_cfg)::get(m_sequencer, "", "reg_cfg", reg_cfg_h))begin
+`endif
             `uvm_warning("REG_CFG:WARNING", "CFG reg_cfg is missing from config_db,using default")
             reg_cfg_h = new();
         end
+`ifdef OPEN_EDA
+        if (!uvm_config_db #(apb_master_cfg_t)::get(m_sequencer, "", "apb_master_cfg", apb_master_cfg_h))begin
+`else
         if (!uvm_config_db #(apb_master_pkg::apb_master_base_cfg)::get(m_sequencer, "", "apb_master_cfg", apb_master_cfg_h))begin
+`endif
             `uvm_warning("APB_MASTER_CFG:WARNING", "CFG apb_master_cfg is missing from config_db,using default")
             apb_master_cfg_h = new();
         end
+`ifdef OPEN_EDA
+        if (!uvm_config_db #(ro_cfg_t)::get(m_sequencer, "", "ro_cfg", ro_cfg_h))begin
+`else
         if (!uvm_config_db #(ro_pkg::ro_base_cfg)::get(m_sequencer, "", "ro_cfg", ro_cfg_h))begin
+`endif
             `uvm_warning("RO_CFG:WARNING", "CFG ro_cfg is missing from config_db,using default")
             ro_cfg_h = new();
         end
+`ifdef OPEN_EDA
+        if (!uvm_config_db #(uart_cfg_t)::get(m_sequencer, "", "uart_cfg", uart_cfg_h))begin
+`else
         if (!uvm_config_db #(uart_pkg::uart_base_cfg)::get(m_sequencer, "", "uart_cfg", uart_cfg_h))begin
+`endif
             `uvm_warning("UART_CFG:WARNING", "CFG uart_cfg is missing from config_db,using default")
             uart_cfg_h = new();
         end
+`ifdef OPEN_EDA
+        if (!uvm_config_db #(efuse_cfg_t)::get(m_sequencer, "", "efuse_cfg", efuse_cfg_h))begin
+`else
         if (!uvm_config_db #(efuse_pkg::efuse_base_cfg)::get(m_sequencer, "", "efuse_cfg", efuse_cfg_h))begin
+`endif
             `uvm_warning("EFUSE_CFG:WARNING", "CFG efuse_cfg is missing from config_db,using default")
             efuse_cfg_h = new();
         end

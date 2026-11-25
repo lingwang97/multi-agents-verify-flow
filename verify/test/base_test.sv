@@ -26,10 +26,25 @@ class base_test extends uvm_test;
 
     // Config declarations
     reg_pkg::reg_base_cfg reg_cfg_h;
+`ifdef OPEN_EDA
+    typedef reg_pkg::reg_base_cfg reg_cfg_t;   // oEDA: no pkg-scoped type as a class-parameter argument
+`endif
     apb_master_pkg::apb_master_base_cfg apb_master_cfg_h;
+`ifdef OPEN_EDA
+    typedef apb_master_pkg::apb_master_base_cfg apb_master_cfg_t;   // oEDA: no pkg-scoped type as a class-parameter argument
+`endif
     ro_pkg::ro_base_cfg ro_cfg_h;
+`ifdef OPEN_EDA
+    typedef ro_pkg::ro_base_cfg ro_cfg_t;   // oEDA: no pkg-scoped type as a class-parameter argument
+`endif
     uart_pkg::uart_base_cfg uart_cfg_h;
+`ifdef OPEN_EDA
+    typedef uart_pkg::uart_base_cfg uart_cfg_t;   // oEDA: no pkg-scoped type as a class-parameter argument
+`endif
     efuse_pkg::efuse_base_cfg efuse_cfg_h;
+`ifdef OPEN_EDA
+    typedef efuse_pkg::efuse_base_cfg efuse_cfg_t;   // oEDA: no pkg-scoped type as a class-parameter argument
+`endif
 
     // randomize declarations
     extern virtual function void reg_cfg_randomize();
@@ -91,11 +106,31 @@ class base_test extends uvm_test;
         
         // Set all config objects
         `uvm_info(get_type_name(),"****** Setting All base_cfg class ******",UVM_LOW);
+`ifdef OPEN_EDA
+        uvm_config_db #(reg_cfg_t)::set(uvm_root::get(),"*", "reg_cfg", reg_cfg_h);
+`else
         uvm_config_db #(reg_pkg::reg_base_cfg)::set(uvm_root::get(),"*", "reg_cfg", reg_cfg_h);
+`endif
+`ifdef OPEN_EDA
+        uvm_config_db #(apb_master_cfg_t)::set(uvm_root::get(),"*", "apb_master_cfg", apb_master_cfg_h);
+`else
         uvm_config_db #(apb_master_pkg::apb_master_base_cfg)::set(uvm_root::get(),"*", "apb_master_cfg", apb_master_cfg_h);
+`endif
+`ifdef OPEN_EDA
+        uvm_config_db #(ro_cfg_t)::set(uvm_root::get(),"*", "ro_cfg", ro_cfg_h);
+`else
         uvm_config_db #(ro_pkg::ro_base_cfg)::set(uvm_root::get(),"*", "ro_cfg", ro_cfg_h);
+`endif
+`ifdef OPEN_EDA
+        uvm_config_db #(uart_cfg_t)::set(uvm_root::get(),"*", "uart_cfg", uart_cfg_h);
+`else
         uvm_config_db #(uart_pkg::uart_base_cfg)::set(uvm_root::get(),"*", "uart_cfg", uart_cfg_h);
+`endif
+`ifdef OPEN_EDA
+        uvm_config_db #(efuse_cfg_t)::set(uvm_root::get(),"*", "efuse_cfg", efuse_cfg_h);
+`else
         uvm_config_db #(efuse_pkg::efuse_base_cfg)::set(uvm_root::get(),"*", "efuse_cfg", efuse_cfg_h);
+`endif
 
         // Set other objects
         uvm_config_db #(top_env)::set(uvm_root::get(),"*", "top_env", top_env_h);
