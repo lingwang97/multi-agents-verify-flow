@@ -23,18 +23,15 @@ Architecture state, standing rules and lessons for developing this verify tree. 
 
 ## 1. Maintenance rules (keep documents and skills in sync)
 
-### R1. Adding or removing a module → sync the add-test-case skill
-- **Rule:** any change that adds/removes a module (`script/uvm_env_config_template.json`, `json/module.json`, `gen_uvm_env.py --guvc`) must update, in the same change:
-  1. `MODULES` in `.claude/skills/add-test-case/add_test_case.py`;
-  2. every module enumeration in `.claude/skills/add-test-case/SKILL.md` (frontmatter `description`, intro sentence, `--module` usage line, block-level Gotcha, Troubleshooting row);
-  3. the block-level support list (does the module have `test/<mod>_block_base_test.sv` + `seq/<mod>_block_base_seq.sv` + `tb_top/filelist/uvm_blk_<mod>.f`? The flow scripts need no per-module branch, see §3).
-- **Why:** the jls → apb_master migration left the skill stale; the script rejected apb_master and its test cases were hand-written instead of scaffolded.
-- **Check:** `python .claude/skills/add-test-case/add_test_case.py --module <new> ...` must be accepted; the old module must be rejected.
-- **Automatic reminder:** the `arch_memory_check.sh` hook (triggers and state: ops §6) injects a once-per-state reminder to run this sync; nothing is edited until the user confirms.
+### R1. Instruction files stay module-agnostic
+- **Rule:** no instruction file (CLAUDE.md, `.claude/rules/`, `.claude/agents/`, the add-test-case skill and its manual) names the chip's modules - examples use `<mod>` / `<case>`. The add-test-case script reads the valid modules from `json/module.json` and detects block-level support from the block base files, so adding or removing a module needs no instruction-file edit.
+- **Why:** the jls → apb_master migration left the skill's hard-coded module list stale (the script rejected apb_master), and a bootstrapped chip inherited the previous chip's module names in every instruction file.
+- **Check:** `python .claude/skills/add-test-case/add_test_case.py --module <new> ...` is accepted right after `--guvc`; `grep` for the module names over the instruction files finds nothing.
 
-### R2. Adding or removing a module → sync CLAUDE.md, the dev manual and §0 above
-- **Rule:** also update `verify/CLAUDE.md` and `.claude/rules/` (any module names they mention), `.claude/skills/add-test-case/test_case_dev_manual.md` (module list; lives inside the skill directory since 2026-11-09), the module table in §0 and the open-gap list in §9 of this file.
-- **Why:** these are the first documents a new session reads; stale module names mislead tooling and people.
+### R2. Adding or removing a module → update the state documents
+- **Rule:** in the same change, update the module table in §0, the open-gap list in §9 and `docs/modules/<mod>.md` (create it for a new module when DUT facts exist; remove it with the module).
+- **Why:** these hold the per-module state every agent reads first; stale rows mislead tooling and people.
+- **Automatic reminder:** the `arch_memory_check.sh` hook (triggers and state: ops §6) injects a once-per-state reminder when the module-defining files change; nothing is edited until the user confirms.
 - **Check:** re-verify §9 whenever RAL, adapters, block-level flow or JSON placeholders change.
 
 ### R3. Prefer the skill over hand-writing leaf test cases
@@ -111,7 +108,7 @@ Roles live in `.claude/agents/` (spec2json = opus; json2env/dev/debug/deliver/re
 
 ## 9. Open development gaps (canonical since 2026-11-23)
 
-Confirmed blockers a developer hits when writing tests in this checkout. Former `test_case_dev_manual.md` §7 table (section removed from the manual 2026-11-23); IDs keep the old row numbers for traceability. **Lifecycle:** when a gap closes, delete its row here, log the fix in `docs/memory/fw_env_memory.md` (state lives here, history there), and remove the matching on-the-spot caveat in `test_case_dev_manual.md` — G3 → §3.4 (RAL macro naming), G5 → §2 + §3.5 (empty `comm_*` files), G6 → §2 (no leaf classes), G8 → §2 + §3.2 (unexercised efuse RAL wiring). This mapping lives only here; the manual does not point back. Per-module readiness that already has a home is not repeated: block-level support → §0 table; placeholder JSON tokens → §7 item 6.
+Confirmed blockers a developer hits when writing tests in this checkout. Former `test_case_dev_manual.md` §7 table (section removed from the manual 2026-11-23); IDs keep the old row numbers for traceability. **Lifecycle:** when a gap closes, delete its row here, log the fix in `docs/memory/fw_env_memory.md` (state lives here, history there), and, for G3, remove the RAL-macro-naming caveat in `test_case_dev_manual.md` §3.4 (the manual describes the generated skeleton generically; the other gaps have no caveat there). Per-module readiness that already has a home is not repeated: block-level support → §0 table; placeholder JSON tokens → §7 item 6.
 
 | ID | Gap | Where | Done looks like |
 |---|---|---|---|

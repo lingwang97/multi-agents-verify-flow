@@ -80,7 +80,7 @@ Retrieval entry point: **look up this table first** to find the canonical home o
 **Key entries per hot file** (retrieval goes to file + section, not just the file):
 
 - `verify/CLAUDE.md`: Commands (wsim usage, pass criterion) · oEDA section (wsim_oeda usage, pass criterion, block-level flow) · "Regenerating the environment" (R5 canon: skip-if-exists vs template-pure, config knobs + generator-enforced rules) · "Flow scripts and the register table" (RalGen gating) · Architecture (non-obvious UVC/base facts) · Multi-agent section (leader pointer).
-- `docs/memory/arch_memory.md`: §0 module/state table · R1/R2 module-sync rules (hook-referenced) · R3 skill preference · R6 doc governance · §5 two-flow closed loop · §6 deferred status · §7 system bring-up checklist · §8 deployment history · §9 open development gaps.
+- `docs/memory/arch_memory.md`: §0 module/state table · R1 module-agnostic instruction files · R2 module state sync (hook-referenced) · R3 skill preference · R6 doc governance · §5 two-flow closed loop · §6 deferred status · §7 system bring-up checklist · §8 deployment history · §9 open development gaps.
 - `docs/ops/multi_agent_ops.md`: §0 roles · §1 tiered confirmation + RTL access · §2 scheduling · §3 passrate/coverage · §4 this map · §5 escalation · §6 hooks · §7 dispatch input · §8 new-requirement intake.
 - `docs/modules/<mod>.md`: DUT details/quirks/case macros per module (first instance: apb_master).
 
@@ -88,7 +88,7 @@ Retrieval entry point: **look up this table first** to find the canonical home o
 
 | Task | Look at |
 |---|---|
-| Add/remove a module | arch R1/R2 + CLAUDE "Regenerating the environment" + log the change in fw_env_memory |
+| Add/remove a module | CLAUDE "Regenerating the environment" + arch R2 (state docs) + log the change in fw_env_memory |
 | Run/simulate a case | CLAUDE Commands (wsim / wsim_oeda) + pass criterion |
 | Write a leaf test/seq | add-test-case manual (§3/§4) + arch §9 open gaps + arch R3 |
 | Check a DUT behavior/quirk | `docs/modules/<mod>.md` |
@@ -107,7 +107,7 @@ Entry format everywhere: **date / change (or symptom) / reason / impact**. The l
 | Feature point contradicts the spec docs | agent stops and reports → leader AskUserQuestion → proceed only on user decision |
 | oEDA/VCS flow or script defect | propose → user approval → fix (sources in `script/`) |
 | New feature point | deliver_agent proposes the plan → user confirms → leader dispatches dev_agent |
-| Module add/remove | spec2json proposes the config → user approves → json2env runs `--guvc`/`--prune` + R1/R2 sync |
+| Module add/remove | spec2json proposes the config → user approves → json2env runs `--guvc`/`--prune` + R2 state sync |
 
 ## 6. Hook guardrails
 
@@ -118,7 +118,7 @@ Entry format everywhere: **date / change (or symptom) / reason / impact**. The l
   - After any edit of the hook run `python .claude/hooks/test_path_guard.py` (decision matrix; a syntax error makes the hook fail open silently).
   - RTL access (§1): in doc mode a sub-agent Read/Grep/Glob of the design root - or a search rooted above it - is blocked unless `.claude/state/rtl_access.json` holds a grant for that agent and path (leader-only helper `.claude/hooks/rtl_access.py`; sub-agents cannot write `.claude/`). Mode and design root come from `script/new_project/answers.json` (`spec_dir`, `design_root`); pre-research mode is not gated.
 - File-path writes inside Bash/PowerShell (generators, sed, scripts) are advisory only (string-level checks misfire too often): discipline comes from the agent charters + leader review; out-of-root file changes are done by the user, or on explicit user instruction.
-- `arch_memory_check.sh` (PreToolUse/Bash) keeps its original duty, the R1/R2 module-sync reminder, independent of this flow: it fires once per state when `script/uvm_env_config_template.json`, `json/module.json` or `script/gen_uvm_env.py` have uncommitted changes, or when `MODULES` in `add_test_case.py` differs from `json/module.json`. It only injects a reminder (nothing is edited until the user confirms); state is kept in `.git/arch_memory_hook.state` (delete it to re-trigger).
+- `arch_memory_check.sh` (PreToolUse/Bash) keeps its original duty, the R2 module-state reminder, independent of this flow: it fires once per state when `script/uvm_env_config_template.json`, `json/module.json` or `script/gen_uvm_env.py` have uncommitted changes. It only injects a reminder (nothing is edited until the user confirms); state is kept in `.git/arch_memory_hook.state` (delete it to re-trigger).
 
 ## 7. Standard leader dispatch input
 
@@ -150,7 +150,7 @@ Every value the procedure needs is a registry variable of stage `verification` (
 
 **After stage 1 (config + register table)** — AskUserQuestion on spec2json's config proposal, including the top-level `enable_ral` / `has_top_if_cfg` (registry owner spec2json). If `enable_ral` is true, ask `reg_table`: candidates from `new_project.py scan` (CSVs carrying the RalGen columns), current value, "defer"; `set reg_table=...` and `apply --stage verification` (writes `WSIM_REG_TABLE`). spec2json then writes the approved config; `check --stage verification` compares the top-level values.
 
-**After stage 2 (json2env), when modules were added or removed** — the R1/R2 sync rewrote instruction text (add-test-case SKILL.md, CLAUDE.md module mentions) and arch §0: ask the user to run `/doctor prompt-audit` and `/doctor prompt-audit docs/` (user-typed); findings are fixed with approval. Not needed when only design lists changed. (`/new-project` asks for the same audit once, before this intake.)
+**After stage 2 (json2env), when modules were added or removed** — the R2 sync rewrote the state docs (arch §0/§9, `docs/modules/`): ask the user to run `/doctor prompt-audit docs/` (user-typed); findings are fixed with approval. Instruction files name no modules (arch R1), so they need no audit here. Not needed when only design lists changed. (`/new-project` asks for the same audit once, before this intake.)
 
 **Stage 2b — design inputs (leader, after json2env's `--guvc` created `tb_top/`)** — `new_project.py scan --markdown`, then per list variable present the scan suggestion with its reasons and confidence and, on a rerun, the +added/-removed diff against the current list (option previews). Round A: `rtl_files` (a design-side filelist referenced with `-f` vs the explicit scanned list), `include_dirs`, `rtl_define_files`, `ip_files`, `rtl_tops`. Round B (gate level, default "defer"): `gate_files`, `gate_ip_files`, `std_libs`, `gpls_libs`. Summary table → confirm → `apply --stage verification` → `check --stage verification --lint` (Verilator lint of the lists; where Verilator is not on PATH, run the printed command where it is) → deferred items become taskboard rows, one fw_env entry. These lists are user-maintained skeletons — later `--guvc` runs keep them. The scan reads structure only (file, module, package, include names); it is not RTL behaviour reading, so the §1 RTL-access rule does not apply — in doc mode its hierarchy output feeds the file lists and the tb_top DUT wiring, not the spec analysis.
 

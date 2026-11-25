@@ -12,10 +12,10 @@ UVM-1.2 (SystemVerilog) verification environment for the SoC `soc` (project id `
 VCS flow — the golden reference; Linux with VCS/Verdi/LSF only, not this Windows box. Run from the repo-root `sim/` (sibling of `verify/`; `wsim` and `project_name` are deployed there by `file_manage.sh`):
 
 ```bash
-./wsim -c reg_smoke_test -uvm            # run one test case (-uvm is accepted but a no-op)
-./wsim -c reg_smoke_test -uvm -fsdb      # + dump FSDB waveform (forces iteration=1)
-./wsim -c reg_smoke_test -seed 12345     # fixed seed (default: random)
-./wsim -m reg                            # run all tests for module 'reg'
+./wsim -c <case> -uvm                    # run one test case (-uvm is accepted but a no-op)
+./wsim -c <case> -uvm -fsdb              # + dump FSDB waveform (forces iteration=1)
+./wsim -c <case> -seed 12345             # fixed seed (default: random)
+./wsim -m <mod>                          # run all tests of module <mod>
 ./wsim -smoke | -stage1 | -stage2 | -full   # regression groups (from case JSON flags)
 ./wsim -l gate|post -corner typ|bst|wst  # gate/post-layout sim with SDF
 ./wsim -cm                               # enable code coverage
@@ -34,10 +34,10 @@ Local fast-iteration flow on this Windows box, inside WSL2 Ubuntu 24.04: Verilat
 ```bash
 # from the repo-root sim/, inside WSL; single case only (-m / regression groups stay on VCS)
 bash ../verify/script/file_manage.sh     # deploys sim/wsim_oeda next to sim/wsim
-./wsim_oeda -c reg_smoke_test            # build + run (FST dump on by default)
-./wsim_oeda -c reg_smoke_test -seed 1    # fixed base seed
-./wsim_oeda -c reg_smoke_test -nowave    # no waveform dump
-./wsim_oeda -c reg_smoke_test -covrpt    # + verilator_coverage report in cov_report/
+./wsim_oeda -c <case>                    # build + run (FST dump on by default)
+./wsim_oeda -c <case> -seed 1            # fixed base seed
+./wsim_oeda -c <case> -nowave            # no waveform dump
+./wsim_oeda -c <case> -covrpt            # + verilator_coverage report in cov_report/
 ```
 
 - Limits: covergroups are parsed but not collected (`*_coverage.sv` converges on VCS only); only simple constraints; no SVA (dual-track rule: `.claude/rules/oeda-verilator.md`). VCS stays the sign-off flow (arch §5).
@@ -57,7 +57,7 @@ bash ../verify/script/file_manage.sh     # deploys sim/wsim_oeda next to sim/wsi
 - **Assembly files are template-pure, rewritten on every run**: top_env, top_vseqr, top_pkg, top_if/top_if_pc, base_seq/test, soc_sequence_lib, `json/module.json`, uvm.f, tb_define, tb_top_soc, and `tb_top/component/` (vif_declare, dump_wave, if_conn, tb_sdf). Never hand-edit them; lift changes into the `script/gen_uvm_env.py` templates.
 - **User-maintained skeletons are generated once, never overwritten**: `tb_top/filelist/` source lists (`rtl_file_lst.f`, `ip_file_lst.f`, `gate_file_lst.f`, `gate_ip_file_lst.f`, `lib_lst.f`, `gpls_lib_lst.f`, `include.f`), `tb_top/macro/rtl_define.f` and `tb_top/config/*.cfg`. The generator only writes the empty skeleton; the design content (sources, include dirs, defines) is filled by the `/new-verification` design-input step (scan → suggestions → user confirms), VCS configs by hand.
 - Commit (or be ready to `git checkout --`) before regenerating; afterwards check `git diff` + one smoke run (`./wsim_oeda -c <mod>_smoke_block_test` for a block-capable module).
-- Module add/remove (`--guvc`, then `--prune [--yes]` for orphans) and its doc sync: json2env_agent charter + arch R1/R2.
+- Module add/remove (`--guvc`, then `--prune [--yes]` for orphans): json2env_agent charter. No instruction file names modules (the add-test-case skill reads `json/module.json`); only the state docs change - arch R1/R2.
 - `--guvc` also emits inert `<mod>_smoke_test`/`_seq` (and `_smoke_block_` for block level) — a runnable starting point, not a real test.
 
 ```bash
