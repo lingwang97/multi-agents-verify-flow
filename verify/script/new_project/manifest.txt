@@ -1,22 +1,19 @@
 # new_project manifest - the single home of the new-chip classification:
 # what a new project carries over, what it gets reset, what is regenerated.
-# Read by `new_project.py bootstrap`. Paths are relative to the repo root.
+# Read by `new_project.py bootstrap` and `new_project.py audit`. Paths are
+# relative to the repo root. EVERY tracked file must match one class -
+# `audit` fails on an unclassified file, and bootstrap refuses to run then,
+# so a new framework file can never be forgotten silently.
 #
 #   carry <glob>                copied as-is
 #   reset <path> <kind>         written fresh from the source file (kinds in new_project.py)
 #   with:<flag> <glob>          carried only when bootstrap gets --with-<flag>
-#   exclude <glob>              never copied (wins over carry)
+#   regen <glob>                not copied: produced by gen_uvm_env.py --guvc or file_manage.sh
+#   state <glob>                not copied: chip-specific state of the source project
+#   exclude <glob>              never copied (wins over every other class)
 #
-# Not listed = not copied. That covers:
-# - everything gen_uvm_env.py --guvc or file_manage.sh produces: env/, test/,
-#   seq/, intf/, json/, uvc/<mod>/, the whole tb_top/ tree (assembly files,
-#   module-private files and the user-maintained skeletons - filelists,
-#   include.f, rtl_define.f, config/*.cfg - which the first --guvc writes
-#   from the generator templates), utils/, sim/*, verify/ral/;
-# - the chip-specific state: the design database (hdl/ is only a placeholder;
-#   the real root is the design_root answer of /new-project), docs/modules/,
-#   docs/features/<mod>/, docs/review/, docs/reports/<reports>, root README.md.
-# The design file lists are filled by the /new-verification design-input step.
+# The design file lists are filled by the /new-verification design-input step;
+# the design database itself lives under the design_root answer of /new-project.
 
 carry .gitignore
 carry deliver_bridge/README.md
@@ -39,6 +36,32 @@ reset verify/docs/memory/fw_env_memory.md fw_env
 reset verify/docs/memory/leader_taskboard.md taskboard
 reset verify/docs/ops/oeda_local_setup.md oeda_setup
 reset verify/script/new_project/answers.json answers
+
+# generated / deployed: the first --guvc and file_manage.sh write them
+regen verify/uvc/**
+regen verify/env/**
+regen verify/test/**
+regen verify/seq/**
+regen verify/intf/**
+regen verify/json/**
+regen verify/tb_top/**
+regen verify/utils/**
+regen verify/ral/**
+regen sim/wsim
+regen sim/wsim_oeda
+regen sim/project_name
+
+# chip-specific state of the source project
+state README.md
+state hdl/**
+state sim/**
+state verify/docs/modules/**
+state verify/docs/features/**
+state verify/docs/review/**
+state verify/docs/reports/**
+state verify/docs/memory/dev/**
+state verify/docs/memory/debug/**
+state verify/docs/memory/deliver/**
 
 exclude **/__pycache__/**
 exclude **/*.pyc

@@ -56,7 +56,7 @@ Architecture state, standing rules and lessons for developing this verify tree. 
 ### R7. New project values are registered in `script/new_project/vars.json` (2026-11-23)
 - **Rule:** any new value a project must define (a `flow_env.sh` setting, a top-level config knob, a filelist the user fills, an identity token in docs) is added to `vars.json` in the same change, with its `stage` (project → `/new-project`, verification → `/new-verification`), target, prompt, validation and deferrability; files a new chip must carry or reset go into `manifest.txt`.
 - **Why:** `/new-project` interviews exactly what the registry lists - an unregistered value is silently skipped and the new project inherits the old chip's value.
-- **Check:** bootstrap into a scratch dir under `sim/`, `new_project.py set/apply/check`, `--guvc` one module, one oEDA smoke.
+- **Check:** `python script/new_project/new_project.py audit` before committing any framework change (every tracked file classified in `manifest.txt`, no module names in carried text, every carried `.md` in the ops §4 doc map, every `flow_env.sh` variable / config key registered, every occurrence of a registered value inside its rewrite files; bootstrap refuses to run while it fails). For bigger changes also bootstrap into a scratch dir under `sim/`, `new_project.py set/apply/check`, `--guvc` one module, one oEDA smoke.
 
 ---
 

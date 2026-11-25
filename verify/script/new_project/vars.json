@@ -44,10 +44,21 @@
             ".claude/rules/generated-assembly.md",
             ".claude/rules/filelists.md",
             ".claude/agents/debug_agent.md",
+            ".claude/agents/json2env_agent.md",
             ".claude/hooks/path_guard.py",
             ".claude/skills/add-test-case/test_case_dev_manual.md"
           ],
           "pattern": "tb_top_{v}"
+        },
+        {
+          "files": [
+            "CLAUDE.md",
+            ".claude/rules/generated-assembly.md",
+            ".claude/agents/json2env_agent.md",
+            ".claude/hooks/path_guard.py",
+            ".claude/skills/add-test-case/SKILL.md"
+          ],
+          "pattern": "{v}_sequence_lib"
         },
         {
           "files": [
@@ -525,5 +536,6 @@
     ".claude/agents/*.md",
     ".claude/skills/*/SKILL.md",
     "docs/ops/multi_agent_ops.md"
-  ]
+  ],
+  "fixed_config_keys": ["seq_name", "test_name", "env_name", "modules"]
 }

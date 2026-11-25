@@ -29,7 +29,7 @@ The leader (main session) runs this. Every value lives in the registry `script/n
 
 1. Show one summary table: phase, variable, new value, current value, deferred items. AskUserQuestion: apply / revise a phase / stop. These targets are source-of-truth files; this confirmation is the user approval (ops §1).
 2. `NP apply --stage project --dry-run`, show the planned changes, then `NP apply --stage project`. A `WARN ... snippet not found` line means an expected text was edited by hand - show it and fix that spot with the user.
-3. `NP check --stage project`. FAIL items must be resolved; PENDING and WARN items are reported, not blockers. A `platform` WARN lists file:line spots still describing the other oEDA platform - fix them (usually by rewording platform-neutral) and register a snippet in `vars.json` if the text must stay platform-specific.
+3. `NP check --stage project`. FAIL items must be resolved; PENDING and WARN items are reported, not blockers. A `platform` WARN lists file:line spots still describing the other oEDA platform - fix them (usually by rewording platform-neutral) and register a snippet in `vars.json` if the text must stay platform-specific. A `source-value` WARN is an identity value of the source project (recorded at bootstrap) left outside the rewrite files, a `source-module` WARN a module name of the source project - reword the spot generically (arch R1) and, in the framework repo, add the file to that variable's rewrite files.
 
 ## 3. Record
 
@@ -39,7 +39,7 @@ The leader (main session) runs this. Every value lives in the registry `script/n
 
 ## 4. Next stage
 
-First ask the user to run `/doctor prompt-audit` (user-typed - Claude cannot invoke it): `apply` just rewrote CLAUDE.md, the charters, rules and the ops runbook, and this is the cheapest moment to catch leftovers of the old project (`check` already covers the platform phrases). Fix its findings with the user's approval.
+First ask the user to run `/doctor prompt-audit` (user-typed - Claude cannot invoke it): `apply` just rewrote CLAUDE.md, the charters, rules and the ops runbook, and this is the cheapest moment to catch leftovers of the old project (`check` already covers the platform phrases, the source project's identity values and its module names). Fix its findings with the user's approval.
 
 Then ask (AskUserQuestion) whether to start the verification intake now: yes → invoke the `new-verification` skill with the chip as the requirement; no → stop and say `/new-verification` starts it later. Tell the user what comes there: specification/RTL inputs, module partition and config (spec2json), register table, `--guvc`, then the design-input step that scans the design root and proposes the file lists for confirmation. Do not continue without the answer.
 

@@ -820,6 +820,39 @@ def cmd_check(root, stage, markdown, lint, top):
                             if phrase in line:
                                 res.append(("WARN", "platform", "%s:%d still says '%s' (%s=%s)"
                                             % (repo_rel(root, f), n, phrase, v["id"], chosen)))
+        # source-project residue: identity values and module names of the repo this one was bootstrapped from
+        bf = a.get("bootstrapped_from") or {}
+        scan = set()
+        for pat in reg.get("residue_files", []) + [f for v in reg["vars"] for rw in v.get("rewrites") or [] for f in rw["files"]]:
+            scan.update(glob.glob(os.path.join(root, pat)))
+        texts = [(repo_rel(root, f), read_text(f)[0].split("\n")) for f in sorted(scan) if os.path.isfile(f)]
+        seen = set()
+        for i, old in sorted((bf.get("source_values") or {}).items()):
+            v = var_by_id(reg).get(i)
+            new = ans.get(i, a["applied"].get(i))
+            if not v or not v.get("rewrites") or not isinstance(old, str) or not old or old == new:
+                continue
+            for rw in v["rewrites"]:
+                needle = rw["pattern"].replace("{v}", old)
+                for f, lines in texts:
+                    for n, line in enumerate(lines, 1):
+                        if needle in line and (f, n, needle) not in seen:
+                            seen.add((f, n, needle))
+                            res.append(("WARN", "source-value", "%s:%d still says '%s' (%s of the source project)" % (f, n, needle, i)))
+        try:
+            with open(os.path.join(root, "json", "module.json"), encoding="utf-8") as fh:
+                cur_mods = set(json.load(fh).get("modules", {}))
+        except (OSError, ValueError):
+            cur_mods = set()
+        # a source module that is a module (or the project name) of this project is no residue
+        own = cur_mods | {str(x) for x in (ans.get("project_name"), a["applied"].get("project_name")) if x}
+        rx = module_name_re([m for m in bf.get("source_modules") or [] if m not in own])
+        if rx:
+            for f, lines in texts:
+                for n, line in enumerate(lines, 1):
+                    hit = rx.search(line)
+                    if hit:
+                        res.append(("WARN", "source-module", "%s:%d names '%s', a module of the source project (arch R1)" % (f, n, hit.group(0))))
         if ans.get("lsf_enable") == "TRUE":
             for k in ("lsf_queue", "lsf_hosts_file"):
                 if k in a["deferred"] or not ans.get(k):
@@ -918,8 +951,8 @@ def _glob_re(pat):
     return re.compile("^" + out + "$")
 
 
-def _manifest():
-    carry, reset, withs, excl = [], [], {}, []
+def _manifest(full=False):
+    carry, reset, withs, excl, regen, state = [], [], {}, [], [], []
     for line in open(os.path.join(HERE, "manifest.txt"), encoding="utf-8"):
         line = "" if line.lstrip().startswith("#") else line.split("#", 1)[0].strip()
         if not line:
@@ -933,20 +966,171 @@ def _manifest():
             withs.setdefault(parts[0][5:], []).append(_glob_re(parts[1]))
         elif parts[0] == "exclude":
             excl.append(_glob_re(parts[1]))
+        elif parts[0] == "regen":
+            regen.append(_glob_re(parts[1]))
+        elif parts[0] == "state":
+            state.append(_glob_re(parts[1]))
+    if full:
+        return carry, reset, withs, excl, regen, state
     return carry, reset, withs, excl
 
 
-def _source_files():
+def classify(f, m=None):
+    """Manifest class of a repo-relative file: exclude > reset > carry/with > regen > state."""
+    carry, reset, withs, excl, regen, state = m or _manifest(full=True)
+    if any(e.match(f) for e in excl):
+        return "exclude"
+    if f in {p for p, _ in reset}:
+        return "reset"
+    if any(p.match(f) for p in carry):
+        return "carry"
+    for flag, pats in withs.items():
+        if any(p.match(f) for p in pats):
+            return "with:" + flag
+    if any(p.match(f) for p in regen):
+        return "regen"
+    if any(p.match(f) for p in state):
+        return "state"
+    return None
+
+
+def module_name_re(mods):
+    """Module names in an 'own-code' context: <mod>_<uvm-ish suffix> or a backticked bare name."""
+    if not mods:
+        return None
+    alt = "|".join(re.escape(m) for m in sorted(mods, key=len, reverse=True))
+    sfx = "smoke|test|seq|block|base|env|if|driver|monitor|scoreboard|sequencer|seqr|adapter|cfg|pkg|agent|coverage"
+    return re.compile(r"\b(?:%s)_(?:%s)\w*|(?<!`)`(?:%s)`(?!`)" % (alt, sfx, alt))
+
+
+def _doc_map_globs(ops_text):
+    """First-column backticked paths of the ops §4 doc-map table, as fnmatch globs."""
+    m = re.search(r"(?ms)^## 4\..*?(?=^## )", ops_text)
+    out = []
+    for line in (m.group(0) if m else "").split("\n"):
+        if not line.startswith("|"):
+            continue
+        cell = line.split("|")[1]
+        for p in re.findall(r"`([^`]+)`", cell):
+            g = re.sub(r"<[^>]+>", "*", p)
+            if g.startswith("verify/"):
+                g = g[len("verify/"):]
+            if g.endswith("/"):
+                g += "*"
+            out.append(g)
+    return out
+
+
+def audit(repo):
+    """Framework self-audit: manifest coverage, module names in carried instruction text,
+    doc-map coverage of carried .md files, registry coverage. Returns [(level, item, detail)]."""
+    import fnmatch
+    m = _manifest(full=True)
+    res = []
+    files = _source_files_of(repo)
+    carried = []
+    for f in files:
+        c = classify(f, m)
+        if c is None:
+            res.append(("FAIL", "manifest", "unclassified file %s - add it to manifest.txt (carry/reset/regen/state/exclude)" % f))
+        elif c in ("carry", "reset"):
+            carried.append(f)
+    verify = os.path.join(repo, "verify")
+    # module names of this repo in carried instruction/doc text (arch R1)
+    try:
+        with open(os.path.join(verify, "json", "module.json"), encoding="utf-8") as fh:
+            mods = list(json.load(fh).get("modules", {}))
+    except (OSError, ValueError):
+        mods = []
+    rx = module_name_re(mods)
+    text_files = [f for f in carried if f.endswith((".md", ".sh", ".json")) and classify(f, m) == "carry"]
+    if rx:
+        for f in text_files:
+            for n, line in enumerate(read_text(os.path.join(repo, f))[0].split("\n"), 1):
+                hit = rx.search(line)
+                if hit:
+                    res.append(("FAIL", "module-name", "%s:%d names a module (%s) - carried files stay module-agnostic (arch R1)" % (f, n, hit.group(0))))
+    # every occurrence of a registered project value in carried text must sit in a file of its rewrite
+    # (otherwise apply leaves the source project's value behind in the new one - arch R7)
+    vtexts = {}
+    for f in carried:
+        if f.startswith("verify/") and classify(f, m) == "carry" and f.endswith((".md", ".py", ".sh", ".json", ".txt")):
+            vtexts[f[len("verify/"):]] = read_text(os.path.join(repo, f))[0].split("\n")
+    seen = set()
+    for v in registry()["vars"]:
+        if not v.get("rewrites"):
+            continue
+        cv = infer_from_rewrites(v, verify) if v["kind"] == "record_only" else current_value(v, verify)
+        if not isinstance(cv, str) or not cv:
+            continue
+        for rw in v["rewrites"]:
+            needle = rw["pattern"].replace("{v}", cv)
+            for f, lines in vtexts.items():
+                if f in rw["files"] or f.startswith("script/new_project/"):
+                    continue
+                for n, line in enumerate(lines, 1):
+                    if needle in line and (f, n, needle) not in seen:
+                        seen.add((f, n, needle))
+                        res.append(("FAIL", "rewrite", "%s:%d holds '%s' but is not in the %s rewrite files of vars.json (arch R7)"
+                                    % (f, n, needle, v["id"])))
+    # doc-map coverage of carried .md files
+    ops = os.path.join(verify, "docs", "ops", "multi_agent_ops.md")
+    globs = _doc_map_globs(read_text(ops)[0]) if os.path.isfile(ops) else []
+    for f in carried:
+        if not f.endswith(".md"):
+            continue
+        rel = f[len("verify/"):] if f.startswith("verify/") else f
+        if not any(fnmatch.fnmatch(rel, g) or fnmatch.fnmatch(f, g) for g in globs):
+            res.append(("FAIL", "doc-map", "%s is carried but not in the ops section 4 doc map" % f))
+    # registry coverage: flow_env variables and config top-level keys
+    reg = registry()
+    sh_vars = {v["var"] for v in reg["vars"] if v["kind"] == "sh_var"}
+    fe = os.path.join(verify, reg["flow_env_file"])
+    for var in re.findall(r"^(WSIM_\w+)=", read_text(fe)[0], re.M) if os.path.isfile(fe) else []:
+        if var not in sh_vars:
+            res.append(("FAIL", "registry", "%s in flow_env.sh is not registered in vars.json (arch R7)" % var))
+    keys = {v["key"] for v in reg["vars"] if v["kind"] == "json_field"} | set(reg.get("fixed_config_keys", []))
+    try:
+        with open(os.path.join(verify, reg["config_file"]), encoding="utf-8") as fh:
+            for k in json.load(fh):
+                if k not in keys:
+                    res.append(("FAIL", "registry", "config key %s is neither registered nor listed in fixed_config_keys (arch R7)" % k))
+    except (OSError, ValueError):
+        pass
+    if not any(r[0] == "FAIL" for r in res):
+        res.append(("READY", "audit", "%d files classified, %d carried, no module names, doc map and registry complete" % (len(files), len(carried))))
+    return res
+
+
+def cmd_audit(markdown):
+    res = audit(SRC_REPO)
+    if markdown:
+        print("| Level | Item | Detail |\n|---|---|---|")
+        for r in res:
+            print("| %s | `%s` | %s |" % r)
+    else:
+        for r in res:
+            print("%-8s %-12s %s" % r)
+    fails = sum(1 for r in res if r[0] == "FAIL")
+    print("\nsummary: FAIL %d" % fails)
+    sys.exit(1 if fails else 0)
+
+
+def _source_files_of(repo):
     # tracked files plus untracked-but-not-ignored ones (framework edits not committed yet)
-    rc, so = _run(["git", "-C", SRC_REPO, "ls-files", "--cached", "--others", "--exclude-standard"], timeout=60)
+    rc, so = _run(["git", "-C", repo, "ls-files", "--cached", "--others", "--exclude-standard"], timeout=60)
     if rc == 0 and so.strip():
-        return sorted({l.strip() for l in so.splitlines() if l.strip()})
+        return sorted({l.strip() for l in so.splitlines() if l.strip() and os.path.isfile(os.path.join(repo, l.strip()))})
     files = []
-    for d, _, fs in os.walk(SRC_REPO):
+    for d, _, fs in os.walk(repo):
         if ".git" in d.split(os.sep):
             continue
-        files += [repo_rel(SRC_REPO, os.path.join(d, f)) for f in fs]
+        files += [repo_rel(repo, os.path.join(d, f)) for f in fs]
     return files
+
+
+def _source_files():
+    return _source_files_of(SRC_REPO)
 
 
 def _sections(text):
@@ -1016,7 +1200,8 @@ def _reset(kind, src_text, ctx):
                 "- Python 3 with openpyxl for RalGen.\n- Waveforms: an FST viewer (Surfer or GTKWave).\n\n"
                 "To be completed for this machine (paths, versions) when the oEDA flow is first run.\n")
     if kind == "answers":
-        return json.dumps({"bootstrapped_from": {"repo": ctx["src"], "commit": ctx["sha"], "date": TODAY, "with": ctx["with"]},
+        return json.dumps({"bootstrapped_from": {"repo": ctx["src"], "commit": ctx["sha"], "date": TODAY, "with": ctx["with"],
+                                                 "source_values": dict(ctx["applied"]), "source_modules": ctx["modules"]},
                            "answers": {}, "deferred": [], "applied": ctx["applied"]}, indent=2, ensure_ascii=False) + "\n"
     die("unknown reset kind '%s'" % kind)
 
@@ -1029,6 +1214,11 @@ def cmd_bootstrap(dst, with_flags, force):
     for w in with_flags:
         if w not in withs:
             die("unknown --with flag '%s' (manifest has: %s)" % (w, ", ".join(withs)))
+    fails = [r for r in audit(SRC_REPO) if r[0] == "FAIL"]
+    if fails:
+        for r in fails:
+            print("FAIL     %-12s %s" % r[1:], file=sys.stderr)
+        die("the framework audit failed (%d item(s)) - fix the source repo first (`new_project.py audit`)" % len(fails))
     rc, sha = _run(["git", "-C", SRC_REPO, "rev-parse", "--short", "HEAD"])
     applied = {}
     for v in registry()["vars"]:
@@ -1036,7 +1226,13 @@ def cmd_bootstrap(dst, with_flags, force):
             cv = infer_from_rewrites(v, SRC_VERIFY) if v["kind"] == "record_only" else current_value(v, SRC_VERIFY)
             if cv:
                 applied[v["id"]] = cv
-    ctx = {"src": _posix(SRC_REPO), "sha": sha.strip() if rc == 0 else "unknown", "with": with_flags, "applied": applied}
+    try:
+        with open(os.path.join(SRC_VERIFY, "json", "module.json"), encoding="utf-8") as fh:
+            src_mods = sorted(json.load(fh).get("modules", {}))
+    except (OSError, ValueError):
+        src_mods = []
+    ctx = {"src": _posix(SRC_REPO), "sha": sha.strip() if rc == 0 else "unknown", "with": with_flags,
+           "applied": applied, "modules": src_mods}
     reset_paths = {p for p, _ in reset}
     patterns = carry + [p for w in with_flags for p in withs[w]]
     copied = 0
@@ -1085,6 +1281,8 @@ def main():
     c.add_argument("--markdown", action="store_true")
     c.add_argument("--lint", action="store_true", help="verilator --lint-only of the design file lists (verification stage)")
     c.add_argument("--top", help="top module for --lint (default: rtl_tops answer)")
+    au = sub.add_parser("audit", help="framework self-audit (run in the framework repo before committing framework changes)")
+    au.add_argument("--markdown", action="store_true")
     args = ap.parse_args()
     if not args.cmd:
         ap.print_help()
@@ -1104,6 +1302,8 @@ def main():
         cmd_apply(root, args.stage, args.dry_run, args.force)
     elif args.cmd == "check":
         cmd_check(root, args.stage, args.markdown, args.lint, args.top)
+    elif args.cmd == "audit":
+        cmd_audit(args.markdown)
 
 
 if __name__ == "__main__":

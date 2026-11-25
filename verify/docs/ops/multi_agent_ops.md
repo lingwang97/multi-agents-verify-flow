@@ -68,11 +68,11 @@ Retrieval entry point: **look up this table first** to find the canonical home o
 | `docs/memory/debug/<mod>.md` | debug_agent | issue & fix log (copy-create from `debug/_template.md`) |
 | `docs/memory/deliver/<mod>.md` | deliver_agent | delivery log (copy-create from `deliver/_template.md`) |
 | `docs/memory/leader_taskboard.md` | leader | task board (updated on every dispatch/recall) |
-| `docs/features/<mod>/` | dev_agent | feature list (`proposed` status requires user confirmation) + PROGRESS |
+| `docs/features/<mod>/`, `docs/features/README.md` | dev_agent | feature list (`proposed` status requires user confirmation) + PROGRESS |
 | `docs/review/` | review_agent | review report archive |
 | `.claude/agents/*.md` | each agent | charter: role/flow/inline constraints/report format (enforcement subset of the canons) |
 | `.claude/skills/` (add-test-case, conv-report, new-verification, new-project) | skills | ops manuals, the intake procedure and the new-chip setup (open gaps: arch_memory §9) |
-| `script/new_project/` | leader | new-chip bootstrap: `manifest.txt` (carry/reset/regenerate classification), `vars.json` (registry of every project value), `new_project.py` (+ `scan`: design-source suggestions, `check --lint`) and `bootstrap.sh`, `answers.json` (this project's recorded values) |
+| `script/new_project/` | leader | new-chip bootstrap: `manifest.txt` (carry/reset/regen/state/exclude classification of every tracked file), `vars.json` (registry of every project value), `new_project.py` (+ `scan`: design-source suggestions, `check --lint`; `audit`: framework self-check - manifest/module-name/doc-map/registry coverage) and `bootstrap.sh`, `answers.json` (this project's recorded values) |
 | `docs/sys_function_splits.md` | spec2json | level-partition plan (exists once produced) |
 | `docs/reports/` | reports | verification campaign reports (`report_template.md` outline + conventions; one per campaign, append-only; leader compiles from agent outputs) |
 | `deliver_bridge/README.md` | interface | design↔verification directory conventions |
