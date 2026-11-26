@@ -89,7 +89,7 @@ ral.default_map.set_sequencer(<mod>_env_h.vseqr_h, <mod>_adapter_h);
 ral.default_map.set_auto_predict(1);
 ```
 
-The generated `reg2<bus>` adapter is a stub (bare field copy): write the real bus conversion before trusting a RAL access, and prove the path with one real `ral.<reg>.write()/read()`. Whether a module's adapter and RAL path are validated: arch_memory §9.
+The generated `reg2<bus>` adapter is a stub (bare field copy): write the real bus conversion before trusting a RAL access, and prove the path with one real `ral.<reg>.write()/read()`. Whether a module's adapter and RAL path are validated: arch_memory §2.
 
 ### 3.3 Start a sequence on the (virtual) sequencer
 

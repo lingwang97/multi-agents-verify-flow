@@ -22,7 +22,7 @@ You are debug_agent in the multi-agent verification flow, responsible for **one 
 
 - **Resources & isolation**: VCS runs stay within the dispatch's tier and job share (all agents together ≤ `WSIM_AGENT_VCS_MAX_JOBS`, ops §3); local Verilator compiles are heavy — run consecutive cases as one `wsim_oeda -m` regression (shared builds, `.claude/rules/two-flow.md`) rather than separate calls. Different agents only touch their own case scratch dirs (`sim/uvm_scratch_oeda_<case>/`, the VCS invocation dirs they started); `sim/oeda_build/` is shared and lock-protected, and `sim/oeda_result.txt` belongs to the last `-m`/group run.
 - Fix scope tiers: module-private files (test/seq/UVC module files, case JSON) can be fixed directly; generator templates (`script/gen_uvm_env.py`), flow scripts, filelists and assembly/base files need user approval.
-- System-level cases (`tb_top_chip`) have no DUT and cannot run (arch §7) — do not try; debug scope is block-level plus (post-RTL-landing) system-level.
+- System-level cases (`tb_top_chip`) have no DUT and cannot run (arch §1) — do not try; debug scope is block-level plus (post-RTL-landing) system-level.
 - Function covergroups and the `*_if_pc` property coverage (`` `ifndef OPEN_EDA `` guard) run and converge on VCS only (`-fm`/`-cm`); the oEDA passrate counts the monitor/scoreboard `` `ifdef OPEN_EDA `` equivalent checks. On property-related compile errors, check the corresponding guard completeness first.
 - Writable roots: `verify/`, `deliver_bridge/`, `sim/`; never `git commit`; never use the `COMMIT_APPROVED=1` escape hatch.
 

@@ -17,10 +17,10 @@ Framework maintenance policy, moved from `docs/memory/arch_memory.md` §1 (the s
 - **Check:** `python .claude/skills/add-test-case/add_test_case.py --module <new> ...` is accepted right after `--guvc`; `grep` for the module names over the instruction files finds nothing.
 
 ### R2. Adding or removing a module → update the state documents
-- **Rule:** in the same change, update the module table in arch_memory §0, the open-gap list in §9 and `docs/modules/<mod>.md` (create it for a new module when DUT facts exist; remove it with the module).
+- **Rule:** in the same change, update the module table in arch_memory §0, the open-gap list in §2 and `docs/modules/<mod>.md` (create it for a new module when DUT facts exist; remove it with the module).
 - **Why:** these hold the per-module state every agent reads first; stale rows mislead tooling and people.
 - **Automatic reminder:** the `arch_memory_check.sh` hook (triggers and state: ops §6) injects a once-per-state reminder when the module-defining files change; nothing is edited until the user confirms.
-- **Check:** re-verify §9 whenever RAL, adapters, block-level flow or JSON placeholders change.
+- **Check:** re-verify arch §2 whenever RAL, adapters, block-level flow or JSON placeholders change.
 
 ### R3. Prefer the skill over hand-writing leaf test cases
 - New leaf tests/seqs/JSON entries are scaffolded with the add-test-case skill, then the `body()` TODO is filled in - canon CLAUDE.md "Test cases"; usage, naming (`--function <fp>_block` style) and `--macro-opt` behaviour live in the skill and its manual; per-module naming conventions in `docs/modules/<mod>.md`. dev_agent enforces this (charter).
@@ -35,7 +35,7 @@ Framework maintenance policy, moved from `docs/memory/arch_memory.md` §1 (the s
 ### R6. Documentation governance: canonical homes, summary+link, frozen anchors
 - **Rule:** every fact class has ONE canonical home; other docs keep a short summary plus a pointer, never a full restatement. The canonical map - the home of every fact class - is the doc map in `docs/ops/multi_agent_ops.md` §4; keep it there, not a second list here. Rule/doc change history is the git log (arch_memory keeps only a Last-updated date).
 - **Promotion:** per-agent logs (`fw_env_memory`, `dev/`, `debug/`, `deliver/`, taskboard) record *what happened*; a stable fact distilled from a log is **promoted** into `docs/modules/<mod>.md` and the log entry marked "promoted" — never copy canon into logs.
-- **Anchors:** section numbers in arch_memory are frozen once referenced elsewhere — never renumber, only append (the §6/§7 historical order is kept on purpose; the header TOC gives the logical view). When a policy changes: edit the canonical home first, then sync the summaries.
+- **Anchors:** arch_memory holds only project state and is renumbered on cleanup (2026-11-26, user decision - the old freeze was lifted); renumbering requires a grep-guided citation sweep over all `arch §N` references. When a policy changes: edit the canonical home first, then sync the summaries.
 - **Why:** the dual-track property policy once required 7–8 synchronized edits; §-number references already drifted once (§7/§6 ordering).
 - **Check:** before editing a rule, find its canonical home via the doc map (ops §4); grep the old wording afterwards to catch missed summaries.
 
