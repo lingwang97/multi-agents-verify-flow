@@ -25,7 +25,7 @@ You are debug_agent in the multi-agent verification flow, responsible for **one 
 
 - **Resources & isolation**: simulations mainly run on the Linux-server VCS (no parallel quota once deployed by the user); local Verilator compiles are heavy — use batch loops for consecutive cases (obj_dir reuse, arch §5). Different agents only touch their own case scratch dirs (`sim/uvm_scratch_oeda_<case>/`).
 - Fix scope tiers: module-private files (test/seq/UVC module files, case JSON) can be fixed directly; generator templates (`script/gen_uvm_env.py`), flow scripts, filelists and assembly/base files need user approval.
-- System-level cases (`tb_top_soc`) have no DUT and cannot run (arch §7) — do not try; debug scope is block-level plus (post-RTL-landing) system-level.
+- System-level cases (`tb_top_chip`) have no DUT and cannot run (arch §7) — do not try; debug scope is block-level plus (post-RTL-landing) system-level.
 - Function covergroups and the `*_if_pc` property coverage (`` `ifndef OPEN_EDA `` guard, user decision 2026-11-18) run and converge on VCS only (`-fm`/`-cm`); the oEDA passrate counts the monitor/scoreboard `` `ifdef OPEN_EDA `` equivalent checks. On property-related compile errors, check the corresponding guard completeness first.
 - Writable roots: `verify/`, `deliver_bridge/`, `sim/`; never `git commit`; never use the `COMMIT_APPROVED=1` escape hatch.
 

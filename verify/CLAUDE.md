@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-UVM-1.2 (SystemVerilog) verification environment for the SoC `soc` (project id `PID 003`). Mostly generated from JSON by Python scripts, then hand-extended: per-module UVCs, a top env that assembles them, and the `wsim` shell/Makefile flow (VCS + Verdi, LSF dispatch, DPO).
+UVM-1.2 (SystemVerilog) verification environment for the SoC `chip` (project id `PID 000`). Mostly generated from JSON by Python scripts, then hand-extended: per-module UVCs, a top env that assembles them, and the `wsim` shell/Makefile flow (VCS + Verdi, LSF dispatch, DPO).
 
 - Launch Claude Code from `verify/` (this directory). Hooks, settings, agents, skills and rules all live in `verify/.claude/`; the repo root has no Claude config.
 - Design database (RTL, IP, netlists, register table): repo-root relative (design root: `hdl`); a new project records its own with `/new-project`.
@@ -45,7 +45,7 @@ bash ../verify/script/file_manage.sh     # deploys sim/wsim_oeda next to sim/wsi
 - Pass = simv exit 0 and no `UVM_ERROR`/`UVM_FATAL` in `run_iterN/sim.log`. The `-covrpt` summary mixes TB+UVC+DUT; DUT-only numbers are in the annotated `cov_report/<dut>.v` (`%000000` = zero-hit, `~` = partial).
 - `WSIM_OEDA_COV=none ./wsim_oeda ...` regenerates the RAL without covergroups if a Verilator build chokes on them.
 - **Block-level flow**: a case whose `VCS_MACRO_OPT` carries `+<MOD>_BLOCK_TEST` makes both flows compile `tb_top/filelist/uvm_blk_<mod>.f` with top `tb_top/tb_top/tb_top_<mod>.sv` instead of `uvm.f` (supported modules: arch §0). Block tests also use their own register-init config.
-- The system-level flow (`tb_top_soc.sv` + `uvm.f`) has no DUT and is not runnable until the SoC RTL lands.
+- The system-level flow (`tb_top_chip.sv` + `uvm.f`) has no DUT and is not runnable until the SoC RTL lands.
 - Per-module DUT facts, case macros and quirks: `docs/modules/<mod>.md`. Campaign reports: `docs/reports/`.
 
 ## Regenerating the environment
@@ -54,7 +54,7 @@ bash ../verify/script/file_manage.sh     # deploys sim/wsim_oeda next to sim/wsi
   - `adapter_type`: `""` = no adapter; non-empty generates the `reg2<bus>` adapter and requires the module's `enable_ral: true`.
   - `enable_ral` (default true): false drops the RAL from block-level files. A top-level `enable_ral: false` requires every module `enable_ral: false` and `adapter_type: ""` — the system flow builds ONE chip model from the whole reg table. Both rules are generator-enforced.
 - **Module-private files are generated once, never overwritten**: `gen_uvm_env.py` skips existing `uvc/<mod>/`, `<mod>_seq/test.sv`, `<mod>_block_base_*`, `json/case/<mod>.json`, `tb_top_<mod>.sv`, `uvm_blk_<mod>.f`, `tb_top_<mod>.f`, `<mod>_if_conn*`.
-- **Assembly files are template-pure, rewritten on every run**: top_env, top_vseqr, top_pkg, top_if/top_if_pc, base_seq/test, soc_sequence_lib, `json/module.json`, uvm.f, tb_define, tb_top_soc, and `tb_top/component/` (vif_declare, dump_wave, if_conn, tb_sdf). Never hand-edit them; lift changes into the `script/gen_uvm_env.py` templates.
+- **Assembly files are template-pure, rewritten on every run**: top_env, top_vseqr, top_pkg, top_if/top_if_pc, base_seq/test, chip_sequence_lib, `json/module.json`, uvm.f, tb_define, tb_top_chip, and `tb_top/component/` (vif_declare, dump_wave, if_conn, tb_sdf). Never hand-edit them; lift changes into the `script/gen_uvm_env.py` templates.
 - **User-maintained skeletons are generated once, never overwritten**: `tb_top/filelist/` source lists (`rtl_file_lst.f`, `ip_file_lst.f`, `gate_file_lst.f`, `gate_ip_file_lst.f`, `lib_lst.f`, `gpls_lib_lst.f`, `include.f`), `tb_top/macro/rtl_define.f` and `tb_top/config/*.cfg`. The generator only writes the empty skeleton; the design content (sources, include dirs, defines) is filled by the `/new-verification` design-input step (scan → suggestions → user confirms), VCS configs by hand.
 - Commit (or be ready to `git checkout --`) before regenerating; afterwards check `git diff` + one smoke run (`./wsim_oeda -c <mod>_smoke_block_test` for a block-capable module).
 - Module add/remove (`--guvc`, then `--prune [--yes]` for orphans): json2env_agent charter. No instruction file names modules (the add-test-case skill reads `json/module.json`); only the state docs change - arch R1/R2.

@@ -65,7 +65,7 @@ A clean run (no `UVM_ERROR`/`UVM_FATAL`) doesn't mean much until the scoreboard 
 - **`stage1`/`stage2` default to mutually exclusive**, matching the existing entries (smoke tests are `stage1`-only, regression tests `stage2`-only). If you pass one, the script infers the other. Pass both explicitly to put a test in both groups.
 - **The target `json/case/<mod>.json` is fully re-serialized** (Python `json`, 4-space indent) when an entry is added - semantically identical, formatting normalized. Expected.
 - **Duplicate-safe, not idempotent**: running the same `--module`/`--function`/`--level` twice fails on the second run instead of overwriting.
-- **No new files are created for leaf classes** - the script appends into the existing per-module file, which is already `` `include ``-d by `env/top_pkg.sv` (system tests), `seq/soc_sequence_lib.sv` (system seqs) or the block `.f` filelist (block level).
+- **No new files are created for leaf classes** - the script appends into the existing per-module file, which is already `` `include ``-d by `env/top_pkg.sv` (system tests), `seq/chip_sequence_lib.sv` (system seqs) or the block `.f` filelist (block level).
 
 ## Troubleshooting
 

@@ -225,13 +225,15 @@ def infer_from_rewrites(var, root):
     """Value a record_only var currently has in the docs, read through its rewrite pattern."""
     for rw in var.get("rewrites", []):
         pre, _, post = rw["pattern"].partition("{v}")
-        rx = re.compile(re.escape(pre) + r"(.+?)" + re.escape(post))
+        # without a closing literal a lazy group would stop after one character: take an identifier
+        # then; never accept a placeholder such as <mod>
+        rx = re.compile(re.escape(pre) + (r"(.+?)" + re.escape(post) if post else r"([A-Za-z0-9_]+)"))
         for f in rw["files"]:
             p = os.path.join(root, f)
             if os.path.isfile(p):
-                m = rx.search(read_text(p)[0])
-                if m:
-                    return m.group(1)
+                for m in rx.finditer(read_text(p)[0]):
+                    if "<" not in m.group(1) and ">" not in m.group(1):
+                        return m.group(1)
     return var.get("default")
 
 
@@ -732,7 +734,10 @@ def cmd_apply(root, stage, dry, force):
     for var in todo:
         value = a["answers"][var["id"]]
         if var.get("rewrites") and var["id"] not in a["applied"]:
-            base = infer_from_rewrites(var, root)
+            # the value the files hold now: from the target file when the variable has one
+            # (read before _apply_var writes it), else inferred through the rewrite patterns
+            base = current_value(var, root) if var["kind"] in ("json_field", "text_file", "sh_var") else None
+            base = base or infer_from_rewrites(var, root)
             if base:
                 a["applied"][var["id"]] = base
         ok = _apply_var(var, value, root, a["applied"], dry, log)
@@ -1174,7 +1179,7 @@ def _reset(kind, src_text, ctx):
             elif n == "6":
                 out.append(head + "\n\n(none yet)\n\n")
             elif n == "9":
-                out.append(head + "\n".join(l for l in body.split("\n") if not l.startswith("| G")))
+                out.append(head + body)   # gaps of the generated environment: every new chip has them too
             else:
                 out.append(head + body)
         return "".join(out)
