@@ -229,6 +229,18 @@
       "deferrable": true
     },
     {
+      "id": "agent_vcs_max_jobs",
+      "stage": "project",
+      "phase": 3,
+      "kind": "sh_var",
+      "file": "script/sflow/flow_env.sh",
+      "var": "WSIM_AGENT_VCS_MAX_JOBS",
+      "prompt": "Max concurrent wsim (VCS) invocations the agents may start, all agents together (ops section 3; license and LSF budget).",
+      "validate": "^[1-9][0-9]*$",
+      "default": "3",
+      "deferrable": true
+    },
+    {
       "id": "reply_language",
       "stage": "project",
       "phase": 4,

@@ -34,21 +34,31 @@ Sub-agents cannot ask the user mid-run, so file confirmation is tiered:
 - **Records** — the agent logs reason, scope and findings in its module log (`docs/memory/dev|debug/<mod>.md`); gray-box feature points carry the method tag `gray-box (RTL access approved <date>)` in `docs/features/<mod>/`.
 - **Enforcement** — path_guard blocks a sub-agent's Read/Grep/Glob of the design root (or a search rooted above it) in doc mode without a matching grant (§6); Bash reads stay advisory. The structural design scan of §8 stage 2b is not RTL behaviour reading and needs no grant.
 
+- **VCS runs**: auto / proposed / confirm tiers - §3.
+
 - **git commit always requires user approval**: agents never commit (hook-hard-blocked); the leader compiles the impact analysis → user approves → the leader runs `COMMIT_APPROVED=1 git commit ...` (the hook's only escape hatch, leader-only).
 
 ## 2. Scheduling discipline
 
 - Parallel agents **≤ 6**.
 - One dev/debug instance per module at a time (avoids file-conflict surface); cross-module parallelism is fine.
-- Simulations mainly run on the Linux-server VCS (no parallel quota once deployed); the local Verilator (oEDA) flow is for fast iteration only (heavy compiles — batch loops for consecutive cases).
+- Simulation load: VCS runs follow §3 (tiers, `WSIM_AGENT_VCS_MAX_JOBS`, background runs); oEDA compiles are heavy - batch loops for consecutive cases.
 
 ## 3. Dual-flow and coverage policy
 
-- **VCS flow setup is the near-term priority** (the user will deploy `wsim` on Linux); oEDA (`wsim_oeda`) is the local fast-iteration flow and leads during early iteration. Migration backlog and triggers: `docs/memory/leader_taskboard.md`.
+- **Flow order**: oEDA (`wsim_oeda`) leads early iteration; VCS (`wsim`) confirms and converges.
 - **Passrate definition**: pass cases / total cases; pass = simv exit 0 and no `UVM_ERROR`/`UVM_FATAL` in `sim.log`. The VCS stage starts at passrate ≥ 80%.
 - **Coverage ownership**: function coverage (covergroups) runs and converges on VCS only (`-cm`/`-fm`); property checks are dual-track — VCS runs the `<mod>_if_pc.sv` SVA (`` `ifndef OPEN_EDA `` guard), oEDA runs the logic-equivalent procedural checks in monitor/scoreboard (`` `ifdef OPEN_EDA `` guard, counted in the oEDA passrate); both sides are convergence-compared and any one-side change must be mirrored on the other.
-- **VCS result return**: the user runs `wsim` on Linux and drops `result.txt`/`fail_wave.txt` into `sim/vcs_results/<date>/`; debug_agent analyzes them and produces the convergence report via the conv-report skill.
-- Sign-off rule unchanged (arch_memory §5): an oEDA PASS is necessary but never sufficient; convergence sign-off is VCS-only.
+- **VCS runs by agents** (canonical here): debug_agent runs `wsim`, the leader schedules it, by tier:
+
+  | Tier | Runs | Decision |
+  |---|---|---|
+  | auto | VCS confirmation of a case that passes on oEDA; `-fsdb` reproduction of a VCS-only failure | debug_agent runs it and reports afterwards |
+  | proposed | module regression `-m <mod>`, `-smoke`, `-stage1`, once the module's oEDA passrate is ≥ 80% | the leader proposes, the user approves once per module and campaign |
+  | confirm | `-stage2`, `-full`, coverage (`-cm`, `-fm`), gate/post-layout (`-l gate|post`), DPO | the user confirms every run |
+
+- **VCS execution rules**: at most `WSIM_AGENT_VCS_MAX_JOBS` (`script/sflow/flow_env.sh`) concurrent `wsim` invocations across all agents, the leader giving each dispatch its share, and at most one regression-group invocation (`-m`/`-smoke`/`-stage*`/`-full`) at a time - `wsim` parallelizes a group's cases itself (through LSF when enabled). Runs start from the repo-root `sim/` in the background (a compile + run outlasts one tool call) with `-timeout <seconds>`, so a license wait cannot hang the agent; results are read from `sim/uvm_scratch_<case>/sim.log`, `sim/result.txt`, `sim/fail_wave.txt`, where the conv-report skill finds them too. No `vcs` on the host: debug_agent writes the `wsim` command list instead and the user runs it into the same `sim/` locations.
+- Sign-off rule (arch_memory §5): an oEDA PASS is necessary but never sufficient; convergence sign-off is VCS-only and stays the user's decision.
 
 ## 4. Doc map (canonical index for the whole tree)
 
@@ -122,7 +132,7 @@ Entry format everywhere: **date / change (or symptom) / reason / impact**. The l
 
 ## 7. Standard leader dispatch input
 
-A sub-agent task prompt must contain: target module/scope, spec basis (doc paths or a "pre-research mode" declaration), RTL access (pre-research: free; doc mode: "none" or the approved grant - category, scope, task id), whether it carries user approval (source-of-truth operations), expected outputs and report requirements, and the relevant memory/features file paths. Check the returned report against the charter's report format; ask for missing items before folding into the user report.
+A sub-agent task prompt must contain: target module/scope, spec basis (doc paths or a "pre-research mode" declaration), RTL access (pre-research: free; doc mode: "none" or the approved grant - category, scope, task id), whether it carries user approval (source-of-truth operations), for debug_agent the VCS tier the user approved and the job share (§3), expected outputs and report requirements, and the relevant memory/features file paths. Check the returned report against the charter's report format; ask for missing items before folding into the user report.
 
 ## 8. New-requirement intake procedure (leader, on every brand-new verification request)
 

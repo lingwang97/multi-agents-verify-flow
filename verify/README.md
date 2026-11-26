@@ -125,6 +125,7 @@ flowchart LR
 | design inputs | RTL / include / IP / macro lists proposed from a scan of the design root |
 | feature list | the module's feature points before development starts |
 | reference model | the plan before any model code is written |
+| VCS runs | module regressions (once per module), `-stage2` / `-full`, coverage and gate-level runs (each time); single-case VCS confirmations run automatically |
 | RTL access | in doc mode, an agent may read RTL only for spec ambiguity / suspected issue / gray-box checks — per task, with your approval |
 | commit | every commit (agents never commit) |
 

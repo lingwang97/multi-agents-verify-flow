@@ -38,7 +38,7 @@ Method ∈ {property assertion, uvm_component check, reference model, directed, 
 
 ## 5. Simulation results [debug_agent]
 
-Per-case table: case / iters / seeds / macros / result per flow; passrate per flow; oEDA↔VCS convergence (ref the conv-report output); VCS results in `sim/vcs_results/<date>/`.
+Per-case table: case / iters / seeds / macros / result per flow; passrate per flow; oEDA↔VCS convergence (ref the conv-report output); VCS results in `sim/uvm_scratch_<case>/` and `sim/result.txt`.
 
 ## 6. Coverage [debug_agent]
 
@@ -60,4 +60,4 @@ What was reported to the design side; open items; baseline (ref `deliver_bridge/
 
 ## 11. Appendix [leader]
 
-Repro commands; artifact paths (scratch dirs / `sim/vcs_results/`); related documents.
+Repro commands; artifact paths (`sim/uvm_scratch_oeda_<case>/`, `sim/uvm_scratch_<case>/`); related documents.

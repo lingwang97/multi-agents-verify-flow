@@ -1146,7 +1146,8 @@ def _reset(kind, src_text, ctx):
         # site values belong to the old server: neutral values until /new-project sets them
         neutral = {"WSIM_REG_TABLE": "", "WSIM_PYTHON": "python3", "WSIM_LSF_ENABLE": "FALSE",
                    "WSIM_LSF_QUEUE": "", "WSIM_LSF_HOSTS_FILE": "", "WSIM_LSF_SUBMIT_HOSTS": "",
-                   "WSIM_LSF_EXEC_HOST_REGEX": "", "WSIM_LSF_QUEUE_SED": "", "WSIM_DPO_DB": ""}
+                   "WSIM_LSF_EXEC_HOST_REGEX": "", "WSIM_LSF_QUEUE_SED": "", "WSIM_DPO_DB": "",
+                   "WSIM_AGENT_VCS_MAX_JOBS": "3"}
         out = src_text
         for k, v in neutral.items():
             out = re.sub(r"^%s=.*$" % k, lambda m, k=k, v=v: '%s="%s"' % (k, v), out, flags=re.M)

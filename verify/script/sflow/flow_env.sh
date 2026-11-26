@@ -17,27 +17,33 @@
 # Register-table CSV consumed by RalGen. Only read when the selected filelist
 # compiles the RAL model (i.e. enable_ral is on somewhere); its location is
 # confirmed with the user through the spec2json intake gate before RAL is used.
-WSIM_REG_TABLE="$database_path/hdl/common/reg_table/reg_table_reg_list.csv"
+WSIM_REG_TABLE=""
 
 # ------------------------------------------------------------------------------
-# Site settings (VCS server) - REVIEW ALL OF THESE AT THE LINUX MIGRATION.
-# Values are identical to the former hard-coded literals (pure refactor).
-# wsim forwards the ones the Makefile needs on the make command line.
+# Site settings (VCS server) - set by /new-project (P3); review them whenever
+# the server changes. wsim forwards the ones the Makefile needs on the make
+# command line.
 # ------------------------------------------------------------------------------
 # Python 3 for the flow helper scripts (RalGen, testjson2lst, Makefile seed).
-WSIM_PYTHON="/opt/anaconda3/bin/python"
+WSIM_PYTHON="python3"
 # Default LSF queue; also the pattern used to discover sibling queues.
-WSIM_LSF_QUEUE="amd7t83"
+WSIM_LSF_QUEUE=""
 # LSF cluster host configuration read for queue/host discovery.
-WSIM_LSF_HOSTS_FILE="/lsf/conf/lsbatch/kulh1-clu-lsf01/configdir/lsb.hosts"
+WSIM_LSF_HOSTS_FILE=""
 # LSF dispatch master switch: anything but TRUE runs every case locally.
-WSIM_LSF_ENABLE="TRUE"
+WSIM_LSF_ENABLE="FALSE"
 # Host-name fragments (3rd '-'-separated field of $HOST) allowed to submit to
 # LSF; runs started on other hosts fall back to local execution. Empty = any host.
-WSIM_LSF_SUBMIT_HOSTS="cch gat0"
+WSIM_LSF_SUBMIT_HOSTS=""
 # Execution-host names in WSIM_LSF_HOSTS_FILE, used for per-queue slot discovery.
-WSIM_LSF_EXEC_HOST_REGEX="kulh1-a[0-9a-zA-Z]+-cch[0-9]+"
+WSIM_LSF_EXEC_HOST_REGEX=""
 # sed expression mapping a host-group name in WSIM_LSF_HOSTS_FILE to its queue name.
-WSIM_LSF_QUEUE_SED='s/amd/a/g'
+WSIM_LSF_QUEUE_SED=""
 # DPO learn/apply/reference database root.
-WSIM_DPO_DB="/archive/project/SG/dpo_database"
+WSIM_DPO_DB=""
+
+# ------------------------------------------------------------------------------
+# Multi-agent policy (docs/ops/multi_agent_ops.md section 3)
+# ------------------------------------------------------------------------------
+# Max concurrent wsim invocations started by the agents (all agents together).
+WSIM_AGENT_VCS_MAX_JOBS="3"
