@@ -31,7 +31,7 @@ A status over several iterations is PASS only when every iteration passed, other
 
 A case is **converged** only when it shows PASS in both `oEDA` and `VCS` columns;
 the summary line counts those. Remember the sign-off rules in
-`verify/docs/memory/arch_memory.md` section 5: functional-coverage closure
+`verify/.claude/rules/two-flow.md`: functional-coverage closure
 (`-fm`) is a separate VCS step and is NOT represented in this report.
 
 ## Notes

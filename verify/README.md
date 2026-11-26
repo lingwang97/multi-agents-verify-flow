@@ -190,7 +190,7 @@ flowchart LR
 ## 9. Maintaining the framework (framework repo)
 
 - Change generators, flow scripts, `new_project`, hooks or instruction files in the framework repo, then run `python script/new_project/new_project.py audit` (every file classified in `manifest.txt`, no module names in carried text, doc map and value registry complete) before committing.
-- A new project-level value is registered in `script/new_project/vars.json` in the same change (arch R7) — otherwise `/new-project` never asks for it.
+- A new project-level value is registered in `script/new_project/vars.json` in the same change (`.claude/rules/maintenance.md` R7) — otherwise `/new-project` never asks for it.
 - Smoke-test on the **local test fixture** — a chip environment kept on disk but never committed (`.git/info/exclude`); how to regenerate or restore it: `docs/memory/arch_memory.md` §0.
 - Projects take the change with `/new-project sync`; module-private files they already generated are migrated by hand.
 

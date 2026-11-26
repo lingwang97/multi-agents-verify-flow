@@ -30,7 +30,7 @@ The leader (main session) runs this. Every value lives in the registry `script/n
 
 1. Show one summary table: phase, variable, new value, current value, deferred items. AskUserQuestion: apply / revise a phase / stop. These targets are source-of-truth files; this confirmation is the user approval (ops §1).
 2. `NP apply --stage project --dry-run`, show the planned changes, then `NP apply --stage project`. A `WARN ... snippet not found` line means an expected text was edited by hand - show it and fix that spot with the user.
-3. `NP check --stage project`. FAIL items must be resolved; PENDING and WARN items are reported, not blockers. A `source-value` WARN is an identity value of the source project (recorded at bootstrap) left outside the rewrite files, a `source-module` WARN a module name of the source project - reword the spot generically (arch R1) and, in the framework repo, add the file to that variable's rewrite files.
+3. `NP check --stage project`. FAIL items must be resolved; PENDING and WARN items are reported, not blockers. A `source-value` WARN is an identity value of the source project (recorded at bootstrap) left outside the rewrite files, a `source-module` WARN a module name of the source project - reword the spot generically (maintenance.md R1) and, in the framework repo, add the file to that variable's rewrite files.
 
 ## 3. Record
 
@@ -48,7 +48,7 @@ Commit only after the user approves (leader, `COMMIT_APPROVED=1`), including `an
 
 ## Sync mode (`/new-project sync <framework-repo>`)
 
-Pulls the framework's committed HEAD into this project. Only carried files and the framework part of two reset files (arch_memory §1 rules, `flow_env.sh`) are touched; generated files and chip state never are. Alias `FW` = `python <framework-repo>/verify/script/new_project/new_project.py --root .` (run from this `verify/`) - always the FRAMEWORK's script: this project's copy may predate sync, and the sync replaces it.
+Pulls the framework's committed HEAD into this project. Only carried files and the framework part of two reset files (the arch_memory §1 stub - framework policy now lives in carried rules - and `flow_env.sh`) are touched; generated files and chip state never are. Alias `FW` = `python <framework-repo>/verify/script/new_project/new_project.py --root .` (run from this `verify/`) - always the FRAMEWORK's script: this project's copy may predate sync, and the sync replaces it.
 
 1. **Preconditions**: `answers.json` has `bootstrapped_from`; the project's working tree is committed (or the user accepts syncing onto uncommitted edits); `<framework-repo>` is a git repo - ask for its path if `$ARGUMENTS` has none.
 2. **Plan**: `FW resync --dry-run --markdown`; show the table and the NOTE lines. Actions: `take` (framework change, untouched here), `merge` (both changed, merged cleanly), `add` (new framework file), `keep` (changed here only), `conflict` (framework version will be written to `<file>.fw-new`, the project file stays), `delete?` (removed in the framework, unchanged here), `removed-modified` (removed there, edited here - kept). Every file is shown with the project's own values already applied, so identity tokens never show up as differences.
@@ -61,7 +61,7 @@ Pulls the framework's committed HEAD into this project. Only carried files and t
 
 ## Gotchas
 
-- A new framework value must be registered in `vars.json` (with its `stage`) in the same change that introduces it (arch_memory R7), otherwise no interview asks it.
+- A new framework value must be registered in `vars.json` (with its `stage`) in the same change that introduces it (`.claude/rules/maintenance.md` R7), otherwise no interview asks it.
 - `project_name` and `design_root` rewrite identity tokens in docs/rules/the path guard (`rewrites` in the registry); `apply` does it, never hand-edit those tokens.
 - Module-level values and everything under `tb_top/` belong to `/new-verification`.
 - Sync takes the framework's last commit, not its uncommitted edits (a NOTE says so). If the recorded base commit is gone from the framework repo (rewritten history), every difference becomes a conflict - pass `--base <sha>` when the user knows the right one.

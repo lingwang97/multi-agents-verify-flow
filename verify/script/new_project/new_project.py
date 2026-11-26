@@ -954,7 +954,7 @@ def cmd_check(root, stage, markdown, lint, top):
                 for n, line in enumerate(lines, 1):
                     hit = rx.search(line)
                     if hit:
-                        res.append(("WARN", "source-module", "%s:%d names '%s', a module of the source project (arch R1)" % (f, n, hit.group(0))))
+                        res.append(("WARN", "source-module", "%s:%d names '%s', a module of the source project (maintenance.md R1)" % (f, n, hit.group(0))))
         if ans.get("lsf_enable") == "TRUE":
             for k in ("lsf_queue", "lsf_hosts_file"):
                 if k in a["deferred"] or not ans.get(k):
@@ -1138,7 +1138,7 @@ def audit(repo):
         elif c in ("carry", "reset"):
             carried.append(f)
     verify = os.path.join(repo, "verify")
-    # module names of this repo in carried instruction/doc text (arch R1)
+    # module names of this repo in carried instruction/doc text (maintenance.md R1)
     try:
         with open(os.path.join(verify, "json", "module.json"), encoding="utf-8") as fh:
             mods = list(json.load(fh).get("modules", {}))
@@ -1151,9 +1151,9 @@ def audit(repo):
             for n, line in enumerate(read_text(os.path.join(repo, f))[0].split("\n"), 1):
                 hit = rx.search(line)
                 if hit:
-                    res.append(("FAIL", "module-name", "%s:%d names a module (%s) - carried files stay module-agnostic (arch R1)" % (f, n, hit.group(0))))
+                    res.append(("FAIL", "module-name", "%s:%d names a module (%s) - carried files stay module-agnostic (maintenance.md R1)" % (f, n, hit.group(0))))
     # every occurrence of a registered project value in carried text must sit in a file of its rewrite
-    # (otherwise apply leaves the source project's value behind in the new one - arch R7)
+    # (otherwise apply leaves the source project's value behind in the new one - maintenance.md R7)
     vtexts = {}
     for f in carried:
         if f.startswith("verify/") and classify(f, m) == "carry" and f.endswith((".md", ".py", ".sh", ".json", ".txt")):
@@ -1173,7 +1173,7 @@ def audit(repo):
                 for n, line in enumerate(lines, 1):
                     if needle in line and (f, n, needle) not in seen:
                         seen.add((f, n, needle))
-                        res.append(("FAIL", "rewrite", "%s:%d holds '%s' but is not in the %s rewrite files of vars.json (arch R7)"
+                        res.append(("FAIL", "rewrite", "%s:%d holds '%s' but is not in the %s rewrite files of vars.json (maintenance.md R7)"
                                     % (f, n, needle, v["id"])))
     # doc-map coverage of carried .md files
     ops = os.path.join(verify, "docs", "ops", "multi_agent_ops.md")
@@ -1190,13 +1190,13 @@ def audit(repo):
     fe = os.path.join(verify, reg["flow_env_file"])
     for var in re.findall(r"^(WSIM_\w+)=", read_text(fe)[0], re.M) if os.path.isfile(fe) else []:
         if var not in sh_vars:
-            res.append(("FAIL", "registry", "%s in flow_env.sh is not registered in vars.json (arch R7)" % var))
+            res.append(("FAIL", "registry", "%s in flow_env.sh is not registered in vars.json (maintenance.md R7)" % var))
     keys = {v["key"] for v in reg["vars"] if v["kind"] == "json_field"} | set(reg.get("fixed_config_keys", []))
     try:
         with open(os.path.join(verify, reg["config_file"]), encoding="utf-8") as fh:
             for k in json.load(fh):
                 if k not in keys:
-                    res.append(("FAIL", "registry", "config key %s is neither registered nor listed in fixed_config_keys (arch R7)" % k))
+                    res.append(("FAIL", "registry", "config key %s is neither registered nor listed in fixed_config_keys (maintenance.md R7)" % k))
     except (OSError, ValueError):
         pass
     if not any(r[0] == "FAIL" for r in res):
@@ -1459,7 +1459,7 @@ def _read_opt(path):
 
 
 def _arch_rules(text):
-    """(prefix, §1 section, suffix) of arch_memory; §1 holds the framework rules R1-Rn."""
+    """(prefix, §1 section, suffix) of arch_memory; §1 is a pointer stub since the framework rules moved to `.claude/rules/maintenance.md` - syncing it is harmless and kept for base-commit compatibility."""
     m = re.search(r"(?ms)^## 1\..*?(?=^## )", text or "")
     return (text[:m.start()], m.group(0), text[m.end():]) if m else (text, None, "")
 

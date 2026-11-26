@@ -41,7 +41,7 @@ bash ../verify/script/file_manage.sh     # deploys sim/wsim_oeda next to sim/wsi
 ./wsim_oeda ... -nowave | -covrpt        # no waves / + verilator_coverage report
 ```
 
-- Limits: covergroups are parsed but not collected (`*_coverage.sv` converges on VCS only); only simple constraints; no SVA (dual-track rule: `.claude/rules/oeda-verilator.md`); no gate/post level. VCS stays the sign-off flow (arch §5).
+- Limits: covergroups are parsed but not collected (`*_coverage.sv` converges on VCS only); only simple constraints; no SVA (dual-track rule: `.claude/rules/oeda-verilator.md`); no gate/post level. VCS stays the sign-off flow (`.claude/rules/two-flow.md`).
 - Builds are shared: cases with the same filelist, defines and wave/coverage flags use one Verilator build in `sim/oeda_build/`, rebuilt automatically when a source changes (`WSIM_OEDA_COV=none` regenerates the RAL without covergroups). Per case: `sim/uvm_scratch_oeda_<case>/result.txt` + `comp_<case>/run_iterN/`; a `-m`/group run also writes `sim/oeda_result.txt`, `sim/oeda_fail_rerun.txt` and (with `-covrpt`) the merged `sim/oeda_cov_<mod|group>/`. Exit status 0 only when every run passed.
 - Pass = simv exit 0 and no `UVM_ERROR`/`UVM_FATAL` in `run_iterN/sim.log`. The `-covrpt` summary mixes TB+UVC+DUT; DUT-only numbers are in the annotated `cov_report/<dut>.v` (`%000000` = zero-hit, `~` = partial).
 - **Block-level flow**: a case whose `VCS_MACRO_OPT` carries `+<MOD>_BLOCK_TEST` makes both flows compile `tb_top/filelist/uvm_blk_<mod>.f` with top `tb_top/tb_top/tb_top_<mod>.sv` instead of `uvm.f` (supported modules: arch §0). Block tests also use their own register-init config. The system-level flow (`tb_top_chip.sv` + `uvm.f`) has no DUT and is not runnable until the SoC RTL lands.
@@ -54,7 +54,7 @@ bash ../verify/script/file_manage.sh     # deploys sim/wsim_oeda next to sim/wsi
 - **Assembly files are template-pure, rewritten on every run**: top_env, top_vseqr, top_pkg, top_if/top_if_pc, base_seq/test, chip_sequence_lib, `json/module.json`, uvm.f, tb_define, tb_top_chip, and `tb_top/component/` (vif_declare, dump_wave, if_conn, tb_sdf). Never hand-edit them; lift changes into the `script/gen_uvm_env.py` templates.
 - **User-maintained skeletons are generated once, never overwritten**: `tb_top/filelist/` source lists, `tb_top/macro/rtl_define.f`, `tb_top/config/*.cfg`. The generator writes only the skeleton; the design content comes from the `/new-verification` design-input step, VCS configs by hand.
 - Commit (or be ready to `git checkout --`) before regenerating; afterwards check `git diff` + one smoke run (`./wsim_oeda -c <mod>_smoke_block_test` for a block-capable module). `--guvc` also emits inert `<mod>_smoke_test`/`_seq` — a runnable starting point, not a real test.
-- Module add/remove (`--guvc`, then `--prune [--yes]` for orphans): json2env_agent charter. No instruction file names modules (the add-test-case skill reads `json/module.json`); only the state docs change - arch R1/R2.
+- Module add/remove (`--guvc`, then `--prune [--yes]` for orphans): json2env_agent charter. No instruction file names modules (the add-test-case skill reads `json/module.json`); only the state docs change - `.claude/rules/maintenance.md` R1/R2.
 
 ```bash
 # from script/
