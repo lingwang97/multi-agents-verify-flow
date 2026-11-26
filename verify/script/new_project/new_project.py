@@ -1263,18 +1263,13 @@ def _reset(kind, src_text, ctx):
         for head, body in secs:
             num = re.match(r"## (\d+)\.", head)
             n = num.group(1) if num else ""
-            if n in ("1", "3", "5", "8"):
-                out.append(head + body)
-            elif n == "0":
+            if n == "0":
+                # framework intro/fixture text lives in this section's body: replaced by the
+                # chip's module-table skeleton (the fixture never reaches a project)
                 out.append(head + "\n\n| Module | UVC state (adapter_type / enable_ral) | Block-level support | Notes |\n"
-                           "|---|---|---|---|\n\n- Filled by json2env_agent after the first `--guvc` of this chip.\n\n---\n\n")
-            elif n == "7":
-                out.append(head + "\n\nTo be written for this chip (system top, register table, init config, DUT wiring, system smoke stimuli).\n\n")
-            elif n == "6":
-                out.append(head + "\n\n(none yet)\n\n")
-            elif n == "9":
-                out.append(head + body)   # gaps of the generated environment: every new chip has them too
+                           "|---|---|---|---|\n\n- Filled by json2env_agent after the first `--guvc` of this chip.\n")
             else:
+                # §1 bring-up checklist and §2 open gaps are generic: every new chip has them too
                 out.append(head + body)
         return "".join(out)
     if kind == "fw_env":
@@ -1352,7 +1347,10 @@ def cmd_bootstrap(dst, with_flags, force):
 
 
 # ----------------------------------------------------------------------- resync
-SYNC_RESET = ("verify/docs/memory/arch_memory.md", "verify/script/sflow/flow_env.sh")   # reset files with a framework part
+# reset files with a framework part. arch_memory is NOT synced any more: it is pure
+# project state (renumbered 2026-11-26) - framework policy flows through the carried
+# rule files (.claude/rules/*) via normal take/merge.
+SYNC_RESET = ("verify/script/sflow/flow_env.sh",)
 GEN_PREFIXES = ("verify/script/gen_uvm_env.py", "verify/script/gen_uvc.py", "verify/script/base_uvc/", "verify/script/utils/")
 DEPLOY_PREFIXES = ("verify/script/sflow/", "verify/script/file_manage")
 
@@ -1458,12 +1456,6 @@ def _read_opt(path):
         return raw          # binary: compared as bytes, never merged
 
 
-def _arch_rules(text):
-    """(prefix, §1 section, suffix) of arch_memory; §1 is a pointer stub since the framework rules moved to `.claude/rules/maintenance.md` - syncing it is harmless and kept for base-commit compatibility."""
-    m = re.search(r"(?ms)^## 1\..*?(?=^## )", text or "")
-    return (text[:m.start()], m.group(0), text[m.end():]) if m else (text, None, "")
-
-
 def cmd_resync(root, dry, deletes, base_override, markdown):
     root = os.path.abspath(root)
     if os.path.normcase(root) == os.path.normcase(SRC_VERIFY):
@@ -1511,13 +1503,6 @@ def cmd_resync(root, dry, deletes, base_override, markdown):
             T = _read_opt(os.path.join(tt, f)) if f in files_t and synced(f, mt) else None
             if B != T:
                 changed_fw.append(f)
-            pre = suf = None
-            if f.endswith("arch_memory.md"):
-                # only the rules section is framework text; the rest is this chip's state
-                pre, O, suf = _arch_rules(O)
-                B, T = _arch_rules(B)[1], _arch_rules(T)[1]
-                if O is None:
-                    continue
             if T == O:
                 continue
             if T is None:
