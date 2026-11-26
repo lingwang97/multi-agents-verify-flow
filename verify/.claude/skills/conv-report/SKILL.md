@@ -15,7 +15,7 @@ python3 .claude/skills/conv-report/conv_report.py --case <mod>     # substring f
 python3 .claude/skills/conv-report/conv_report.py -o conv_report.txt   # + write sim/conv_report.txt
 ```
 
-The script resolves the repo-root `sim/` from its own location, so it runs from any cwd, on Linux servers and on local oEDA hosts (WSL included) (paths are plain filesystem, no simulator needed).
+The script resolves the repo-root `sim/` from its own location, so it runs from any cwd on any host (paths are plain filesystem, no simulator needed).
 
 ## Output columns
 
@@ -34,5 +34,4 @@ the summary line counts those. Remember the sign-off rules in
 
 ## Notes
 
-- Old `uvm_scratch_local_*` directories (pre-rename artifacts) are ignored.
 - The report never fails (exit 0); empty columns mean that flow has not run the case.

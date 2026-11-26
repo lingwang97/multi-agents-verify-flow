@@ -1,4 +1,4 @@
-# Scripts and makefiles run on Linux: always LF, also in a Windows checkout
+# Scripts and makefiles run on Linux: always LF, whatever core.autocrlf says
 # (a CRLF copy fails there with "bash\r: bad interpreter").
 *.sh text eol=lf
 verify/script/sflow/wsim text eol=lf

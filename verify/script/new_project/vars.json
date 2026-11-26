@@ -139,50 +139,6 @@
       "prompt": "VERDI_HOME (FSDB dump / Verdi GUI)."
     },
     {
-      "id": "oeda_platform",
-      "stage": "project",
-      "phase": 2,
-      "kind": "choice_rewrite",
-      "prompt": "Where does the oEDA (Verilator) flow run? linux = natively on this Linux host; wsl = WSL2 on a Windows box.",
-      "choices": [
-        "linux",
-        "wsl"
-      ],
-      "default": "linux",
-      "snippets": {
-        "CLAUDE.md": {
-          "wsl": "Local fast-iteration flow on this Windows box, inside WSL2 Ubuntu 24.04: Verilator (OSS CAD Suite) + UVM-1.2 + FST waves + `verilator_coverage`. Machine setup, the Surfer viewer and `wsl.exe` invocation pitfalls: `docs/ops/oeda_local_setup.md`.",
-          "linux": "Local fast-iteration flow, run natively on this Linux host: Verilator (OSS CAD Suite) + UVM-1.2 + FST waves + `verilator_coverage`. Machine setup and the waveform viewer: `docs/ops/oeda_local_setup.md`."
-        },
-        "CLAUDE.md#2": {
-          "wsl": "# from the repo-root sim/, inside WSL; single case only",
-          "linux": "# from the repo-root sim/; single case only"
-        },
-        ".claude/agents/debug_agent.md": {
-          "wsl": "`\"/c/Program Files/WSL/wsl.exe\" -d Ubuntu-24.04 -- bash /mnt/c/Users/wangling/pro_cc/projecd_id/sim/<run_script>.sh`\n   Multi-command runs must go into a script file (Git Bash quoting loses `$var`; add `MSYS_NO_PATHCONV=1` inside the script), never inline.",
-          "linux": "`cd <repo>/sim && ./wsim_oeda -c <case> -seed 1` (see `docs/ops/oeda_local_setup.md` for the environment).\n   Multi-command runs go into a script file, never inline."
-        },
-        "CLAUDE.md#3": {
-          "wsl": "VCS flow — the golden reference; Linux with VCS/Verdi/LSF only, not this Windows box.",
-          "linux": "VCS flow — the golden reference; it runs on the Linux server with VCS/Verdi/LSF."
-        },
-        "CLAUDE.md#4": {
-          "wsl": "## Open-source EDA flow (oEDA: `wsim_oeda`, WSL2 + Verilator)",
-          "linux": "## Open-source EDA flow (oEDA: `wsim_oeda`, Verilator)"
-        }
-      },
-      "residue": {
-        "linux": [
-          "WSL2",
-          "Windows box",
-          "wsl.exe",
-          "wsl.localhost",
-          "inside WSL"
-        ],
-        "wsl": []
-      }
-    },
-    {
       "id": "wsim_python",
       "stage": "project",
       "phase": 3,
@@ -537,5 +493,10 @@
     ".claude/skills/*/SKILL.md",
     "docs/ops/multi_agent_ops.md"
   ],
-  "fixed_config_keys": ["seq_name", "test_name", "env_name", "modules"]
+  "fixed_config_keys": [
+    "seq_name",
+    "test_name",
+    "env_name",
+    "modules"
+  ]
 }

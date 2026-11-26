@@ -177,7 +177,6 @@ flowchart LR
 
 | Symptom | Fix |
 |---|---|
-| A path argument turns into `C:/…/Git/…` on Windows | prefix the command with `MSYS_NO_PATHCONV=1` (Git Bash path conversion) |
 | `register table not found` | set it in `/new-verification` (register-table step); RAL cases need it |
 | `[path_guard] BLOCKED … design database` | doc mode: the agent must file an RTL ACCESS REQUEST; the leader asks you |
 | `[path_guard] BLOCKED … permission mode 'auto'` | switch to default mode (Shift+Tab) to approve source-of-truth edits, then re-dispatch |

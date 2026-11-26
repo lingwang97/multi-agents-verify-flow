@@ -65,7 +65,7 @@ This repository is the **framework**: `script/uvm_env_config_template.json` list
 
 ## 5. Two-flow closed loop: oEDA first, VCS sign-off (rules since 2026-11-11)
 
-Naming: the open-source flow is **oEDA** (script `wsim_oeda`, scratch `sim/uvm_scratch_oeda_<case>/`, isolation define `+define+OPEN_EDA`); the business flow is VCS (`wsim`, `sim/uvm_scratch_<case>/`). Old `_local` artifacts on disk are historical and are not renamed.
+Naming: the open-source flow is **oEDA** (script `wsim_oeda`, scratch `sim/uvm_scratch_oeda_<case>/`, isolation define `+define+OPEN_EDA`); the business flow is VCS (`wsim`, `sim/uvm_scratch_<case>/`).
 
 **Loop:** develop/debug a case with `./wsim_oeda -c <case> [-seed 1]` (fast iteration, FST waves) -> once stable, confirm the same case on VCS with `./wsim -c <case> -uvm` -> converge with VCS regression groups (`-smoke/-stage1/-stage2/-full`) and coverage (`-cm`, functional covergroups via `-fm`).
 
@@ -93,7 +93,7 @@ Naming: the open-source flow is **oEDA** (script `wsim_oeda`, scratch `sim/uvm_s
 
 - SVA protocol assertions: the 2026-11-11 deferral was lifted (2026-11-17/18) — property checks are **dual-tracked**; the mechanism canon is `.claude/rules/oeda-verilator.md`, summary in ops §3. Status note kept here because this section tracks deferred items: Verilator must never see SVA outside the guard.
 - Width-macro alignment: see item 4 in section 5.
-- Full compile cache (native-FS scratch, hash-keyed obj_dir): superseded by obj_dir reuse for as long as the primary environment is server Linux; revisit only if the WSL box becomes the primary debug environment again.
+- Shared compile cache across cases: not needed while the per-case obj_dir reuse (build key with source fingerprint) keeps rebuilds cheap; revisit if compile time becomes a bottleneck.
 
 - Placeholder system-level path: the `gen_uvm_env.py` top_env template sets `ral.set_hdl_path_root("tb_top.C[0].btnode.btc")` - not the chip's hierarchy. Harmless while no system-level RAL model exists, but it MUST be updated to the real hierarchy before any backdoor register access in the revived system flow.
 

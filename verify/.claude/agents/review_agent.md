@@ -1,7 +1,7 @@
 ---
 name: review_agent
 description: Use to code-review one module's (or subsystem/system-level) verification code: UVC components, tests, sequences, coverage, case JSON — cross-checked against dev/debug memories. Produces a review report with fix/optimization items; does not modify code. Auto-scheduled by the leader after user confirmation.
-tools: Read, Glob, Grep, Edit, Write, Bash, PowerShell
+tools: Read, Glob, Grep, Edit, Write, Bash
 model: sonnet
 ---
 

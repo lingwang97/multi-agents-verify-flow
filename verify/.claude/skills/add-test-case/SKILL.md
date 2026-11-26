@@ -53,7 +53,7 @@ The generated seq's `body()` is a `// TODO: real stimulus...` stub. Fill it in, 
 
 ```bash
 ./wsim_oeda -c <mod>_<function>_test -seed 1     # local oEDA run
-./wsim -c <mod>_<function>_test                  # VCS (Linux server)
+./wsim -c <mod>_<function>_test                  # VCS (sign-off flow)
 ```
 
 A clean run (no `UVM_ERROR`/`UVM_FATAL`) doesn't mean much until the scoreboard has a real check — see `test_case_dev_manual.md` §5.

@@ -1,14 +1,19 @@
-# oEDA local flow environment manual (WSL2 + Verilator, machine-specific)
+# oEDA local flow - machine setup (Linux)
 
-> Division of labor: day-to-day commands and the pass criterion are canonized in `verify/CLAUDE.md` (oEDA section), the Verilator/OPEN_EDA coding rules in `.claude/rules/oeda-verilator.md`; this file covers only how this machine is set up and driven.
+> Division of labor: day-to-day commands and the pass criterion are canonized in `verify/CLAUDE.md` (oEDA section), the Verilator/OPEN_EDA coding rules in `.claude/rules/oeda-verilator.md`; this file covers only how a Linux machine is set up for the oEDA flow. Record this machine's actual paths and versions below once the flow runs.
 
-## One-time setup (machine-specific)
+## One-time setup
 
-- One-time: right-click-run `C:\Users\wangling\tools\wsl-setup\enable_wsl2.bat` as administrator (VirtualMachinePlatform; one UAC + one reboot), then import the distro: `"C:\Program Files\WSL\wsl.exe" --import Ubuntu-24.04 C:\Users\wangling\wsl\Ubuntu-24.04 C:\Users\wangling\tools\wsl-setup\ubuntu-24.04-wsl-rootfs.tar.gz --version 2` (WSL 2.7.14 MSI already installed).
-- Inside WSL add `source ~/tools/oss-cad-suite/environment` and `export UVM_HOME=$HOME/tools/uvm-1.2` to `~/.bashrc` (automated by `C:\Users\wangling\tools\wsl-setup\bootstrap_ubuntu.sh`).
-- Waveforms: native-Windows Surfer `C:\Users\wangling\tools\surfer\surfer.exe` (FST/VCD) opening `\\wsl.localhost\Ubuntu-24.04\...` paths (SourceForge-hosted GTKWave is unreachable on this network).
+- Verilator: unpack the OSS CAD Suite and source its `environment` in the shell that runs the flow (`source <oss-cad-suite>/environment`); `verilator --version` must answer.
+- UVM-1.2 library: `export UVM_HOME=<path>/uvm-1.2` (`wsim_oeda` default: `$HOME/tools/uvm-1.2`). Use a plain Accellera UVM-1.2 source tree - a simulator-bundled UVM can carry vendor code Verilator cannot parse.
+- Python 3 with openpyxl for RalGen: `WSIM_PYTHON` in `script/sflow/flow_env.sh`, else `/usr/bin/python3` (the OSS CAD Suite python has no openpyxl).
+- Waveforms: an FST viewer (Surfer or GTKWave).
 
-## Windows-side invocation pitfalls
+## Pitfalls
 
-- **Use the full path** `"/c/Program Files/WSL/wsl.exe" -d Ubuntu-24.04 -- ...` (the `system32` shim lacks the inbox kernel; symptom: exit 127 and garbled UTF-16 error).
-- **Git Bash quoting:** `wsl ... bash -c '...$c...'` loses `$c` (expanded to empty on the Windows side → `wsim_oeda -c  -seed 1` "invalid option"). Put multi-command runs in a script file and call it with `MSYS_NO_PATHCONV=1` so `/mnt/c/...` is not rewritten.
+- csh/tcsh login shells: `wsim_oeda` is a bash script and does not see variables set only in `~/.cshrc`. Export `UVM_HOME` and source the OSS CAD Suite `environment` where bash sees them (`~/.bashrc` / `~/.profile`), or in the shell before calling `./wsim_oeda`.
+- The compile runs in `sim/uvm_scratch_oeda_<case>/comp_<case>/` (three levels below the repo root, matching the `.f` path depth); `obj_dir` is reused while the build key (tool version, defines, flags, filelist, source fingerprint) is unchanged.
+
+## This machine
+
+- To be filled in: OSS CAD Suite path and Verilator version, `UVM_HOME`, `WSIM_PYTHON`, waveform viewer.

@@ -1,7 +1,7 @@
 ---
 name: spec2json_agent
 description: Use for architecture-level verification analysis: read architecture/top/module design docs (or RTL in pre-research mode), partition modules into system/subsystem/block verification levels, produce sys_function_splits.md and a proposed uvm_env_config_template.json. Invoke only by explicit user request, or by the leader after user approval.
-tools: Read, Glob, Grep, Edit, Write, Bash, PowerShell
+tools: Read, Glob, Grep, Edit, Write, Bash
 model: opus
 ---
 

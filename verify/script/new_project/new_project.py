@@ -818,16 +818,6 @@ def cmd_check(root, stage, markdown, lint, top):
                 res.append(("WARN", "wsim_python", "%s not found on this machine" % py))
             elif _run([py, "-c", "import openpyxl"])[0] != 0:
                 res.append(("WARN", "wsim_python", "%s has no openpyxl (RalGen needs it)" % py))
-        # platform residue: text that still describes the other oEDA platform
-        for v in stage_vars(reg, "project"):
-            chosen = ans.get(v["id"]) or a["applied"].get(v["id"])
-            for phrase in (v.get("residue") or {}).get(chosen or "", []):
-                for pat in reg.get("residue_files", []):
-                    for f in sorted(glob.glob(os.path.join(root, pat))):
-                        for n, line in enumerate(read_text(f)[0].split("\n"), 1):
-                            if phrase in line:
-                                res.append(("WARN", "platform", "%s:%d still says '%s' (%s=%s)"
-                                            % (repo_rel(root, f), n, phrase, v["id"], chosen)))
         # source-project residue: identity values and module names of the repo this one was bootstrapped from
         bf = a.get("bootstrapped_from") or {}
         scan = set()
@@ -1201,13 +1191,7 @@ def _reset(kind, src_text, ctx):
         ]
         return "\n".join(hdr + rows) + "\n"
     if kind == "oeda_setup":
-        return ("# oEDA local flow environment manual (machine-specific)\n\n"
-                "> Division of labor: day-to-day commands and the pass criterion are canonized in `verify/CLAUDE.md` (oEDA section), "
-                "the Verilator/OPEN_EDA coding rules in `.claude/rules/oeda-verilator.md`; this file covers only how this machine is set up.\n\n"
-                "## One-time setup\n\n- Verilator: OSS CAD Suite unpacked and its `environment` sourced in the login shell (`source <oss-cad-suite>/environment`).\n"
-                "- UVM-1.2 library: `export UVM_HOME=<path>/uvm-1.2` (wsim_oeda default: `$HOME/tools/uvm-1.2`).\n"
-                "- Python 3 with openpyxl for RalGen.\n- Waveforms: an FST viewer (Surfer or GTKWave).\n\n"
-                "To be completed for this machine (paths, versions) when the oEDA flow is first run.\n")
+        return src_text   # generic Linux setup manual; the project fills in its machine section
     if kind == "answers":
         return json.dumps({"bootstrapped_from": {"repo": ctx["src"], "commit": ctx["sha"], "date": TODAY, "with": ctx["with"],
                                                  "source_values": dict(ctx["applied"]), "source_modules": ctx["modules"]},

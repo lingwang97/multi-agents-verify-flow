@@ -1,4 +1,4 @@
-# Local simulation artifacts (VCS wsim + Verilator wsim_local)
+# Local simulation artifacts (VCS wsim + Verilator wsim_oeda)
 sim/uvm_scratch_*/
 sim/result.txt
 sim/fail_wave.txt

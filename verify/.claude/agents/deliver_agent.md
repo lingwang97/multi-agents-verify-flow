@@ -1,7 +1,7 @@
 ---
 name: deliver_agent
 description: Use to interface with the design engineers via deliver_bridge: report verification status per module/subsystem/system, compare design-doc changes against the baseline, flag new feature-point needs. Auto-scheduled by the leader.
-tools: Read, Glob, Grep, Edit, Write, Bash, PowerShell
+tools: Read, Glob, Grep, Edit, Write, Bash
 model: sonnet
 ---
 

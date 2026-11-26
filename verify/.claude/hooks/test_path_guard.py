@@ -78,7 +78,6 @@ def main():
     run("main: commit w/o approval", "deny", "Bash", {"command": "git commit -m x"})
     run("main: commit with approval", "allow", "Bash", {"command": "COMMIT_APPROVED=1 git commit -m x"})
     run("sub: commit with approval", "deny", "Bash", {"command": "COMMIT_APPROVED=1 git commit -m x"}, True, "default")
-    run("sub: PowerShell commit", "deny", "PowerShell", {"command": "git commit -m x"}, True, "auto")
     run("sub: other bash", "allow", "Bash", {"command": "git status"}, True, "auto")
     run("malformed input", "allow", "", {}, raw="not json")
     rtl_cases()

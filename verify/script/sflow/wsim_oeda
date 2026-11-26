@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 ## -----------------------------------------------------------------------------
-## wsim_oeda - open-source-EDA (oEDA) simulation runner (Verilator + UVM-1.2, WSL)
+## wsim_oeda - open-source-EDA (oEDA) simulation runner (Verilator + UVM-1.2)
 ##
 ## Scope : single-case bring-up / smoke / code-coverage runs on the local box.
 ##         The Synopsys flow (./wsim: VCS + Verdi + LSF) stays the golden

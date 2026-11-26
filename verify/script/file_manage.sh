@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 ################################################################################
 # file_manage.sh - deploy flow files from script/ into their runtime locations.
-# Runs on Linux and on Windows (Git Bash / WSL / MSYS).
+# Runs on Linux (bash).
 # Safe to run from any working directory; paths are resolved relative to this
 # script so `bash script/file_manage.sh` and `./file_manage.sh` both work.
 ################################################################################

@@ -5,7 +5,7 @@ Enforces the rules from docs/ops/multi_agent_ops.md §1/§6:
 
 1. Write/Edit/MultiEdit/NotebookEdit may only touch files under the
    writable roots: verify/ (the project dir), deliver_bridge/, sim/.
-2. Bash/PowerShell `git commit`:
+2. Bash `git commit`:
    - inside a subagent: always blocked, even with COMMIT_APPROVED=1;
    - main session (leader): blocked unless the command carries
      COMMIT_APPROVED=1 (escape hatch after explicit user approval).
@@ -251,7 +251,7 @@ def main():
         if path:
             _check_write(path, data, tool)
         return
-    if tool in ("bash", "powershell"):
+    if tool == "bash":
         cmd = ti.get("command") or ""
         if not re.search(r"\bgit\b[^|;&]{0,80}\bcommit\b", cmd):
             return

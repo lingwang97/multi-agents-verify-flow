@@ -19,7 +19,7 @@ Every SV source must compile on both flows: VCS (sign-off) and oEDA (Verilator, 
 - Never start a comment with `verilator` (`// verilator ...` is parsed as a lint pragma → `%Error-BADVLTPRAGMA`).
 - Covergroups are fine to write (Verilator parses them) but are collected on VCS only.
 
-## Property checks are dual-tracked (user decision 2026-11-18)
+## Property checks are dual-tracked
 
 - VCS side: SVA concurrent assertions / property coverage live only in `<mod>_if_pc.sv`, wholly wrapped in `` `ifndef OPEN_EDA ``.
 - oEDA side: logic-equivalent procedural checks live in the monitor/scoreboard, wrapped in `` `ifdef OPEN_EDA ``; they count toward the oEDA passrate.
