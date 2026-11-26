@@ -12,7 +12,7 @@ Paths below are relative to `verify/` (the "verify root").
 ## Run this — the driver
 
 ```bash
-python3 .claude/skills/add-test-case/add_test_case.py \
+${CLAUDE_SKILL_DIR}/add_test_case.py \
   --module <mod> \
   --function <short_scenario_name> \
   --level <system|block> \
@@ -25,15 +25,15 @@ Examples:
 
 ```bash
 # system-level
-python3 .claude/skills/add-test-case/add_test_case.py \
+${CLAUDE_SKILL_DIR}/add_test_case.py \
   --module <mod> --function toggle_check --level system --stage1 true --smoke true
 
 # block-level (the module needs its block base pair - see Gotchas)
-python3 .claude/skills/add-test-case/add_test_case.py \
+${CLAUDE_SKILL_DIR}/add_test_case.py \
   --module <mod> --function burn_and_read --level block --stage2 true --iteration 4
 
 # block-level with an extra compile define for this case only
-python3 .claude/skills/add-test-case/add_test_case.py \
+${CLAUDE_SKILL_DIR}/add_test_case.py \
   --module <mod> --function wait_states_block --level block --macro-opt "+<EXTRA_DEFINE>"
 ```
 

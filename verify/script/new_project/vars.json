@@ -45,7 +45,6 @@
             ".claude/rules/filelists.md",
             ".claude/agents/debug_agent.md",
             ".claude/agents/json2env_agent.md",
-            ".claude/hooks/path_guard.py",
             ".claude/skills/add-test-case/test_case_dev_manual.md"
           ],
           "pattern": "tb_top_{v}"
@@ -55,7 +54,6 @@
             "CLAUDE.md",
             ".claude/rules/generated-assembly.md",
             ".claude/agents/json2env_agent.md",
-            ".claude/hooks/path_guard.py",
             ".claude/skills/add-test-case/SKILL.md"
           ],
           "pattern": "{v}_sequence_lib"
@@ -250,25 +248,11 @@
           "pattern": "AskUserQuestion — is in {v};"
         },
         {
-          "files": [
-            ".claude/agents/debug_agent.md",
-            ".claude/agents/deliver_agent.md",
-            ".claude/agents/dev_agent.md",
-            ".claude/agents/json2env_agent.md",
-            ".claude/agents/review_agent.md",
-            ".claude/agents/spec2json_agent.md"
-          ],
+          "files": [],
           "pattern": "are written in {v};"
         },
         {
-          "files": [
-            ".claude/agents/debug_agent.md",
-            ".claude/agents/deliver_agent.md",
-            ".claude/agents/dev_agent.md",
-            ".claude/agents/json2env_agent.md",
-            ".claude/agents/review_agent.md",
-            ".claude/agents/spec2json_agent.md"
-          ],
+          "files": [],
           "pattern": "the leader, in {v})"
         }
       ]
@@ -295,14 +279,7 @@
           "pattern": "(this one included) is in {v}."
         },
         {
-          "files": [
-            ".claude/agents/debug_agent.md",
-            ".claude/agents/deliver_agent.md",
-            ".claude/agents/dev_agent.md",
-            ".claude/agents/json2env_agent.md",
-            ".claude/agents/review_agent.md",
-            ".claude/agents/spec2json_agent.md"
-          ],
+          "files": [],
           "pattern": "is written in {v}."
         }
       ]

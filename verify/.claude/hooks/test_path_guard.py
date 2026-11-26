@@ -80,9 +80,40 @@ def main():
     run("sub: commit with approval", "deny", "Bash", {"command": "COMMIT_APPROVED=1 git commit -m x"}, True, "default")
     run("sub: other bash", "allow", "Bash", {"command": "git status"}, True, "auto")
     run("malformed input", "allow", "", {}, raw="not json")
+    dyn_cases()
     rtl_cases()
     print("FAILS: %d" % fails)
     sys.exit(1 if fails else 0)
+
+
+def dyn_cases():
+    """Project-derived SOT names come from answers.json at runtime - throw-away project."""
+    global ENV
+    import shutil
+    import tempfile
+    tmp = tempfile.mkdtemp(prefix="pg_dyn_")
+    proj = os.path.join(tmp, "verify")
+    os.makedirs(os.path.join(proj, "script", "new_project"))
+    saved = ENV
+    ENV = dict(os.environ, CLAUDE_PROJECT_DIR=proj)
+
+    def answers(name):
+        with open(os.path.join(proj, "script", "new_project", "answers.json"), "w") as f:
+            json.dump({"answers": {}, "applied": {"project_name": name}}, f)
+    try:
+        answers("foo7")
+        run("dyn: seq/foo7_sequence_lib.sv", "ask", "Edit", W(os.path.join(proj, "seq", "foo7_sequence_lib.sv")), True, "default")
+        run("dyn: tb_top_foo7 top", "ask", "Write", W(os.path.join(proj, "tb_top", "tb_top", "tb_top_foo7.sv")), True, "default")
+        run("dyn: other project's lib not gated", "allow", "Edit", W(os.path.join(proj, "seq", "bar_sequence_lib.sv")), True, "default")
+        answers("")
+        chip_lib = os.path.join(proj, "seq", "ch" + "ip_sequence_lib.sv")  # fallback literal, not a rewrite target
+        run("dyn: no name -> chip fallback gated", "ask", "Edit", W(chip_lib), True, "default")
+        run("dyn: no name, foo7 not gated", "allow", "Edit", W(os.path.join(proj, "seq", "foo7_sequence_lib.sv")), True, "default")
+        os.remove(os.path.join(proj, "script", "new_project", "answers.json"))
+        run("dyn: missing answers -> chip fallback", "ask", "Edit", W(chip_lib), True, "default")
+    finally:
+        ENV = saved
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def rtl_cases():

@@ -111,7 +111,7 @@ An oEDA pass is **necessary, never sufficient**: functional coverage, SVA and ga
 |---|---|
 | Add a test case | ask Claude to add one (add-test-case skill: test + sequence + JSON entry), then fill `body()` — guide: `.claude/skills/add-test-case/test_case_dev_manual.md` |
 | Define a test | `json/case/<mod>.json` entry: regression flags, `UVM_TESTNAME`, `VCS_MACRO_OPT`, `VCS_PLUSARGS_OPT` — never edit generated list files |
-| Wire a DUT (block level) | DUT instance in `tb_top/tb_top/tb_top_<mod>.sv`, its ports bound to `dut_<port>` nets; the nets and their assigns to/from the interface in `intf/<mod>_if_conn.sv` (`_gpls.sv` for gate/post-layout) — `CLAUDE.md` "Interface connection" |
+| Wire a DUT (block level) | DUT instance in `tb_top/tb_top/tb_top_<mod>.sv`, its ports bound to `dut_<port>` nets; the nets and their assigns to/from the interface in `intf/<mod>_if_conn.sv` (`_gpls.sv` for gate/post-layout) — `.claude/rules/uvm-architecture.md` "Interface connection" |
 | Code that VCS and Verilator read differently | Verilator form under `` `ifdef OPEN_EDA ``, the VCS form unchanged under `` `else `` — `.claude/rules/oeda-verilator.md` |
 | Compare the two flows | `/conv-report` |
 | Add / remove a module | via `/new-verification` (spec2json → json2env) — never by hand |

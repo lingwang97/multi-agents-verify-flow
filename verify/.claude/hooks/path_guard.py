@@ -43,7 +43,10 @@ import sys
 # Source-of-truth paths, relative to the project dir (verify/), "/" separators.
 # Module-private filelists (uvm_blk_<mod>.f, tb_top_<mod>.f) are excluded below.
 SOT_PREFIXES = ("script/", ".claude/", "utils/")
-SOT_FILES = {
+# The two project-derived assembly names (seq/<project>_sequence_lib.sv,
+# tb_top/tb_top/tb_top_<project>.sv) are built at runtime from the project
+# name in script/new_project/answers.json - no literal to rewrite per project.
+SOT_FILES_STATIC = {
     "CLAUDE.md",
     "json/module.json",
     "env/top_env.sv",
@@ -53,14 +56,31 @@ SOT_FILES = {
     "env/top_if_pc.sv",
     "test/base_test.sv",
     "seq/base_seq.sv",
-    "seq/chip_sequence_lib.sv",
-    "tb_top/tb_top/tb_top_chip.sv",
     "tb_top/macro/tb_define.sv",
     "tb_top/component/vif_declare.sv",
     "tb_top/component/dump_wave.sv",
     "tb_top/component/if_conn.sv",
     "tb_top/component/tb_sdf.sv",
 }
+
+
+def _project_name():
+    proj = _project_dir()
+    try:
+        with open(os.path.join(proj, "script", "new_project", "answers.json"), encoding="utf-8") as f:
+            a = json.load(f)
+        name = ((a.get("applied") or {}).get("project_name")
+                or (a.get("answers") or {}).get("project_name") or "").strip()
+        if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
+            return name
+    except (OSError, ValueError):
+        pass
+    return "chip"
+
+
+def sot_files():
+    n = _project_name()
+    return SOT_FILES_STATIC | {"seq/%s_sequence_lib.sv" % n, "tb_top/tb_top/tb_top_%s.sv" % n}
 SOT_GLOBS = ("tb_top/filelist/*.f",)
 SOT_GLOB_EXCEPT = ("tb_top/filelist/uvm_blk_*.f", "tb_top/filelist/tb_top_*.f")
 REF_MODEL_GLOB = "uvc/*/src/*_ref_model.sv"
@@ -119,7 +139,7 @@ def _rel_to_project(abspath):
 
 def _is_source_of_truth(rel):
     lrel = rel.lower()  # Windows paths are case-insensitive
-    if lrel.startswith(SOT_PREFIXES) or lrel in {f.lower() for f in SOT_FILES}:
+    if lrel.startswith(SOT_PREFIXES) or lrel in {f.lower() for f in sot_files()}:
         return True
     if any(fnmatch.fnmatchcase(lrel, g) for g in SOT_GLOBS):
         return not any(fnmatch.fnmatchcase(lrel, g) for g in SOT_GLOB_EXCEPT)

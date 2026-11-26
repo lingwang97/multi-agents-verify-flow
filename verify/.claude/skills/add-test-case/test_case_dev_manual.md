@@ -4,7 +4,7 @@
 
 This is a task-oriented guide for engineers writing a new test case in this `verify` UVM environment. It is **not** a UVM tutorial — it assumes you know UVM basics and want to know specifically what to do *in this repo*. For the overall architecture (naming conventions, `wsim` flow), read `CLAUDE.md` at the root of this tree first (filelist layering: `.claude/rules/filelists.md`); this manual only repeats what's needed inline. It is written for any module of the chip (`<mod>` below): which modules exist and how far each is customised is project state, kept in `docs/memory/arch_memory.md` §0 (open gaps: §9) and `docs/modules/<mod>.md`.
 
-**Automating §3/§4:** this manual lives inside the `add-test-case` skill (`.claude/skills/add-test-case/`, next to `SKILL.md` and `add_test_case.py`) because the skill scaffolds the mechanical parts of §3 and §4 (the `test/`/`seq/` classes and the JSON entry) in one step, following the naming and inheritance rules below. Run `python3 .claude/skills/add-test-case/add_test_case.py --help` — you still fill in real stimulus (§3.4-3.6) by hand. Paths are relative to the verify root (`verify/`) unless stated otherwise.
+**Automating §3/§4:** this manual lives inside the `add-test-case` skill (`.claude/skills/add-test-case/`, next to `SKILL.md` and `add_test_case.py`) because the skill scaffolds the mechanical parts of §3 and §4 (the `test/`/`seq/` classes and the JSON entry) in one step, following the naming and inheritance rules below. Run `${CLAUDE_SKILL_DIR}/add_test_case.py --help` — you still fill in real stimulus (§3.4-3.6) by hand. Paths are relative to the verify root (`verify/`) unless stated otherwise.
 
 ## 2. The starting state: what a generated module looks like
 
@@ -14,7 +14,7 @@ This is a task-oriented guide for engineers writing a new test case in this `ver
 - **Driver** only drives `card_sel` (`// begin your drv logic here.` marks where real driving goes) — nothing else on the interface is driven.
 - **Scoreboard** checks nothing: `main_phase` prints a banner and waits, the monitor's write method just logs the received transaction.
 - **Coverage** has two generic single-bin covergroups on the ctrl signal — no protocol-state bins, no crosses.
-- **`seq/comm_<mod>_methods.sv`** (reusable per-module helper tasks, `` `include ``-d into `base_seq`'s class body — `CLAUDE.md` Architecture, "Test/sequence base") is an empty placeholder.
+- **`seq/comm_<mod>_methods.sv`** (reusable per-module helper tasks, `` `include ``-d into `base_seq`'s class body — `.claude/rules/uvm-architecture.md` "Test/sequence base") is an empty placeholder.
 - **Tests and sequences**: `test/<mod>_test.sv` holds `<mod>_base_test` plus an inert `<mod>_smoke_test`; `seq/<mod>_seq.sv` holds `<mod>_base_seq` plus an empty `<mod>_smoke_seq`. A module generated with `has_tb_top: true` also gets the block-level pair `test/<mod>_block_base_test.sv` / `seq/<mod>_block_base_seq.sv` (with an inert `<mod>_smoke_block_test`), `tb_top/tb_top/tb_top_<mod>.sv` and `tb_top/filelist/uvm_blk_<mod>.f`.
 - **JSON** (`json/case/<mod>.json`) starts with placeholder entries (`<mod>_smoke_test`, `<mod>_smoke_block_test`, `<mod>_random1_test`, `<mod>_random2_test`) using fake tokens (`+DEFINE1+DEFINE2+DEFINE3=100`, `+PLUSARGS1…`); most of their `UVM_TESTNAME`s have no class.
 
@@ -28,7 +28,7 @@ This is a task-oriented guide for engineers writing a new test case in this `ver
 - **Scoreboard**: a real model of the expected behaviour (e.g. a shadow memory for a storage DUT), derived from the spec - never from the RTL.
 - **Coverage**: bins on protocol state and data classes (boundaries, errors, wait states), crosses where they matter.
 - **Sequences**: reusable helpers (`<mod>_write/<mod>_read/<mod>_idle`-style) in the block base seq or `comm_<mod>_methods.sv`; helpers that need read data call `get_response`.
-- **DUT wiring** (block level): the DUT instance in `tb_top/tb_top/tb_top_<mod>.sv` binds its ports to `dut_*` nets; the nets and their assigns to and from the interface live in `intf/<mod>_if_conn.sv` (`_gpls.sv` for gate/post-layout) - CLAUDE.md "Interface connection".
+- **DUT wiring** (block level): the DUT instance in `tb_top/tb_top/tb_top_<mod>.sv` binds its ports to `dut_*` nets; the nets and their assigns to and from the interface live in `intf/<mod>_if_conn.sv` (`_gpls.sv` for gate/post-layout) - `.claude/rules/uvm-architecture.md` "Interface connection".
 - **JSON**: one entry per scenario with only the macros the case needs.
 
 Record the module's DUT facts, quirks and case macros in `docs/modules/<mod>.md`.
@@ -110,7 +110,7 @@ Put reusable tasks (register read/write wrappers, wait-for-signal helpers, etc.)
 
 ### 3.6 Wire the interface/driver/monitor/scoreboard/coverage for the real protocol
 
-If your test exercises real protocol behaviour (not just register writes through RAL), add real signals. Follow `CLAUDE.md`'s UVC-pattern rule: a new interface signal is added in `*_if.sv`, sampled in the monitor and covered in `*_coverage.sv`. The scoreboard needs a real check replacing the generated stub (§2) before a passing run means anything (§5). Property checks are dual-tracked (SVA in `*_if_pc.sv` for VCS, procedural equivalents in the monitor/scoreboard for oEDA — `.claude/rules/oeda-verilator.md`).
+If your test exercises real protocol behaviour (not just register writes through RAL), add real signals. Follow the UVC-pattern rule (`.claude/rules/uvm-architecture.md`): a new interface signal is added in `*_if.sv`, sampled in the monitor and covered in `*_coverage.sv`. The scoreboard needs a real check replacing the generated stub (§2) before a passing run means anything (§5). Property checks are dual-tracked (SVA in `*_if_pc.sv` for VCS, procedural equivalents in the monitor/scoreboard for oEDA — `.claude/rules/oeda-verilator.md`).
 
 ## 4. Registering the test in JSON (not in SV)
 
