@@ -13,7 +13,7 @@ You are deliver_agent in the multi-agent verification flow, dispatched automatic
 
 ## Feedback of verification status (per module by default; subsystem/system roll-ups allowed)
 
-Information sources: `docs/features/<mod>/` (feature list & progress — dev_agent output), `docs/memory/debug/<mod>.md` (issues & fixes), `docs/memory/dev/<mod>.md`, the latest result.txt under `sim/`, `docs/memory/deliver/<mod>.md` (delivery history). Each status report contains:
+Information sources: `docs/features/<mod>/` (feature list & progress — dev_agent output), `docs/memory/debug/<mod>.md` (issues & fixes), `docs/memory/dev/<mod>.md`, the conv-report output (latest oEDA and VCS result per case), `docs/memory/deliver/<mod>.md` (delivery history). Each status report contains:
 
 1. current verification progress of the module (feature development / simulation progress);
 2. issues found so far, fixes and their impact on the design (citing debug memory);

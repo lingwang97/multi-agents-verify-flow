@@ -470,6 +470,9 @@ endif
 uvm_package = -ntb_opts uvm-1.2
 uvm_para += +UVM_TESTNAME=$(UVM_TESTNAME) +UVM_VERBOSITY=$(UVM_VERBOSITY)
 uvm_para +=$(subst +, +,$(VCS_PLUSARGS_OPT))
+# command-line plusargs from wsim (+A+B form, like VCS_PLUSARGS_OPT); placed before
+# uvm_para on the simv line so they win over the case JSON ones (first match)
+cmd_plusargs_list := $(subst +, +,$(cmd_plusargs))
 
 
 #-------------------------------------------------------------------------
@@ -565,7 +568,7 @@ sim:
 	make simv_echo; make covsim; echo current SEED is $(SEED);
 covsim:
 	./simv +vcs+lic+wait -ucli -l sim.log +ntb_stop_on_constraint_solver_error=1 -assert quiet+report \
-	$(dump_simv) $(fsdb_force) $(uvm_para) $(gui_option) +ntb_random_seed=$(SEED) $(cm_para_sim) $(fgp_para) \
+	$(cmd_plusargs_list) $(dump_simv) $(fsdb_force) $(uvm_para) $(gui_option) +ntb_random_seed=$(SEED) $(cm_para_sim) $(fgp_para) \
 	$(simv_opt) $(vip_sim_para)$(xprop_sim) $(init_reg_cfg) $(dpo_sim_para)
 show:
 	dve -vpd simv.vpd -full64 &
@@ -603,7 +606,7 @@ com_var = vcs $(VCS_MACRO_OPT) -timescale=1ns/10ps  +v2k -sverilog $(fgp_compile
 	-top tb_top
 
 simv_var = ./simv +vcs+lic+wait -ucli -l sim.log +ntb_stop_on_constraint_solver_error=1 -assert quiet+report \
-	$(dump_simv) $(fsdb_force) $(uvm_para) $(gui_option) +ntb_random_seed=$(SEED) $(cm_para_sim) $(fgp_para) \
+	$(cmd_plusargs_list) $(dump_simv) $(fsdb_force) $(uvm_para) $(gui_option) +ntb_random_seed=$(SEED) $(cm_para_sim) $(fgp_para) \
 	$(simv_opt) $(vip_sim_para)$(xprop_sim) $(init_reg_cfg) $(dpo_sim_para)
 
 com_echo:

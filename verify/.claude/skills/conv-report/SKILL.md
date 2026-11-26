@@ -21,11 +21,13 @@ The script resolves the repo-root `sim/` from its own location, so it runs from 
 
 | Column | Meaning |
 |---|---|
-| `case` | case name (scratch suffix after `uvm_scratch_` / `uvm_scratch_oeda_`) |
-| `oEDA` | last line for this case in the oEDA tree's `result.txt` (PASS/FAIL/-) |
+| `case` | case key of `json/case/<mod>.json` |
+| `oEDA` | status of the case's last oEDA run (`sim/uvm_scratch_oeda_<case>/result.txt`) |
 | `oEDA-cov` | `yes` if a `-covrpt` annotated `cov_report/` exists (line/toggle coverage) |
-| `VCS` | last line for this case in the VCS tree's `result.txt` |
-| `VCS-cov` | `yes`/`?`/`-` for VCS coverage artifacts (naming varies by `-cm` invocation) |
+| `VCS` | status of the case in the newest `wsim` invocation dir that ran it (`sim/uvm_scratch_<case\|mod\|group>_<timestamp>_.../result.txt`; run names `<case>_<prefix>_iter<N>` are mapped back to the case) |
+| `VCS-cov` | `yes` if that invocation has `comp_<case>/simv.vdb` (`-cm`) |
+
+A status over several iterations is PASS only when every iteration passed, otherwise the first non-PASS status (`FAIL`, `compile_error`, `sim_setup_error`); `-` = the flow has not run the case.
 
 A case is **converged** only when it shows PASS in both `oEDA` and `VCS` columns;
 the summary line counts those. Remember the sign-off rules in

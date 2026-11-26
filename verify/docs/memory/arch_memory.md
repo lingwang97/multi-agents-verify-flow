@@ -65,7 +65,7 @@ This repository is the **framework**: `script/uvm_env_config_template.json` list
 
 ## 5. Two-flow closed loop: oEDA first, VCS sign-off (rules since 2026-11-11)
 
-Naming: the open-source flow is **oEDA** (script `wsim_oeda`, scratch `sim/uvm_scratch_oeda_<case>/`, isolation define `+define+OPEN_EDA`); the business flow is VCS (`wsim`, `sim/uvm_scratch_<case>/`).
+Naming: the open-source flow is **oEDA** (script `wsim_oeda`, scratch `sim/uvm_scratch_oeda_<case>/`, isolation define `+define+OPEN_EDA`); the business flow is VCS (`wsim`, one `sim/uvm_scratch_<case|mod|group>_<timestamp>_.../` per invocation; layout in CLAUDE.md Commands).
 
 **Loop:** develop/debug a case with `./wsim_oeda -c <case> [-seed 1]` (fast iteration, FST waves) -> once stable, confirm the same case on VCS with `./wsim -c <case> -uvm` -> converge with VCS regression groups (`-smoke/-stage1/-stage2/-full`) and coverage (`-cm`, functional covergroups via `-fm`). Which VCS runs the agents start on their own: ops §3 tiers.
 

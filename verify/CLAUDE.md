@@ -23,8 +23,8 @@ VCS flow — the golden reference (Linux host with VCS/Verdi; LSF dispatch optio
 ./wsim -h                                # full option list
 ```
 
-- `wsim` generates the RAL model, expands the test list from JSON, then compiles and simulates each case in `sim/uvm_scratch_<case>/`.
-- Pass = no `UVM_ERROR`/`UVM_FATAL` in `sim.log`. Results roll up into `result.txt`; rerun commands for failures land in `fail_wave.txt`.
+- `wsim` generates the RAL model, expands the test list from JSON, then compiles and simulates in one directory per invocation: `sim/uvm_scratch_<case|mod|group>_<timestamp>_<mtm>_<corner>_<level>/` (`-tag <t>` replaces the timestamp part, `-nopostfix` drops it). Inside: `comp_<case>/` (compile; `simv.vdb` with `-cm`), one `[FAKECORE_]sim_<case>_<prefix>_iter<N>_<level>/sim.log` per run, `result.txt` (every run + pass rate) and `fail_wave.txt` (rerun commands for failures).
+- Pass = no `UVM_ERROR`/`UVM_FATAL` in `sim.log`. Runtime plusargs: `./wsim -c <case> +NAME=value ...` (also `wsim_oeda`; placed before the case JSON plusargs, so they win).
 - What a switch expands to: the Makefile (source `script/sflow/Makefile`, deployed to `tb_top/scripts/`).
 
 ## Open-source EDA flow (oEDA: `wsim_oeda`, Verilator)

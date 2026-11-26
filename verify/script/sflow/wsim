@@ -18,6 +18,9 @@ export OPTS_DUMPVPD="FALSE"
 export OPTS_LEVEL="RTL"
 export OPTS_DPO="null"
 export OPTS_SIMV=""
+# runtime plusargs from the command line (+NAME[=value] ...), joined without spaces
+# like VCS_PLUSARGS_OPT; the Makefile splits them at each '+'
+export OPTS_CMD_PLUSARGS=""
 export OPTS_MODULE=""
 export OPTS_GEN_MODE_SWITCH="FALSE"
 export OPTS_TIME_POSTFIX="TRUE"
@@ -128,6 +131,7 @@ function usage()
     echo "    -full                       :   set to run the full regression"
     echo "    -uvm                        :   set to support UVM verification environment"
     echo "    -upf| + upf_file            :   set to run netlist+upf sim flow"
+    echo "    +NAME[=value]               :   runtime plusarg passed to simv (repeatable; placed before the case JSON plusargs, so it wins; a value must not contain '+')"
 
     echo ""
 }
@@ -200,7 +204,7 @@ function print_result()
     else
         caseseed=$(grep -oP '\+ntb_random_seed\=\K[0-9]+' sim.log)
         if ! grep  -q "$casename[[:space:]]\+" ${sim_dir}/fail_wave.txt;then
-            echo "./wsim -c $casename -uvm -fsdb -seed $caseseed"  >>${sim_dir}/fail_wave.txt
+            echo "./wsim -c $casename -uvm -fsdb -seed $caseseed${OPTS_CMD_PLUSARGS//+/ +}"  >>${sim_dir}/fail_wave.txt
         fi
         cm_post -dir $sim_dir$comp_dir/simv.vdb -test_status "fail"
 
@@ -343,6 +347,10 @@ function buildUvmCase()
     make_option+=" dpo=$OPTS_DPO"
     
     make_option+=" simv_opt=$OPTS_SIMV"
+
+    if [[ -n $OPTS_CMD_PLUSARGS ]]; then
+        make_option+=" cmd_plusargs=$OPTS_CMD_PLUSARGS"
+    fi
 
     make_option+=" testname=$testname"
 
@@ -1071,6 +1079,13 @@ while [ $# -gt 0 ]; do
 	-upf)
 	    shift
 	    OPTS_UPF_FILE="$1"
+	    ;;
+	+*)
+	    if [[ "$1" =~ [[:space:]] || "${1:1}" == *"+"* ]]; then
+	        echo "invalid plusarg '$1': one +NAME[=value] per argument, no spaces, no '+' inside the value"
+	        exit 1
+	    fi
+	    OPTS_CMD_PLUSARGS+="$1"
 	    ;;
 	*)
 	    echo "invalid option, please check following usage"

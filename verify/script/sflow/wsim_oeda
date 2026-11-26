@@ -41,6 +41,7 @@ OPTS_SEED_VALUE=""
 OPTS_DUMPWAVE=""          # default: TRUE for a single case, FALSE for -m / regression groups
 OPTS_COVRPT="FALSE"
 OPTS_JOBS=2
+CMD_PLUSARGS=()           # runtime plusargs from the command line, passed before the case JSON ones
 OPTS_COV_TYPE="${WSIM_OEDA_COV:-${WSIM_LOCAL_COV:-addr}}"
 
 wsim_dir_path=$(dirname $(realpath $0))
@@ -63,6 +64,7 @@ function usage() {
     echo "    -j + N                    : Parallel simulations (default 2; builds run one at a time)"
     echo "    -wave | -nowave           : FST dump on/off (default: on for -c, off for -m/groups)"
     echo "    -covrpt                   : verilator_coverage annotated report (per case; merged for -m/groups)"
+    echo "    +NAME[=value]             : runtime plusarg passed to simv (repeatable; wins over the case JSON plusargs)"
     echo "    -h  |--help               : Show help information"
     echo "    -v  |--version            : Show version information"
     echo ""
@@ -85,7 +87,8 @@ while [ $# -gt 0 ]; do
         -wave)           OPTS_DUMPWAVE="TRUE" ;;
         -nowave)         OPTS_DUMPWAVE="FALSE" ;;
         -covrpt)         OPTS_COVRPT="TRUE" ;;
-        *)               echo "invalid option: $1"; usage; exit 1 ;;
+        +*)              CMD_PLUSARGS+=("$1") ;;
+        *)             echo "invalid option: $1"; usage; exit 1 ;;
     esac
     shift
 done
@@ -266,9 +269,9 @@ print("****wsim_oeda****: filelist: %d sources, %d incdirs" % (len(outs_files), 
 PYEOF
 }
 
-# Fingerprint of the sources: path + mtime + size of every listed file, of every
-# file directly in a listed +incdir (`include targets such as uvc/<mod>/src/*.sv)
-# and of the two files passed outside the filelist. Run from the build dir.
+# Fingerprint of the source CONTENTS (md5 per file, independent of mtimes): every
+# listed file, every file directly in a listed +incdir (`include targets such as
+# uvc/<mod>/src/*.sv) and the two files passed outside the filelist. Run from the build dir.
 function src_stamp() {
     {
         grep -v '^+incdir+' "$BUILD_DIR/uvm_oeda.f"
@@ -277,7 +280,8 @@ function src_stamp() {
         done
         echo "$database_path/verify/tb_top/macro/tb_define.sv"
         echo "$database_path/verify/utils/dpi_func.c"
-    } | sort -u | while read -r f; do [ -f "$f" ] && stat -c '%n %Y %s' "$f"; done | cksum
+    } | sort -u | while read -r f; do [ -f "$f" ] && printf '%s\0' "$f"; done \
+      | xargs -0 -r md5sum | cksum
 }
 
 ################################################################################
@@ -287,7 +291,7 @@ function src_stamp() {
 ################################################################################
 function compile() {
     local trace_opts="" cov_opts="" build_key
-    build_key="$(verilator --version)|PID=$PID_VALUE|$WL_DEFINES|$OPTS_DUMPWAVE|$OPTS_COVRPT|$(cksum "$BUILD_DIR/uvm_oeda.f" 2>/dev/null)|$(src_stamp)"
+    build_key="$(verilator --version)|UVM=$UVM_HOME|PID=$PID_VALUE|$WL_DEFINES|$OPTS_DUMPWAVE|$OPTS_COVRPT|$(cksum "$BUILD_DIR/uvm_oeda.f" 2>/dev/null)|$(src_stamp)"
     if [ -x "$BUILD_DIR/obj_dir/simv" ] && [ "$(cat "$BUILD_DIR/.build_key" 2>/dev/null)" == "$build_key" ]; then
         echo "****$me****: [$BUILD_TAG] build inputs unchanged, reusing obj_dir"
         return 0
@@ -393,6 +397,7 @@ function run_one() {
     (
         cd "$rundir" || exit 1
         "$simv" \
+            "${CMD_PLUSARGS[@]}" \
             "+UVM_TESTNAME=$testname" \
             +UVM_VERBOSITY=UVM_MEDIUM \
             +ntb_random_seed=$seed \
@@ -525,10 +530,12 @@ if [ "$RUN_MODE" == "group" ]; then
     summary="$wsim_dir_path/oeda_result.txt"
     rerun="$wsim_dir_path/oeda_fail_rerun.txt"
     : > "$summary"; : > "$rerun"
+    rerun_args=""
+    for a in "${CMD_PLUSARGS[@]}"; do rerun_args+=" $a"; done
     for c in "${ORDER[@]}"; do
         cat "${CASE_RES[$c]}" >> "$summary"
-        awk -v c="$c" '$2 == "compile_error" { print "./wsim_oeda -c " c; exit }' "${CASE_RES[$c]}" >> "$rerun"
-        awk '$2 == "FAIL" { s = $3; sub(/^seed=/, "", s); print "./wsim_oeda -c " $1 " -seed " s }' "${CASE_RES[$c]}" >> "$rerun"
+        awk -v c="$c" -v p="$rerun_args" '$2 == "compile_error" { print "./wsim_oeda -c " c p; exit }' "${CASE_RES[$c]}" >> "$rerun"
+        awk -v p="$rerun_args" '$2 == "FAIL" { s = $3; sub(/^seed=/, "", s); print "./wsim_oeda -c " $1 " -seed " s p }' "${CASE_RES[$c]}" >> "$rerun"
     done
     passrate=$((total > 0 ? pass * 100 / total : 0))
     echo "pass rate is: ${passrate}% ($pass/$total runs). Please check oeda_result.txt for detail status." >> "$summary"

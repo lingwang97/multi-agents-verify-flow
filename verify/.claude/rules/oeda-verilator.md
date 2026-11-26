@@ -16,6 +16,7 @@ Every SV source must compile on both flows: VCS (sign-off) and oEDA (Verilator, 
 - No `program` blocks outside an `` `ifndef OPEN_EDA `` guard (Verilator does not support them).
 - Assign a vif and `uvm_config_db::set` it in ONE `initial` block — Verilator gives no ordering guarantee between initial blocks.
 - Keep constraints simple; tests that need complex constraints must pass on VCS.
+- Dequeue only with `pop_front()` / `pop_back()` (or `delete(i)`), never by re-assigning a slice of the queue to itself (`q = q[1:$];`, `q = q[0:$-1];`): Verilator does not handle the self-slice as a dequeue the way VCS does, and the slice copies the whole queue on every call. Check `size()` before popping.
 - Never start a comment with `verilator` (`// verilator ...` is parsed as a lint pragma → `%Error-BADVLTPRAGMA`).
 - Covergroups are fine to write (Verilator parses them) but are collected on VCS only.
 
