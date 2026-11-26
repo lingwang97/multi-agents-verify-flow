@@ -85,15 +85,15 @@ cd <repo>/sim
 |---|---|---|
 | one case | `./wsim_oeda -c <case>` | `./wsim -c <case>` |
 | fixed seed | `./wsim_oeda -c <case> -seed 1` | `./wsim -c <case> -seed 1` |
-| waveform | FST by default (`-nowave` to skip) | `-fsdb` |
-| coverage | `-covrpt` (line/toggle) | `-cm` (code), `-fm` (functional) |
-| regression | — (loop over cases) | `-m <mod>`, `-smoke`, `-stage1`, `-stage2`, `-full` |
+| waveform | FST by default for `-c`, off for regressions (`-wave` / `-nowave`) | `-fsdb` |
+| coverage | `-covrpt` (line/toggle; merged for a regression) | `-cm` (code), `-fm` (functional) |
+| regression | `-m <mod>`, `-smoke`, `-stage1`, `-stage2`, `-full` (`-j N` parallel runs, default 2) | `-m <mod>`, `-smoke`, `-stage1`, `-stage2`, `-full` |
 | guard a license wait | — | `-timeout <seconds>` |
 
-**Pass** = simulator exit 0 and no `UVM_ERROR` / `UVM_FATAL` in `sim.log`. Results: `result.txt` (VCS: `sim/`; oEDA: `sim/uvm_scratch_oeda_<case>/`), rerun commands for VCS failures in `sim/fail_wave.txt`.
+**Pass** = simulator exit 0 and no `UVM_ERROR` / `UVM_FATAL` in `sim.log`. Results: VCS `sim/result.txt` + rerun commands in `sim/fail_wave.txt`; oEDA per case `sim/uvm_scratch_oeda_<case>/result.txt`, for a regression also `sim/oeda_result.txt` (pass rate) + `sim/oeda_fail_rerun.txt`.
 
 - A **block-level case** carries `+<MOD>_BLOCK_TEST` in its `VCS_MACRO_OPT` (any position); both flows then compile `tb_top/filelist/uvm_blk_<mod>.f` with the top `tb_top_<mod>.sv`.
-- `wsim_oeda` reuses `obj_dir` between runs and **rebuilds by itself when a source changes** — a plain shell loop over cases is a cheap local pre-regression.
+- `wsim_oeda` **shares one Verilator build** between cases with the same filelist and defines (`sim/oeda_build/`) and **rebuilds by itself when a source changes** — a module regression usually compiles once or twice.
 
 ```mermaid
 flowchart LR
@@ -213,7 +213,7 @@ flowchart LR
 | `WARNING: Verilator x.y is older than the recommended 5.054` | install a recent OSS CAD Suite; until then isolate each incompatible form with `OPEN_EDA` (`docs/ops/oeda_local_setup.md`) |
 | `WARNING: <dir> is not UVM-1.2` / UVM parse errors on Verilator | point `UVM_HOME` at an Accellera UVM-1.2 tree, not a simulator-bundled one |
 | Verilator syntax error at `uvm_config_db #(<pkg>::<type>)::get/set`, or a function without a return type | an older module generated before the fix: isolate it like the current templates do (class-scope `typedef` / `function void` under `` `ifdef OPEN_EDA ``) |
-| oEDA keeps running old code after an edit | redeploy (`file_manage.sh`) — the current `wsim_oeda` rebuilds on source changes; with an old copy delete `comp_<case>/.build_key` |
+| oEDA keeps running old code after an edit | redeploy (`file_manage.sh`) — the current `wsim_oeda` rebuilds on source changes; to force a rebuild delete `sim/oeda_build/` |
 | `` no `define PID in sim/project_name ... `` | run `bash script/file_manage.sh` (deploys `project_name`) |
 | `./wsim` fails under csh, or `bash\r: bad interpreter` | redeploy the current scripts (shebang on line 1, LF); a CRLF copy: re-checkout or `sed -i 's/\r$//' <file>` |
 | `simv: Command not found` | old Makefile that relied on `.` in `PATH` — sync, redeploy |

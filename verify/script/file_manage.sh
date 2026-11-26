@@ -15,6 +15,8 @@ root_dir="$(cd "$script_dir/.." && pwd)"   # verify/
 # copy <src> <dst>: ensure the destination's parent dir exists, then copy.
 # Dir -> existing dir syncs CONTENTS (cp -R src/. dst/); plain `cp -R src dst`
 # would re-nest the tree (utils/utils/) and never refresh existing files.
+# -p keeps the source mtimes: wsim_oeda's build key fingerprints source mtimes,
+# so a deploy must not make unchanged files look edited (forced oEDA rebuild).
 copy() {
     src="$1"
     dst="$2"
@@ -24,9 +26,9 @@ copy() {
     fi
     mkdir -p "$(dirname "$dst")"
     if [ -d "$src" ] && [ -d "$dst" ]; then
-        cp -R "$src"/. "$dst"/
+        cp -Rp "$src"/. "$dst"/
     else
-        cp -R "$src" "$dst"
+        cp -Rp "$src" "$dst"
     fi
     echo "  $src -> $dst"
 }

@@ -42,12 +42,12 @@ Sub-agents cannot ask the user mid-run, so file confirmation is tiered:
 
 - Parallel agents **≤ 6**.
 - One dev/debug instance per module at a time (avoids file-conflict surface); cross-module parallelism is fine.
-- Simulation load: VCS runs follow §3 (tiers, `WSIM_AGENT_VCS_MAX_JOBS`, background runs); oEDA compiles are heavy - batch loops for consecutive cases.
+- Simulation load: VCS runs follow §3 (tiers, `WSIM_AGENT_VCS_MAX_JOBS`, background runs); oEDA compiles are heavy - consecutive cases run as one `wsim_oeda -m <mod>` regression (shared builds, `-j` parallel simulations).
 
 ## 3. Dual-flow and coverage policy
 
 - **Flow order**: oEDA (`wsim_oeda`) leads early iteration; VCS (`wsim`) confirms and converges.
-- **Passrate definition**: pass cases / total cases; pass = simv exit 0 and no `UVM_ERROR`/`UVM_FATAL` in `sim.log`. The VCS stage starts at passrate ≥ 80%.
+- **Passrate definition**: pass runs / total runs (every iteration counts); pass = simv exit 0 and no `UVM_ERROR`/`UVM_FATAL` in `sim.log`. The oEDA passrate of a module comes from `./wsim_oeda -m <mod>` (`sim/oeda_result.txt`), the VCS one from `sim/result.txt`. The VCS stage starts at oEDA passrate ≥ 80%.
 - **Coverage ownership**: function coverage (covergroups) runs and converges on VCS only (`-cm`/`-fm`); property checks are dual-track — VCS runs the `<mod>_if_pc.sv` SVA (`` `ifndef OPEN_EDA `` guard), oEDA runs the logic-equivalent procedural checks in monitor/scoreboard (`` `ifdef OPEN_EDA `` guard, counted in the oEDA passrate); both sides are convergence-compared and any one-side change must be mirrored on the other.
 - **VCS runs by agents** (canonical here): debug_agent runs `wsim`, the leader schedules it, by tier:
 

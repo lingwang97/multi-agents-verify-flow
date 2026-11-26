@@ -32,16 +32,19 @@ VCS flow — the golden reference (Linux host with VCS/Verdi; LSF dispatch optio
 Local fast-iteration flow, run natively on Linux: Verilator (OSS CAD Suite) + UVM-1.2 + FST waves + `verilator_coverage`. Machine setup and the waveform viewer: `docs/ops/oeda_local_setup.md`.
 
 ```bash
-# from the repo-root sim/; single case only (-m / regression groups stay on VCS)
+# from the repo-root sim/
 bash ../verify/script/file_manage.sh     # deploys sim/wsim_oeda next to sim/wsim
-./wsim_oeda -c <case>                    # build + run (FST dump on by default)
-./wsim_oeda -c <case> -seed 1            # fixed base seed
-./wsim_oeda -c <case> -nowave            # no waveform dump
-./wsim_oeda -c <case> -covrpt            # + verilator_coverage report in cov_report/
+./wsim_oeda -c <case>                    # build + run one case (FST dump on by default)
+./wsim_oeda -c <case> -seed 1            # fixed seed (iteration forced to 1, like wsim)
+./wsim_oeda -m <mod>                     # all cases of a module (waves off; -wave to dump)
+./wsim_oeda -smoke | -stage1 | -stage2 | -full   # regression groups (same selection as wsim)
+./wsim_oeda -m <mod> -j 4                # parallel simulations (default 2; builds run one at a time)
+./wsim_oeda ... -nowave | -covrpt        # no waves / + verilator_coverage report
 ```
 
-- Limits: covergroups are parsed but not collected (`*_coverage.sv` converges on VCS only); only simple constraints; no SVA (dual-track rule: `.claude/rules/oeda-verilator.md`). VCS stays the sign-off flow (arch §5).
-- Scratch: `sim/uvm_scratch_oeda_<case>/comp_<case>/` — the compile+run cwd, three levels below the repo root to match the `.f` path depth. It holds `compile.log`, `uvm_oeda.f`, `run_iterN/{sim.log,wave.fst,coverage.dat}` and `cov_report/`.
+- Limits: covergroups are parsed but not collected (`*_coverage.sv` converges on VCS only); only simple constraints; no SVA (dual-track rule: `.claude/rules/oeda-verilator.md`); no gate/post level. VCS stays the sign-off flow (arch §5).
+- Builds are shared: cases with the same filelist, defines and wave/coverage flags use one Verilator build in `sim/oeda_build/<tag>_<sig>/` (`compile.log`, `uvm_oeda.f`, `obj_dir`; three levels below the repo root to match the `.f` path depth), reused until a source, define or tool changes.
+- Per case: `sim/uvm_scratch_oeda_<case>/result.txt` and `comp_<case>/` with `run_iterN/{sim.log,wave.fst,coverage.dat}`, `cov_report/` and a `build` link to its build dir. A `-m`/group run also writes `sim/oeda_result.txt` (every run + pass rate) and `sim/oeda_fail_rerun.txt` (one `./wsim_oeda -c <case> -seed <n>` per failed run); `-covrpt` merges the group's coverage into `sim/oeda_cov_<mod|group>/`. Exit status 0 only when every run passed.
 - Pass = simv exit 0 and no `UVM_ERROR`/`UVM_FATAL` in `run_iterN/sim.log`. The `-covrpt` summary mixes TB+UVC+DUT; DUT-only numbers are in the annotated `cov_report/<dut>.v` (`%000000` = zero-hit, `~` = partial).
 - `WSIM_OEDA_COV=none ./wsim_oeda ...` regenerates the RAL without covergroups if a Verilator build chokes on them.
 - **Block-level flow**: a case whose `VCS_MACRO_OPT` carries `+<MOD>_BLOCK_TEST` makes both flows compile `tb_top/filelist/uvm_blk_<mod>.f` with top `tb_top/tb_top/tb_top_<mod>.sv` instead of `uvm.f` (supported modules: arch §0). Block tests also use their own register-init config.

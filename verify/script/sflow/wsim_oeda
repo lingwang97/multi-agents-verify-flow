@@ -2,18 +2,25 @@
 ## -----------------------------------------------------------------------------
 ## wsim_oeda - open-source-EDA (oEDA) simulation runner (Verilator + UVM-1.2)
 ##
-## Scope : single-case bring-up / smoke / code-coverage runs on the local box.
-##         The Synopsys flow (./wsim: VCS + Verdi + LSF) stays the golden
-##         reference. covergroup-based functional coverage is NOT collected by
-##         Verilator (parsed only) - functional coverage still comes from VCS.
+## Scope : local single-case and regression runs (module / smoke / stage1 /
+##         stage2 / full - the same case selection as ./wsim, from the case
+##         JSON through testjson2lst.py). The Synopsys flow (./wsim: VCS +
+##         Verdi + LSF) stays the golden reference. covergroup-based functional
+##         coverage is NOT collected by Verilator (parsed only).
+##
+## Builds are shared: cases with the same filelist, defines and wave/coverage
+## flags use one Verilator build under sim/oeda_build/<tag>_<sig>/ (UVM_TESTNAME
+## is a runtime plusarg), reused while its build key is unchanged.
 ##
 ## Source of truth lives in script/sflow/wsim_oeda; deployed to sim/ by
 ## script/file_manage.sh. Run from the repo-root sim/ directory:
 ##
-##   ./wsim_oeda -c reg_smoke_test            # build + run one case (FST dump on)
-##   ./wsim_oeda -c reg_smoke_test -seed 1    # fixed base seed
-##   ./wsim_oeda -c reg_smoke_test -nowave    # disable waveform dump
-##   ./wsim_oeda -c reg_smoke_test -covrpt    # + verilator_coverage annotated report
+##   ./wsim_oeda -c <case>                # build + run one case (FST dump on)
+##   ./wsim_oeda -c <case> -seed 1        # fixed seed (iteration forced to 1, like wsim)
+##   ./wsim_oeda -m <mod>                 # all cases of a module (no waves; -wave to dump)
+##   ./wsim_oeda -smoke | -stage1 | -stage2 | -full   # regression groups
+##   ./wsim_oeda -m <mod> -j 4            # 4 simulations in parallel (default 2)
+##   ./wsim_oeda ... -covrpt              # + verilator_coverage annotated report
 ##
 ## Environment (once, e.g. in ~/.bashrc):
 ##   source ~/tools/oss-cad-suite/environment     # provides verilator/make
@@ -26,11 +33,14 @@
 
 set -o pipefail
 
-VERSION=1.0
+VERSION=1.1
 OPTS_TESTCASE_NAME=""
+OPTS_MODULE=""
+OPTS_REGRESSION_MODE=""
 OPTS_SEED_VALUE=""
-OPTS_DUMPWAVE="TRUE"
+OPTS_DUMPWAVE=""          # default: TRUE for a single case, FALSE for -m / regression groups
 OPTS_COVRPT="FALSE"
+OPTS_JOBS=2
 OPTS_COV_TYPE="${WSIM_OEDA_COV:-${WSIM_LOCAL_COV:-addr}}"
 
 wsim_dir_path=$(dirname $(realpath $0))
@@ -44,10 +54,15 @@ source "$flow_env"
 
 function usage() {
     echo "USAGE: $0 [OPTION]"
-    echo "    -c  |--case + case_name   : Set case name (lookup in verify/json/case/*.json)"
-    echo "    -seed + seed_num          : Set the base random seed number (default: random)"
-    echo "    -nowave                   : Disable FST waveform dump"
-    echo "    -covrpt                   : Generate verilator_coverage annotated report (cov_report/)"
+    echo "    -c  |--case + case_name   : Run one case (lookup in verify/json/case/*.json)"
+    echo "    -m  |--module + module    : Run all cases of a module"
+    echo "    -smoke | -stage1 | -stage2 | -full"
+    echo "                              : Run a regression group (case JSON flags)"
+    echo "                                (priority like wsim: group > -m > -c)"
+    echo "    -seed + seed_num          : Fixed seed; forces iteration 1 (default: random seeds)"
+    echo "    -j + N                    : Parallel simulations (default 2; builds run one at a time)"
+    echo "    -wave | -nowave           : FST dump on/off (default: on for -c, off for -m/groups)"
+    echo "    -covrpt                   : verilator_coverage annotated report (per case; merged for -m/groups)"
     echo "    -h  |--help               : Show help information"
     echo "    -v  |--version            : Show version information"
     echo ""
@@ -60,10 +75,14 @@ function die() {
 
 while [ $# -gt 0 ]; do
     case "$1" in
-        -h|-help)        usage; exit 0 ;;
+        -h|-help|--help) usage; exit 0 ;;
         -v|--version)    echo "version is $VERSION"; exit 0 ;;
         -c|--case)       shift; OPTS_TESTCASE_NAME="$1" ;;
+        -m|--module)     shift; OPTS_MODULE="$1" ;;
+        -smoke|-stage1|-stage2|-full) OPTS_REGRESSION_MODE="${1#-}" ;;
         -seed|--seed)    shift; OPTS_SEED_VALUE="$1" ;;
+        -j)              shift; OPTS_JOBS="$1" ;;
+        -wave)           OPTS_DUMPWAVE="TRUE" ;;
         -nowave)         OPTS_DUMPWAVE="FALSE" ;;
         -covrpt)         OPTS_COVRPT="TRUE" ;;
         *)               echo "invalid option: $1"; usage; exit 1 ;;
@@ -71,11 +90,27 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-[ -n "$OPTS_TESTCASE_NAME" ] || { echo "missing -c <case>"; usage; exit 1; }
+# case selection, same priority as wsim: regression group > module > single case
+if [ -n "$OPTS_REGRESSION_MODE" ]; then
+    RUN_MODE="group"; RUN_NAME="$OPTS_REGRESSION_MODE"; LIST_OPT=("--$OPTS_REGRESSION_MODE")
+elif [ -n "$OPTS_MODULE" ]; then
+    RUN_MODE="group"; RUN_NAME="$OPTS_MODULE"; LIST_OPT=(-m "$OPTS_MODULE")
+elif [ -n "$OPTS_TESTCASE_NAME" ]; then
+    RUN_MODE="case"; RUN_NAME="$OPTS_TESTCASE_NAME"; LIST_OPT=(-c "$OPTS_TESTCASE_NAME")
+else
+    echo "missing -c <case>, -m <module> or a regression group"; usage; exit 1
+fi
+[[ "$OPTS_JOBS" =~ ^[1-9][0-9]*$ ]] || die "-j needs a positive integer, got '$OPTS_JOBS'"
+[ -z "$OPTS_SEED_VALUE" ] || [[ "$OPTS_SEED_VALUE" =~ ^[0-9]+$ ]] || die "-seed needs a number, got '$OPTS_SEED_VALUE'"
+if [ -z "$OPTS_DUMPWAVE" ]; then
+    if [ "$RUN_MODE" == "case" ]; then OPTS_DUMPWAVE="TRUE"; else OPTS_DUMPWAVE="FALSE"; fi
+fi
+
 command -v verilator >/dev/null || die "verilator not on PATH. source ~/tools/oss-cad-suite/environment first"
 command -v python3   >/dev/null || die "python3 not found"
 : "${UVM_HOME:=$HOME/tools/uvm-1.2}"
 [ -f "$UVM_HOME/src/uvm_pkg.sv" ] || die "UVM library not found at $UVM_HOME (export UVM_HOME=...)"
+(( BASH_VERSINFO[0] > 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] >= 3) )) || die "bash >= 4.3 required (wait -n)"
 
 # Recommended toolchain (verify/docs/ops/oeda_local_setup.md): Verilator >= 5.054 and
 # Accellera UVM-1.2. Other versions still run; the warning points at known incompatibilities.
@@ -90,20 +125,40 @@ uvm_ver_file="$UVM_HOME/src/macros/uvm_version_defines.svh"
 if ! { grep -qs '^`define UVM_MAJOR_REV 1' "$uvm_ver_file" && grep -qs '^`define UVM_MINOR_REV 2' "$uvm_ver_file"; }; then
     echo "****$me****: WARNING: $UVM_HOME is not UVM-1.2 - the framework targets Accellera UVM-1.2 (see verify/docs/ops/oeda_local_setup.md)"
 fi
+command -v flock >/dev/null || echo "****$me****: WARNING: flock not found - concurrent wsim_oeda runs sharing a build are not serialized"
 
-sim_dir="$wsim_dir_path/uvm_scratch_oeda_${OPTS_TESTCASE_NAME}"
-test_full_name="$OPTS_TESTCASE_NAME"
+# Project id: the `define PID line of the deployed sim/project_name (the file the
+# VCS flow compiles), else of its source verify/script/sflow/project_name.
+function project_pid() {
+    local f
+    for f in "$database_path/sim/project_name" "$database_path/verify/script/sflow/project_name"; do
+        if [ -f "$f" ]; then
+            tr -d '\r' < "$f" | sed -n 's/^`define[[:space:]]\{1,\}PID[[:space:]]\{1,\}\([A-Za-z0-9_]\{1,\}\).*/\1/p' | head -1
+            return
+        fi
+    done
+}
+PID_VALUE="$(project_pid)"
+[ -n "$PID_VALUE" ] || die "no \`define PID in sim/project_name or verify/script/sflow/project_name - run file_manage.sh (the value is set by /new-project)"
 
 ################################################################################
 # RalGen - mirrors wsim's RalGen: (re)generate verify/ral/ral_reg_model.sv from
 # the register table $WSIM_REG_TABLE (flow_env.sh) when missing or inputs are newer.
+# Runs at most once per invocation; a failure fails every case that needs the RAL.
 ################################################################################
+RAL_STATE=""
 function RalGen() {
+    [ "$RAL_STATE" == "ok" ] && return 0
+    [ "$RAL_STATE" == "fail" ] && return 1
+    RAL_STATE="fail"
     local csv_input="$WSIM_REG_TABLE"
     local reg_script="$database_path/verify/utils/reg/gen_reg_model.py"
     local output="$database_path/verify/ral/ral_reg_model.sv"
-    [ -f "$csv_input" ]   || die "register table not found: $csv_input - this case compiles the RAL model (enable_ral); provide the CSV or update WSIM_REG_TABLE in verify/script/sflow/flow_env.sh"
-    [ -f "$reg_script" ]  || die "reg model generator not found: $reg_script"
+    if [ ! -f "$csv_input" ]; then
+        echo "****$me****'ERROR!!!'register table not found: $csv_input - this case compiles the RAL model (enable_ral); provide the CSV or update WSIM_REG_TABLE in verify/script/sflow/flow_env.sh" >&2
+        return 1
+    fi
+    [ -f "$reg_script" ] || { echo "****$me****'ERROR!!!'reg model generator not found: $reg_script" >&2; return 1; }
     mkdir -p "$database_path/verify/ral"
     local stamp="$output.covtype"
     if [ ! -f "$output" ] || [ "$csv_input" -nt "$output" ] || [ "$reg_script" -nt "$output" ] \
@@ -117,51 +172,49 @@ function RalGen() {
         elif /usr/bin/python3 -c 'import openpyxl' 2>/dev/null; then
             py3=/usr/bin/python3
         fi
-        "$py3" "$reg_script" -i "$csv_input" -cov "$OPTS_COV_TYPE" -o "$output" || die "RAL generation failed"
+        "$py3" "$reg_script" -i "$csv_input" -cov "$OPTS_COV_TYPE" -o "$output" \
+            || { echo "****$me****'ERROR!!!'RAL generation failed" >&2; return 1; }
         echo "$OPTS_COV_TYPE" > "$stamp"
     fi
-    [ -f "$output" ] || die "ral_reg_model.sv was not generated"
+    [ -f "$output" ] || { echo "****$me****'ERROR!!!'ral_reg_model.sv was not generated" >&2; return 1; }
+    RAL_STATE="ok"
 }
 
 ################################################################################
-# Case info from the JSON case database (same source of truth as ./wsim)
-# Sets: WL_MODULE WL_TESTNAME WL_ITER WL_DEFINES WL_PLUSARGS
+# Case list from the JSON case database - the same testjson2lst.py selection as
+# ./wsim (-c / -m / --smoke / --stage1 / --stage2 / --full).
 ################################################################################
-function get_case_info() {
-    # Consume the SAME single-case list the VCS flow generates (single parser, no drift).
-    # The two UVM_REG_WIDTH macros are filtered out for now: alignment with VCS is
-    # deferred until the real reg table lands (docs/memory/arch_memory.md section 5 item 4).
-    local listfile script
-    listfile=$(mktemp)
-    script="$database_path/verify/tb_top/scripts/testjson2lst.py"
-    [ -f "$script" ] || die "testjson2lst.py not found: $script"
+function gen_case_list() {
+    local script="$database_path/verify/tb_top/scripts/testjson2lst.py"
+    [ -f "$script" ] || die "testjson2lst.py not found: $script (run file_manage.sh)"
     python3 "$script" -f "$database_path/verify/json/module.json" \
-        -c "$OPTS_TESTCASE_NAME" -o "$listfile" \
+        "${LIST_OPT[@]}" -o "$1" \
         --project "$(cat "$wsim_dir_path/project_name")" --dpo null >/dev/null 2>&1 \
-        || die "testjson2lst.py failed for case $OPTS_TESTCASE_NAME"
-    local line
-    line=$(grep -v '^//' "$listfile" | head -1)
-    [ -n "$line" ] || die "case $OPTS_TESTCASE_NAME not found in the case JSON database"
-    rm -f "$listfile"
+        || die "testjson2lst.py failed for '${LIST_OPT[*]}'"
+}
 
+# One list line -> CASE_NAME WL_MODULE WL_TESTNAME WL_ITER WL_DEFINES WL_PLUSARGS
+function parse_case_line() {
+    local line="$1" macros
+    CASE_NAME=$(echo "$line" | sed -n 's/^testname=\([^ ]*\).*/\1/p')
     WL_MODULE=$(echo "$line" | sed -n 's/.*mudue_name=\([^ ]*\).*/\1/p')
     WL_TESTNAME=$(echo "$line" | sed -n 's/.*UVM_TESTNAME=\([^ ]*\).*/\1/p')
     WL_ITER=$(echo "$line" | sed -n 's/.* iter=\([^ ]*\).*/\1/p')
-    local macros plusargs tok
+    [[ "$WL_ITER" =~ ^[1-9][0-9]*$ ]] || WL_ITER=1
     macros=$(echo "$line" | sed -n "s/.*VCS_MACRO_OPT='+define\([^']*\)'.*/\1/p" | tr '+' '\n' \
         | grep -v '^$' | sed 's/^/+define+/' | tr '\n' ' ')
     WL_DEFINES="${macros% }"
-    plusargs=$(echo "$line" | sed -n 's/.*VCS_PLUSARGS_OPT=\([^ ]*\).*/\1/p')
-    WL_PLUSARGS="$plusargs"
+    WL_PLUSARGS=$(echo "$line" | sed -n 's/.*VCS_PLUSARGS_OPT=\([^ ]*\).*/\1/p')
 }
 
 ################################################################################
 # Filelist preprocessing: expand -f recursively, strip //-comments, and add an
 # +incdir for every source directory (VCS searches the including file's dir;
 # Verilator needs explicit +incdir). Roots follow the VCS Makefile assembly.
+# Runs in the build dir (three levels below the repo root, like comp_<case>/).
 ################################################################################
 function preprocess_filelist() {
-    python3 - "$@" "$scratch_dir/uvm_oeda.f" <<'PYEOF'
+    python3 - "$@" "$BUILD_DIR/uvm_oeda.f" <<'PYEOF'
 import os, sys
 
 outs_files, outs_incs = [], []
@@ -211,19 +264,15 @@ with open(sys.argv[-1], "w", encoding="utf-8") as f:
         f.write(s + "\n")
 print("****wsim_oeda****: filelist: %d sources, %d incdirs" % (len(outs_files), len(outs_incs)))
 PYEOF
-    [ -f "$scratch_dir/uvm_oeda.f" ] || die "filelist preprocessing failed"
 }
 
-################################################################################
-# Compile with Verilator. --coverage is added only for -covrpt runs (coverage.dat is unused otherwise).
-################################################################################
 # Fingerprint of the sources: path + mtime + size of every listed file, of every
 # file directly in a listed +incdir (`include targets such as uvc/<mod>/src/*.sv)
-# and of the two files passed outside the filelist. Run from the compile cwd.
+# and of the two files passed outside the filelist. Run from the build dir.
 function src_stamp() {
     {
-        grep -v '^+incdir+' "$scratch_dir/uvm_oeda.f"
-        grep '^+incdir+' "$scratch_dir/uvm_oeda.f" | sed 's/^+incdir+//' | while read -r d; do
+        grep -v '^+incdir+' "$BUILD_DIR/uvm_oeda.f"
+        grep '^+incdir+' "$BUILD_DIR/uvm_oeda.f" | sed 's/^+incdir+//' | while read -r d; do
             [ -d "$d" ] && find "$d" -maxdepth 1 -type f
         done
         echo "$database_path/verify/tb_top/macro/tb_define.sv"
@@ -231,75 +280,124 @@ function src_stamp() {
     } | sort -u | while read -r f; do [ -f "$f" ] && stat -c '%n %Y %s' "$f"; done | cksum
 }
 
-# Project id: the `define PID line of the deployed sim/project_name (the file the
-# VCS flow compiles), else of its source verify/script/sflow/project_name.
-function project_pid() {
-    local f
-    for f in "$database_path/sim/project_name" "$database_path/verify/script/sflow/project_name"; do
-        if [ -f "$f" ]; then
-            tr -d '\r' < "$f" | sed -n 's/^`define[[:space:]]\{1,\}PID[[:space:]]\{1,\}\([A-Za-z0-9_]\{1,\}\).*/\1/p' | head -1
-            return
-        fi
-    done
-}
-
+################################################################################
+# Compile with Verilator in $BUILD_DIR. --coverage only for -covrpt runs.
+# obj_dir is reused while the build key (tool, project id, defines, flags,
+# filelist and source fingerprint) is unchanged - any source edit rebuilds.
+################################################################################
 function compile() {
-    local trace_opts=""
-    local cov_opts=""
-    local build_key
-    local pid
-    pid="$(project_pid)"
-    [ -n "$pid" ] || die "no \`define PID in sim/project_name or verify/script/sflow/project_name - run file_manage.sh (the value is set by /new-project)"
-    # any source edit changes the key, so obj_dir is reused only for an unchanged build
-    build_key="$(verilator --version)|PID=$pid|$WL_DEFINES|$OPTS_DUMPWAVE|$OPTS_COVRPT|$(cksum "$scratch_dir/uvm_oeda.f" 2>/dev/null)|$(cd "$scratch_dir" && src_stamp)"
-    if [ -x "$scratch_dir/obj_dir/simv" ] && [ "$(cat "$scratch_dir/.build_key" 2>/dev/null)" == "$build_key" ]; then
-        echo "****$me****: build inputs unchanged, reusing obj_dir"
+    local trace_opts="" cov_opts="" build_key
+    build_key="$(verilator --version)|PID=$PID_VALUE|$WL_DEFINES|$OPTS_DUMPWAVE|$OPTS_COVRPT|$(cksum "$BUILD_DIR/uvm_oeda.f" 2>/dev/null)|$(src_stamp)"
+    if [ -x "$BUILD_DIR/obj_dir/simv" ] && [ "$(cat "$BUILD_DIR/.build_key" 2>/dev/null)" == "$build_key" ]; then
+        echo "****$me****: [$BUILD_TAG] build inputs unchanged, reusing obj_dir"
         return 0
     fi
     [ "$OPTS_DUMPWAVE" == "TRUE" ] && trace_opts="--trace-fst"
     [ "$OPTS_COVRPT" == "TRUE" ] && cov_opts="--coverage"
-    echo "****$me****: compiling (verilator $(verilator --version | awk '{print $2}'))..."
+    rm -f "$BUILD_DIR/.build_key"
+    echo "****$me****: [$BUILD_TAG] compiling (verilator $(verilator --version | awk '{print $2}'))..."
     verilator --binary --timing -j 0 \
         --top-module tb_top \
         --timescale-override 1ns/10ps \
         -Wno-fatal \
         +define+OPEN_EDA \
         +define+UVM_NO_DPI \
-        +define+PID="$pid" \
+        +define+PID="$PID_VALUE" \
         $WL_DEFINES \
         +incdir+"$UVM_HOME/src" \
         "$UVM_HOME/src/uvm_pkg.sv" \
-        -f "$scratch_dir/uvm_oeda.f" \
+        -f "$BUILD_DIR/uvm_oeda.f" \
         "$database_path/verify/tb_top/macro/tb_define.sv" \
         "$database_path/verify/utils/dpi_func.c" \
         $trace_opts $cov_opts \
         --Mdir obj_dir -o simv \
-        > "$scratch_dir/compile.log" 2>&1
+        > "$BUILD_DIR/compile.log" 2>&1
     if [ $? -ne 0 ]; then
-        echo "COMPILE FAILED - tail of compile.log:"
-        tail -40 "$scratch_dir/compile.log"
-        echo "$test_full_name		compile_error" >> "${sim_dir}/result.txt"
-        exit 1
+        echo "****$me****: [$BUILD_TAG] COMPILE FAILED - tail of $BUILD_DIR/compile.log:"
+        tail -40 "$BUILD_DIR/compile.log"
+        return 1
     fi
-    echo "$build_key" > "$scratch_dir/.build_key"
-    echo "****$me****: compile done"
+    echo "$build_key" > "$BUILD_DIR/.build_key"
+    echo "****$me****: [$BUILD_TAG] compile done"
 }
 
 ################################################################################
-# Run one iteration in its own dir (sim.log, wave.fst, coverage.dat per run)
+# Build for the current case: select the filelist (<MOD>_BLOCK_TEST -> the
+# module's uvm_blk_<mod>.f, same rule as the VCS Makefile), RalGen if the filelist
+# compiles the RAL model, then compile in the shared build dir under a lock.
+# Sets BUILD_DIR; returns 1 (reason in BUILD_ERR) when the case cannot be built.
+################################################################################
+declare -A BUILD_STATE
+function build_case() {
+    local case_filelist blk_token blk_mod sig defs_sorted rc
+    BUILD_ERR=""; BUILD_DIR=""
+    case_filelist="$database_path/verify/tb_top/filelist/uvm.f"
+    BUILD_TAG="top"
+    blk_token=$(echo "$WL_DEFINES" | tr ' ' '\n' | sed -n 's/^+define+\([A-Z0-9_]*_BLOCK_TEST\)$/\1/p' | head -1)
+    if [ -n "$blk_token" ]; then
+        blk_mod=$(echo "${blk_token%_BLOCK_TEST}" | tr 'A-Z' 'a-z')
+        case_filelist="$database_path/verify/tb_top/filelist/uvm_blk_${blk_mod}.f"
+        BUILD_TAG="$blk_mod"
+        [ -f "$case_filelist" ] || { BUILD_ERR="block-level filelist not found for $blk_token: $case_filelist"; return 1; }
+    fi
+    if grep -q "ral_reg_model" "$case_filelist"; then
+        RalGen || { BUILD_ERR="RalGen failed (register table: WSIM_REG_TABLE in verify/script/sflow/flow_env.sh)"; return 1; }
+    fi
+    defs_sorted=$(echo "$WL_DEFINES" | tr ' ' '\n' | grep -v '^$' | sort -u | tr '\n' ' ')
+    sig=$(printf '%s|%s|%s|%s' "$case_filelist" "$defs_sorted" "$OPTS_DUMPWAVE" "$OPTS_COVRPT" | cksum | awk '{print $1}')
+    # depth 3 below the repo root (sim/oeda_build/<tag>_<sig>/), like comp_<case>/:
+    # the .f files' '../../../verify/...' paths are written against that depth
+    BUILD_DIR="$wsim_dir_path/oeda_build/${BUILD_TAG}_${sig}"
+    BUILD_TAG="${BUILD_TAG}_${sig}"
+    case "${BUILD_STATE[$sig]}" in
+        ok)   return 0 ;;
+        fail) BUILD_ERR="compile failed: $BUILD_DIR/compile.log"; return 1 ;;
+    esac
+    mkdir -p "$BUILD_DIR" || { BUILD_ERR="cannot create $BUILD_DIR"; return 1; }
+    (
+        cd "$BUILD_DIR" || exit 1
+        if command -v flock >/dev/null; then
+            exec 9>"$BUILD_DIR/.lock"
+            flock 9
+        fi
+        preprocess_filelist \
+            "$database_path/verify/tb_top/macro/rtl_define.f" \
+            "$database_path/verify/tb_top/filelist/ip_file_lst.f" \
+            "$database_path/verify/tb_top/filelist/include.f" \
+            "$database_path/verify/tb_top/filelist/lib_lst.f" \
+            "$database_path/verify/tb_top/filelist/rtl_file_lst.f" \
+            "$case_filelist" || exit 2
+        compile
+    )
+    rc=$?
+    if [ $rc -eq 0 ]; then
+        BUILD_STATE[$sig]="ok"
+        return 0
+    fi
+    BUILD_STATE[$sig]="fail"
+    if [ $rc -eq 2 ]; then BUILD_ERR="filelist preprocessing failed for $case_filelist"
+    else BUILD_ERR="compile failed: $BUILD_DIR/compile.log"; fi
+    return 1
+}
+
+################################################################################
+# Run one iteration in its own dir (sim.log, wave.fst, coverage.dat per run).
+# Result line "<case>  PASS|FAIL  seed=<n>" goes to run_iterN/result.line; the
+# main process collects them after all runs (parallel appends to one file are
+# not reliable on every filesystem).
 ################################################################################
 function run_one() {
-    local iter=$1 seed=$2 rundir=$3
+    local case=$1 iter=$2 seed=$3 rundir=$4 simv=$5 testname=$6 plusargs=$7
     local rc=0
     mkdir -p "$rundir"
     (
         cd "$rundir" || exit 1
-        "$scratch_dir/obj_dir/simv" \
-            "+UVM_TESTNAME=$WL_TESTNAME" \
+        "$simv" \
+            "+UVM_TESTNAME=$testname" \
             +UVM_VERBOSITY=UVM_MEDIUM \
             +ntb_random_seed=$seed \
             "+verilator+seed+$seed" \
-            $WL_PLUSARGS > sim.log 2>&1
+            $plusargs > sim.log 2>&1
     ) || rc=$?
     # PASS requires simv exit 0 AND a UVM report summary with zero errors/fatals;
     # an aborted run (e.g. bad plusarg) leaves no summary and must not pass.
@@ -310,70 +408,136 @@ function run_one() {
        && [ "$uvm_err" == "0" ] && [ "$uvm_fatal" == "0" ]; then
         result="PASS"
     fi
-    echo "$test_full_name		$result" >> "${sim_dir}/result.txt"
+    printf '%s\t\t%s\tseed=%s\n' "$case" "$result" "$seed" > "$rundir/result.line"
     if [ "$result" == "PASS" ]; then
-        echo "****$me****: [$test_full_name iter$iter seed$seed] PASS"
-    else
-        echo "****$me****: [$test_full_name iter$iter seed$seed] FAIL - tail of sim.log:"
+        echo "****$me****: [$case iter$iter seed$seed] PASS"
+    elif [ "$RUN_MODE" == "case" ]; then
+        echo "****$me****: [$case iter$iter seed$seed] FAIL - tail of sim.log:"
         tail -30 "$rundir/sim.log"
+    else
+        echo "****$me****: [$case iter$iter seed$seed] FAIL - $rundir/sim.log"
     fi
 }
 
 ################################################################################
+# Main: list -> builds (one at a time) -> simulations (-j in parallel) -> results
+################################################################################
+listfile=$(mktemp)
+gen_case_list "$listfile"
+mapfile -t CASE_LINES < <(grep '^testname=' "$listfile")
+rm -f "$listfile"
+[ ${#CASE_LINES[@]} -gt 0 ] || die "no case selected by '${LIST_OPT[*]}' in the case JSON database"
+echo "****$me****: ${#CASE_LINES[@]} case(s) selected by '${LIST_OPT[*]}' (jobs=$OPTS_JOBS wave=$OPTS_DUMPWAVE)"
 
-get_case_info "$OPTS_TESTCASE_NAME"
-echo "****$me****: case=$OPTS_TESTCASE_NAME module=$WL_MODULE test=$WL_TESTNAME iter=$WL_ITER"
+ORDER=()                 # case names in list order
+declare -A CASE_RES      # case -> its result.txt
+declare -A CASE_DIRS     # case -> comp_<case>/ (run dirs, cov_report, build link)
+declare -A CASE_BUILT    # case -> 1 when its build succeeded
+declare -A CASE_BUILDS   # case -> its build dir
+Q_CASE=(); Q_ITER=(); Q_SEED=(); Q_DIR=(); Q_SIMV=(); Q_TEST=(); Q_ARGS=()
 
-# keep comp_<case>/obj_dir across runs (reused only while the build key - tool, defines, flags, filelist and source fingerprint - is unchanged); clear only per-run artifacts
-rm -rf "$sim_dir"/run_iter* "$sim_dir"/result.txt "$sim_dir"/cov_report 2>/dev/null
-mkdir -p "$sim_dir"
-# compile cwd must sit three levels below the repo root (like VCS's comp_<test>/):
-# the .f files' '../../../verify/...' paths are written against that depth
-scratch_dir="$sim_dir/comp_${OPTS_TESTCASE_NAME}"
-mkdir -p "$scratch_dir"
-cd "$scratch_dir" || die "cannot cd $scratch_dir"
+for line in "${CASE_LINES[@]}"; do
+    parse_case_line "$line"
+    [ -n "$CASE_NAME" ] || continue
+    [ -n "${CASE_RES[$CASE_NAME]}" ] && continue     # a case listed twice runs once
+    case_sim_dir="$wsim_dir_path/uvm_scratch_oeda_${CASE_NAME}"
+    case_dir="$case_sim_dir/comp_${CASE_NAME}"
+    # clear per-run artifacts; obj_dir/compile.log/uvm_oeda.f/.build_key are leftovers
+    # of the per-case build layout (wsim_oeda 1.0) - builds now live in sim/oeda_build/
+    rm -rf "$case_sim_dir/result.txt" "$case_dir"/run_iter* "$case_dir/cov_report" \
+           "$case_dir/obj_dir" "$case_dir/compile.log" "$case_dir/uvm_oeda.f" "$case_dir/.build_key" 2>/dev/null
+    mkdir -p "$case_dir"
+    ORDER+=("$CASE_NAME")
+    CASE_RES[$CASE_NAME]="$case_sim_dir/result.txt"
+    CASE_DIRS[$CASE_NAME]="$case_dir"
+    : > "$case_sim_dir/result.txt"
+    iters=$WL_ITER
+    [ -n "$OPTS_SEED_VALUE" ] && iters=1
+    echo "****$me****: case=$CASE_NAME module=$WL_MODULE test=$WL_TESTNAME iter=$iters"
 
-# Block-level cases compile only their own module env + tb_top: <MOD>_BLOCK_TEST selects
-# tb_top/filelist/uvm_blk_<mod>.f (same rule as the VCS Makefile, no per-module branch).
-case_filelist="$database_path/verify/tb_top/filelist/uvm.f"
-blk_token=$(echo "$WL_DEFINES" | tr ' ' '\n' | sed -n 's/^+define+\([A-Z0-9_]*_BLOCK_TEST\)$/\1/p' | head -1)
-if [ -n "$blk_token" ]; then
-    blk_mod=$(echo "${blk_token%_BLOCK_TEST}" | tr 'A-Z' 'a-z')
-    case_filelist="$database_path/verify/tb_top/filelist/uvm_blk_${blk_mod}.f"
-    [ -f "$case_filelist" ] || die "block-level filelist not found for $blk_token: $case_filelist"
-fi
+    if build_case; then
+        ln -sfn "$BUILD_DIR" "$case_dir/build"
+        CASE_BUILT[$CASE_NAME]=1
+        CASE_BUILDS[$CASE_NAME]="$BUILD_DIR"
+        for ((iter = 0; iter < iters; iter++)); do
+            if [ -n "$OPTS_SEED_VALUE" ]; then seed=$OPTS_SEED_VALUE
+            else seed=$((RANDOM * 32768 + RANDOM)); fi
+            Q_CASE+=("$CASE_NAME"); Q_ITER+=("$iter"); Q_SEED+=("$seed")
+            Q_DIR+=("$case_dir/run_iter${iter}"); Q_SIMV+=("$BUILD_DIR/obj_dir/simv")
+            Q_TEST+=("$WL_TESTNAME"); Q_ARGS+=("$WL_PLUSARGS")
+        done
+    else
+        echo "****$me****: [$CASE_NAME] not built - $BUILD_ERR"
+        [ -n "$BUILD_DIR" ] && [ -d "$BUILD_DIR" ] && ln -sfn "$BUILD_DIR" "$case_dir/build"
+        for ((iter = 0; iter < iters; iter++)); do
+            printf '%s\t\t%s\n' "$CASE_NAME" "compile_error" >> "${CASE_RES[$CASE_NAME]}"
+        done
+    fi
+done
 
-# RalGen only when the selected filelist actually compiles the RAL model
-# (enable_ral=false block modules drop the ral_reg_model.sv line from uvm_blk_<mod>.f)
-if grep -q "ral_reg_model" "$case_filelist"; then
-    RalGen
-else
-    echo "****$me****: filelist has no RAL dependency, skipping RalGen"
-fi
-
-preprocess_filelist \
-    "$database_path/verify/tb_top/macro/rtl_define.f" \
-    "$database_path/verify/tb_top/filelist/ip_file_lst.f" \
-    "$database_path/verify/tb_top/filelist/include.f" \
-    "$database_path/verify/tb_top/filelist/lib_lst.f" \
-    "$database_path/verify/tb_top/filelist/rtl_file_lst.f" \
-    "$case_filelist"
-
-compile
-
-base_seed=${OPTS_SEED_VALUE:-$((RANDOM * 32768 + RANDOM))}
-for ((iter = 0; iter < WL_ITER; iter++)); do
-    run_one "$iter" "$((base_seed + iter))" "$scratch_dir/run_iter${iter}"
+for ((i = 0; i < ${#Q_CASE[@]}; i++)); do
+    while (( $(jobs -rp | wc -l) >= OPTS_JOBS )); do wait -n; done
+    run_one "${Q_CASE[$i]}" "${Q_ITER[$i]}" "${Q_SEED[$i]}" "${Q_DIR[$i]}" \
+            "${Q_SIMV[$i]}" "${Q_TEST[$i]}" "${Q_ARGS[$i]}" &
+done
+wait
+for ((i = 0; i < ${#Q_CASE[@]}; i++)); do
+    if [ -f "${Q_DIR[$i]}/result.line" ]; then
+        cat "${Q_DIR[$i]}/result.line"
+    else
+        printf '%s\t\t%s\tseed=%s\n' "${Q_CASE[$i]}" "FAIL" "${Q_SEED[$i]}"
+    fi >> "${CASE_RES[${Q_CASE[$i]}]}"
 done
 
 if [ "$OPTS_COVRPT" == "TRUE" ]; then
-    echo "****$me****: generating coverage report..."
-    verilator_coverage "$scratch_dir"/run_iter*/coverage.dat \
-        --annotate "$scratch_dir/cov_report" || die "verilator_coverage failed"
-    echo "****$me****: coverage annotated under $scratch_dir/cov_report"
+    cov_all=()
+    for c in "${ORDER[@]}"; do
+        [ -n "${CASE_BUILT[$c]}" ] || continue
+        dats=("${CASE_DIRS[$c]}"/run_iter*/coverage.dat)
+        [ -f "${dats[0]}" ] || continue
+        cov_all+=("${dats[@]}")
+        # coverage.dat records the sources relative to the build cwd ('../../../verify/...'):
+        # annotate from a build dir (every one sits at the same depth)
+        cov_cwd="${CASE_BUILDS[$c]}"
+        ( cd "$cov_cwd" && verilator_coverage "${dats[@]}" --annotate "${CASE_DIRS[$c]}/cov_report" >/dev/null ) \
+            && echo "****$me****: [$c] coverage annotated under ${CASE_DIRS[$c]}/cov_report" \
+            || echo "****$me****: WARNING: verilator_coverage failed for $c"
+    done
+    if [ "$RUN_MODE" == "group" ] && [ ${#cov_all[@]} -gt 0 ]; then
+        merged="$wsim_dir_path/oeda_cov_${RUN_NAME}"
+        rm -rf "$merged"
+        ( cd "$cov_cwd" && verilator_coverage "${cov_all[@]}" --annotate "$merged" ) \
+            && echo "****$me****: merged coverage of '$RUN_NAME' annotated under $merged" \
+            || echo "****$me****: WARNING: merged verilator_coverage failed"
+    fi
 fi
 
-cd "$wsim_dir_path" || exit
-echo "****$me****: done. Results in $sim_dir/result.txt"
-[ -f "$sim_dir/result.txt" ] && cat "$sim_dir/result.txt"
-exit 0
+# Results. Per case: sim/uvm_scratch_oeda_<case>/result.txt. A -m / group run also
+# writes sim/oeda_result.txt (all runs + pass rate, like wsim's result.txt) and
+# sim/oeda_fail_rerun.txt (one ./wsim_oeda command per failed run).
+cd "$wsim_dir_path" || exit 1
+total=0; pass=0
+for c in "${ORDER[@]}"; do
+    total=$((total + $(grep -c . "${CASE_RES[$c]}")))
+    pass=$((pass + $(grep -c "[[:space:]]PASS\([[:space:]]\|$\)" "${CASE_RES[$c]}")))
+done
+if [ "$RUN_MODE" == "group" ]; then
+    summary="$wsim_dir_path/oeda_result.txt"
+    rerun="$wsim_dir_path/oeda_fail_rerun.txt"
+    : > "$summary"; : > "$rerun"
+    for c in "${ORDER[@]}"; do
+        cat "${CASE_RES[$c]}" >> "$summary"
+        awk -v c="$c" '$2 == "compile_error" { print "./wsim_oeda -c " c; exit }' "${CASE_RES[$c]}" >> "$rerun"
+        awk '$2 == "FAIL" { s = $3; sub(/^seed=/, "", s); print "./wsim_oeda -c " $1 " -seed " s }' "${CASE_RES[$c]}" >> "$rerun"
+    done
+    passrate=$((total > 0 ? pass * 100 / total : 0))
+    echo "pass rate is: ${passrate}% ($pass/$total runs). Please check oeda_result.txt for detail status." >> "$summary"
+    echo "****$me****: done ($RUN_NAME). $summary:"
+    cat "$summary"
+    [ -s "$rerun" ] && echo "****$me****: rerun commands for failures: $rerun"
+else
+    echo "****$me****: done. Results in ${CASE_RES[$RUN_NAME]:-$wsim_dir_path/uvm_scratch_oeda_$RUN_NAME/result.txt}"
+    for c in "${ORDER[@]}"; do cat "${CASE_RES[$c]}"; done
+fi
+[ "$total" -gt 0 ] && [ "$pass" -eq "$total" ] && exit 0
+exit 1

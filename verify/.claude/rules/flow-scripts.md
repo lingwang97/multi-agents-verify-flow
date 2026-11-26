@@ -11,7 +11,7 @@ paths:
 
 ## Source of truth and deploy
 
-- `script/` is the source of truth. `script/file_manage.sh` deploys it: repo-root `sim/` (`wsim`, `wsim_oeda`, `project_name`), `tb_top/scripts/` (`Makefile*`, `testjson2lst.py`) and the whole `utils/` tree (identical copy of `script/utils/`). It is cwd-independent.
+- `script/` is the source of truth. `script/file_manage.sh` deploys it: repo-root `sim/` (`wsim`, `wsim_oeda`, `project_name`), `tb_top/scripts/` (`Makefile*`, `testjson2lst.py`) and the whole `utils/` tree (identical copy of `script/utils/`). It is cwd-independent and copies with `cp -Rp` - keeping source mtimes, so a deploy does not invalidate the oEDA builds (their key fingerprints source mtimes).
 - Never edit the deployed copies; edit under `script/` and rerun the deploy.
 - `wsim`, `wsim_oeda`, the Makefiles and `*.sh` are LF, pinned by the repo-root `.gitattributes` (a CRLF copy fails on Linux with `bash\r: bad interpreter`). A script's `#!` line must be line 1 - otherwise csh runs `./wsim` as a csh script.
 
