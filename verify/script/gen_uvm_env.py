@@ -1561,6 +1561,12 @@ def get_if_coon_template():
 //=========================================black-box signals begin================================================
 // ******include Module input/output port signals in DUT *******
 //================================================================================================================
+// Black-box: one net per DUT port, named dut_<port>; the DUT instance in the tb top binds to them.
+// The direction of each assign follows the port; adapt polarity or width here, not at the DUT.
+//   wire [31:0] dut_addr;  assign dut_addr  = {module_name}_pif.addr;    // DUT input  <- interface
+//   wire [31:0] dut_rdata; assign {module_name}_pif.rdata = dut_rdata;   // DUT output -> interface
+//   wire        dut_rst_n; assign dut_rst_n = ~{module_name}_pif.rst;    // active-low reset
+// The _gpls variant connects the netlist ports (e.g. bit-blasted buses) the same way.
 
 
 
@@ -1581,6 +1587,8 @@ def get_if_coon_template():
 // ***   such signal for block-verify, asssertion check,or coverage sample ***
 // ***   NOTE: coverage sample should skip GPLS 
 //================================================================================================================
+// Gray-box: hierarchical reads of key internals (RTL only - leave them out of the _gpls variant), e.g.
+//   assign {module_name}_pif.fsm_state = u_<dut>.u_ctrl.state;
 
 
 
@@ -1845,75 +1853,56 @@ module tb_top();
 
 
     // include tb-relative file
-  
-    `include "dump_wave.sv" 
+    `include "dump_wave.sv"
 
-    //interface initialation and setting
-
+    // Interface instance and initialization: the vif assignment and the config_db
+    // publication share ONE initial block (no ordering guarantee between initial blocks)
     virtual  {pid}_if   {pid}_vif;
-    {pid}_if            {pid}_pif();   
-    initial     {pid}_vif = {pid}_pif;
-
+    {pid}_if            {pid}_pif();
     initial begin
+        {pid}_vif = {pid}_pif;
         uvm_config_db#(virtual interface {pid}_if)::set(uvm_root::get(),"*","{pid}_vif", {pid}_vif);
     end
-
 
     // Setting time display format
     initial begin
         $timeformat(-9, 3, "ns", 10);
     end
 
-
-
-    // Setting Rst initial config and signal connection
-
-
-
-
-    // Setting Clkgen initial config and signal connection
-
-
-
-    // DUT instance and signal connection 
-
-
-
-    // Setting UPF initial config
-
-
-
-    // Module < if_conn >  instantiation 
-
-    `ifndef GPL_SIM
-		`include "{pid}_if_conn.sv"
-
-    `else
-		`include "{pid}_if_conn_gpls.sv"
-
-    `endif                                    
-
-
-    `ifndef OPEN_EDA
-        // Program  < sdf_annotate >  instantiation 
-        sdf_annotate sdf_annotate();
-    `endif
-    // Setting Rst initial config and signal connection
-    // memory[] is initialized only in the !PRESETn branch, so reset must be
-    // asserted from time 0 and held for ~20 clocks.
-    initial begin
-        {pid}_pif.rst = 1'b1;
-        repeat (20) @(posedge {pid}_pif.clk);
-        {pid}_pif.rst = 1'b0;
-    end
-
-    // Setting Clkgen initial config and signal connection
+    // Clock and reset: reset asserted from time 0 and held for 20 clocks
     logic tb_clk;
     initial begin
         tb_clk = 1'b0;
         forever #5 tb_clk = ~tb_clk;
     end
     assign {pid}_pif.clk = tb_clk;
+    initial begin
+        {pid}_pif.rst = 1'b1;
+        repeat (20) @(posedge {pid}_pif.clk);
+        {pid}_pif.rst = 1'b0;
+    end
+
+    // DUT <-> interface signal connection (intf/, RTL or gate/post-layout variant):
+    // declares the dut_* nets the DUT instance below binds to - keep it BEFORE the DUT
+    `ifndef GPL_SIM
+        `include "{pid}_if_conn.sv"
+    `else
+        `include "{pid}_if_conn_gpls.sv"
+    `endif
+
+    // DUT instance (hand work): its ports bind only to the dut_* nets of the
+    // if_conn file, never to interface signals directly, e.g.
+    //   <dut> u_<dut> (.CLK(dut_clk), .RST_N(dut_rst_n), .ADDR(dut_addr), .RDATA(dut_rdata));
+
+
+    // Setting UPF initial config
+
+
+    `ifndef OPEN_EDA
+        // Program  < sdf_annotate >  instantiation
+        sdf_annotate sdf_annotate();
+    `endif
+
     initial begin run_test(""); end
 
 endmodule
@@ -1927,7 +1916,7 @@ program sdf_annotate;
 endprogram
 `endif
 
-// Other Component Module 
+// Other Component Module
 
 
 // include dut-relative file
@@ -2629,14 +2618,12 @@ def generate_interface(config, output_dir):
         fname=module_name+"_if_conn.sv"    
         if_template=get_if_coon_template()
         ifcontent=if_template.format(module_name=module_name)
-        with open(os.path.join(if_dir,fname), 'w', encoding='utf-8') as f:
-            f.write(ifcontent)
+        write_new(os.path.join(if_dir,fname), ifcontent)
 
         fname_gpls=module_name+"_if_conn_gpls.sv"    
         if_template=get_if_coon_template()
         ifcontent=if_template.format(module_name=module_name)
-        with open(os.path.join(if_dir,fname_gpls), 'w', encoding='utf-8') as f:
-            f.write(ifcontent)
+        write_new(os.path.join(if_dir,fname_gpls), ifcontent)
 
 def generate_base_sequence(config, output_dir):
     """generate base_sequence"""

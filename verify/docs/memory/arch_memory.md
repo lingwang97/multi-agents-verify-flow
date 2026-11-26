@@ -85,7 +85,7 @@ Naming: the open-source flow is **oEDA** (script `wsim_oeda`, scratch `sim/uvm_s
 1. The chip RTL lands under the design root and is listed in `tb_top/filelist/rtl_file_lst.f` through the `/new-verification` design-input step (ops §8 stage 2b) (the generated system top `tb_top_<project>.sv` has clk/rst from the template; DUT instantiation is hand work, not generatable).
 2. The real register-table CSV is provided at the `WSIM_REG_TABLE` location (`verify/script/sflow/flow_env.sh`; the location is asked in the `/new-verification` register-table step and written through `new_project.py set/apply`; placing the file is the user's action) -> triggers RalGen real model AND the derived-width validation (section 5 item 4: check `verify/ral/ral_reg_width` covers the real widest register, especially sliced registers).
 3. `tb_top/config/Makefile.initreg.cfg` is referenced by the VCS Makefile but is not generated - create it when register init is first needed.
-4. DUT-to-UVC wiring in `intf/<mod>_if_conn.sv` skeletons (hand work per DUT).
+4. Chip DUT instance in `tb_top_<project>.sv`, its wiring to the UVC interfaces in `intf/<mod>_if_conn.sv` / `top_if_conn.sv` (included through `tb_top/component/if_conn.sv`; same `dut_*` net convention as the block level, CLAUDE.md "Interface connection") - hand work per DUT.
 5. System smoke stimuli: the generated `<mod>_smoke_test` classes are inert; fill their bodies (add-test-case skill covers scaffolding).
 6. Replace the fake tokens (`+DEFINE1...`) of the generated case JSONs when real system cases are added.
 

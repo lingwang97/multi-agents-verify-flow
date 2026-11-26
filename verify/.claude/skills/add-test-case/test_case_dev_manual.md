@@ -28,6 +28,7 @@ This is a task-oriented guide for engineers writing a new test case in this `ver
 - **Scoreboard**: a real model of the expected behaviour (e.g. a shadow memory for a storage DUT), derived from the spec - never from the RTL.
 - **Coverage**: bins on protocol state and data classes (boundaries, errors, wait states), crosses where they matter.
 - **Sequences**: reusable helpers (`<mod>_write/<mod>_read/<mod>_idle`-style) in the block base seq or `comm_<mod>_methods.sv`; helpers that need read data call `get_response`.
+- **DUT wiring** (block level): the DUT instance in `tb_top/tb_top/tb_top_<mod>.sv` binds its ports to `dut_*` nets; the nets and their assigns to and from the interface live in `intf/<mod>_if_conn.sv` (`_gpls.sv` for gate/post-layout) - CLAUDE.md "Interface connection".
 - **JSON**: one entry per scenario with only the macros the case needs.
 
 Record the module's DUT facts, quirks and case macros in `docs/modules/<mod>.md`.

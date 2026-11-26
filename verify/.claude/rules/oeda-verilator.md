@@ -27,7 +27,7 @@ Every SV source must compile on both flows: VCS (sign-off) and oEDA (Verilator, 
 
 ## Existing `OPEN_EDA` differences (all VCS-safe)
 
-- `tb_top_chip.sv` and the block tops `tb_top_<mod>.sv`: guard the `sdf_annotate` `program` block; a block top also generates clk/rst, and its DUT instantiation is hand work.
+- `tb_top_chip.sv` and the block tops `tb_top_<mod>.sv`: guard the `sdf_annotate` `program` block; a block top also generates clk/rst; its DUT instance is hand work (port wiring through `intf/<mod>_if_conn.sv`: CLAUDE.md "Interface connection").
 - `dump_wave.sv`: adds an FST branch.
 - `top_pkg.sv`: skips `` `include "uvm_pkg.sv" `` (VCS resolves it via `-ntb_opts uvm-1.2`; Verilator compiles `$UVM_HOME/src/uvm_pkg.sv` explicitly).
 - `vif_declare.sv`: vif assignment + `uvm_config_db` in one `initial`.
