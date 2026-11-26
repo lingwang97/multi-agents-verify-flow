@@ -19,7 +19,7 @@ The leader (main session) runs this. Every value lives in the registry `script/n
 
 1. Run `NP status --stage project` and `NP detect --stage project`; read each variable's prompt, choices, default and deferrability in `vars.json`.
 2. Go phase by phase, skipping variables already answered unless the user asked to revisit a phase (`$ARGUMENTS`):
-   - **P1 identity + design root**: `project_name`, `pid`, `design_root` - the root of the design database (RTL, IP, netlists, register table), repo-root relative or absolute. The repo's `hdl/` is only a placeholder: always ask, offering the directories `detect` found (with their HDL file counts) and "Other" for a path that does not exist yet (allowed; check warns until it lands).
+   - **P1 identity + design root**: `project_name` (also the project id: `apply` writes it as `` `define PID <name> `` into `script/sflow/project_name`), `design_root` - the root of the design database (RTL, IP, netlists, register table), repo-root relative or absolute. The repo's `hdl/` is only a placeholder: always ask, offering the directories `detect` found (with their HDL file counts) and "Other" for a path that does not exist yet (allowed; check warns until it lands).
    - **P2 machine tools**: `uvm_home`, `verilator`, `vcs`, `verdi_home` are check-only - report what was found and, for a missing tool, the hint from `docs/ops/oeda_local_setup.md`, with "fix later" as an option. For `verilator` and `uvm_home`, `NP detect` adds `status` and `advice` against the recommended toolchain (Verilator >= 5.054, Accellera UVM-1.2; canon: `docs/ops/oeda_local_setup.md`): READY → recommend using it (for UVM, the `export UVM_HOME=...` line); WARN → explain the compatibility risk from `advice` and offer "follow the advice" / "fix later". Record the outcome in the "This machine" section of `docs/ops/oeda_local_setup.md`.
    - **P3 VCS server**: `wsim_python`, `lsf_enable`, `lsf_queue`, `lsf_hosts_file`, `lsf_submit_hosts`, `lsf_exec_host_regex`, `lsf_queue_sed`, `dpo_db`, `agent_vcs_max_jobs` (concurrent agent-started VCS runs, default 3). Bootstrap resets this section (`WSIM_PYTHON=python3`, LSF off, the rest empty) - no old-server value survives; offer the detected candidates.
    - **P4 language**: `reply_language`, `file_language`.
@@ -62,6 +62,6 @@ Pulls the framework's committed HEAD into this project. Only carried files and t
 ## Gotchas
 
 - A new framework value must be registered in `vars.json` (with its `stage`) in the same change that introduces it (arch_memory R7), otherwise no interview asks it.
-- `project_name`, `pid` and `design_root` rewrite identity tokens in docs/rules/the path guard (`rewrites` in the registry); `apply` does it, never hand-edit those tokens.
+- `project_name` and `design_root` rewrite identity tokens in docs/rules/the path guard (`rewrites` in the registry); `apply` does it, never hand-edit those tokens.
 - Module-level values and everything under `tb_top/` belong to `/new-verification`.
 - Sync takes the framework's last commit, not its uncommitted edits (a NOTE says so). If the recorded base commit is gone from the framework repo (rewritten history), every difference becomes a conflict - pass `--base <sha>` when the user knows the right one.

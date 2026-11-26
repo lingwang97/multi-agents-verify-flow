@@ -481,7 +481,10 @@ ifeq ($(block_env),)
 	uvm_file_lst = -f $(dataBasePath)/verify/tb_top/filelist/uvm.f
 else
 	#block env: <MOD>_BLOCK_TEST selects tb_top/filelist/uvm_blk_<mod>.f (no per-module branch needed)
-	blk_token := $(firstword $(filter %_BLOCK_TEST,$(subst +, ,$(VCS_MACRO_OPT))))
+	#the list line quotes VCS_MACRO_OPT ('+define+...'): strip the quotes before splitting,
+	#or a trailing <MOD>_BLOCK_TEST' would not match
+	blk_macros := $(subst ',,$(subst ",,$(VCS_MACRO_OPT)))
+	blk_token := $(firstword $(filter %_BLOCK_TEST,$(subst +, ,$(blk_macros))))
 	blk_mod   := $(shell echo $(blk_token) | sed 's/_BLOCK_TEST$$//' | tr 'A-Z' 'a-z')
 	blk_f     := $(dataBasePath)/verify/tb_top/filelist/uvm_blk_$(blk_mod).f
 	ifneq ($(wildcard $(blk_f)),)

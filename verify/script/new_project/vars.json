@@ -34,7 +34,7 @@
       "file": "script/uvm_env_config_template.json",
       "key": "project_name",
       "type": "str",
-      "prompt": "Chip/project name (lower-case identifier). Names the system top tb_top_<name>.sv and its filelist.",
+      "prompt": "Chip/project name (lower-case identifier). Names the system top tb_top_<name>.sv and its filelist. Also the project id: written as `define PID <name> into script/sflow/project_name (deployed as sim/project_name; compiled by both flows).",
       "validate": "^[a-z][a-z0-9_]*$",
       "rewrites": [
         {
@@ -65,24 +65,12 @@
             "CLAUDE.md"
           ],
           "pattern": "for the SoC `{v}`"
-        }
-      ]
-    },
-    {
-      "id": "pid",
-      "stage": "project",
-      "phase": 1,
-      "kind": "text_file",
-      "file": "script/sflow/project_name",
-      "template": "`define PID {v}",
-      "prompt": "Project id (deployed as sim/project_name; read by wsim, wsim_oeda, the Makefile and testjson2lst).",
-      "validate": "^[A-Za-z0-9_]+$",
-      "rewrites": [
+        },
         {
           "files": [
-            "CLAUDE.md"
+            "script/sflow/project_name"
           ],
-          "pattern": "(project id `PID {v}`)"
+          "pattern": "`define PID {v}"
         }
       ]
     },

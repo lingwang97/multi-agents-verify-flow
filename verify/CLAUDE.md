@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-UVM-1.2 (SystemVerilog) verification environment for the SoC `chip` (project id `PID 000`). Mostly generated from JSON by Python scripts, then hand-extended: per-module UVCs, a top env that assembles them, and the `wsim` shell/Makefile flow (VCS + Verdi, LSF dispatch, DPO).
+UVM-1.2 (SystemVerilog) verification environment for the SoC `chip`. Mostly generated from JSON by Python scripts, then hand-extended: per-module UVCs, a top env that assembles them, and the `wsim` shell/Makefile flow (VCS + Verdi, LSF dispatch, DPO).
 
 - Launch Claude Code from `verify/` (this directory). Hooks, settings, agents, skills and rules all live in `verify/.claude/`; the repo root has no Claude config.
 - Design database (RTL, IP, netlists, register table): repo-root relative (design root: `hdl`); a new project records its own with `/new-project`.
