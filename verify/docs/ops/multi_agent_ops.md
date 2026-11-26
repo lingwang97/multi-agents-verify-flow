@@ -16,7 +16,7 @@ Roles are defined in `verify/.claude/agents/`; this runbook targets the **leader
 | deliver_agent | `.claude/agents/deliver_agent.md` | sonnet | leader auto-dispatch |
 | review_agent | `.claude/agents/review_agent.md` | sonnet | leader dispatch after user confirmation |
 
-Leader duties: analyze user needs, schedule and manage the other agents, analyze returned results and compile reports, execute commits after approval. **The leader never edits code** — the one exception is writing registry values through `new_project.py apply` after the user confirms them (§1); the other agents may edit code but never commit.
+Leader duties: analyze user needs, schedule and manage the other agents, analyze returned results and compile reports, execute commits after approval. **The leader never edits code** — two exceptions: writing registry values through `new_project.py apply` / `resync` after the user confirms them (§1), and framework maintenance (generators, flow scripts, new_project, hooks, instruction files and docs) the user asked for and approved, in the framework repo or a project; the other agents may edit code but never commit.
 
 ## 1. Tiered confirmation mode
 

@@ -18,7 +18,7 @@
 ## Pitfalls
 
 - csh/tcsh login shells: `wsim_oeda` is a bash script and does not see variables set only in `~/.cshrc`. Export `UVM_HOME` and source the OSS CAD Suite `environment` where bash sees them (`~/.bashrc` / `~/.profile`), or in the shell before calling `./wsim_oeda`.
-- The compile runs in `sim/uvm_scratch_oeda_<case>/comp_<case>/` (three levels below the repo root, matching the `.f` path depth); `obj_dir` is reused while the build key (tool version, defines, flags, filelist, source fingerprint) is unchanged.
+- The compile runs in `sim/uvm_scratch_oeda_<case>/comp_<case>/` (three levels below the repo root, matching the `.f` path depth); `obj_dir` is reused while the build key (tool version, project id, defines, flags, filelist, source fingerprint) is unchanged.
 
 ## This machine
 
