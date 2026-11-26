@@ -77,6 +77,20 @@ command -v python3   >/dev/null || die "python3 not found"
 : "${UVM_HOME:=$HOME/tools/uvm-1.2}"
 [ -f "$UVM_HOME/src/uvm_pkg.sv" ] || die "UVM library not found at $UVM_HOME (export UVM_HOME=...)"
 
+# Recommended toolchain (verify/docs/ops/oeda_local_setup.md): Verilator >= 5.054 and
+# Accellera UVM-1.2. Other versions still run; the warning points at known incompatibilities.
+vl_ver=$(verilator --version 2>/dev/null | sed -n 's/^Verilator \([0-9]*\)\.\([0-9]*\).*/\1 \2/p')
+if [ -n "$vl_ver" ]; then
+    read -r vl_maj vl_min <<< "$vl_ver"
+    if (( vl_maj < 5 || (vl_maj == 5 && 10#$vl_min < 54) )); then
+        echo "****$me****: WARNING: Verilator $vl_maj.$vl_min is older than the recommended 5.054 - older releases reject some UVM/SV forms (see verify/docs/ops/oeda_local_setup.md)"
+    fi
+fi
+uvm_ver_file="$UVM_HOME/src/macros/uvm_version_defines.svh"
+if ! { grep -qs '^`define UVM_MAJOR_REV 1' "$uvm_ver_file" && grep -qs '^`define UVM_MINOR_REV 2' "$uvm_ver_file"; }; then
+    echo "****$me****: WARNING: $UVM_HOME is not UVM-1.2 - the framework targets Accellera UVM-1.2 (see verify/docs/ops/oeda_local_setup.md)"
+fi
+
 sim_dir="$wsim_dir_path/uvm_scratch_oeda_${OPTS_TESTCASE_NAME}"
 test_full_name="$OPTS_TESTCASE_NAME"
 

@@ -500,18 +500,116 @@ def _hdl_dirs(repo, maxdepth=3):
     return out
 
 
+# ------------------------------------------------------------- oEDA toolchain
+# Recommended versions: docs/ops/oeda_local_setup.md "Recommended toolchain" (single home).
+VERILATOR_RECOMMENDED = (5, 54)
+VERILATOR_GUESS = ("~/tools/oss-cad-suite/bin/verilator", "/opt/oss-cad-suite/bin/verilator",
+                   "/tools/oss-cad-suite/bin/verilator", "/usr/local/oss-cad-suite/bin/verilator")
+UVM_GUESS = ("~/tools/uvm-1.2", "/opt/uvm-1.2", "/tools/uvm-1.2", "/usr/local/uvm-1.2")
+VENDOR_HINTS = ("synopsys", "/vcs", "questa", "mentor", "xcelium", "cadence", "/etc/uvm")
+
+
+def verilator_info():
+    """First Verilator found (PATH, then the usual OSS CAD Suite places) -> dict or None."""
+    w = _which("verilator")
+    cands = [w] if w else [os.path.expanduser(c) for c in VERILATOR_GUESS] + \
+        sorted(glob.glob(os.path.expanduser("~/*/oss-cad-suite*/bin/verilator")))
+    for c in cands:
+        if c and os.path.isfile(c):
+            rc, out = _run([c, "--version"])
+            m = re.search(r"Verilator\s+(\d+)\.(\d+)", out)
+            return {"path": c, "on_path": bool(w), "version": (int(m.group(1)), int(m.group(2))) if m else None,
+                    "text": out.strip().split("\n")[0] if out.strip() else ""}
+    return None
+
+
+def uvm_info(path):
+    """UVM tree at path -> {path, version '1.2'|..., origin accellera|vendor|unknown} or None."""
+    if not path or not os.path.isfile(os.path.join(path, "src", "uvm_pkg.sv")):
+        return None
+    ver = None
+    vd = os.path.join(path, "src", "macros", "uvm_version_defines.svh")
+    if os.path.isfile(vd):
+        txt = read_text(vd)[0]
+        ma = re.search(r"^`define\s+UVM_MAJOR_REV\s+(\d+)", txt, re.M)
+        mi = re.search(r"^`define\s+UVM_MINOR_REV\s+(\w+)", txt, re.M)
+        if ma and mi:
+            ver = "%s.%s" % (ma.group(1), mi.group(1))
+    low = os.path.realpath(path).replace("\\", "/").lower()
+    vcs_home = (os.environ.get("VCS_HOME") or "").lower()
+    if any(h in low for h in VENDOR_HINTS) or (vcs_home and low.startswith(vcs_home)):
+        origin = "vendor"
+    elif any("accellera" in read_text(f)[0].lower()
+             for f in glob.glob(os.path.join(path, "*.txt")) + glob.glob(os.path.join(path, "README*"))):
+        origin = "accellera"
+    else:
+        origin = "unknown"
+    return {"path": path, "version": ver, "origin": origin}
+
+
+def toolchain_findings():
+    """{'verilator': (level, detail), 'uvm_home': (level, detail)} for /new-project P2 and check."""
+    rec = "%d.%03d" % VERILATOR_RECOMMENDED
+    doc = "docs/ops/oeda_local_setup.md"
+    out = {}
+    v = verilator_info()
+    if not v:
+        out["verilator"] = ("WARN", "not found - install a recent OSS CAD Suite (Verilator >= %s) and source its environment (%s)" % (rec, doc))
+    else:
+        vs = "%d.%03d" % v["version"] if v["version"] else "unknown version"
+        where = "" if v["on_path"] else " - found at %s but not on PATH: source %s in the shell that runs wsim_oeda" % (
+            v["path"], os.path.join(os.path.dirname(os.path.dirname(v["path"])), "environment"))
+        if not v["version"] or v["version"] < VERILATOR_RECOMMENDED:
+            out["verilator"] = ("WARN", "Verilator %s is below the recommended %s: older releases reject some UVM/SV forms "
+                                "(5.040: uvm_config_db #(pkg::type)::get/set, functions without a return type) - the framework "
+                                "isolates the known ones under OPEN_EDA, new code may hit more; install a recent OSS CAD Suite, "
+                                "or isolate each incompatible form with OPEN_EDA%s" % (vs, rec, where))
+        else:
+            out["verilator"] = ("WARN" if where else "READY", "Verilator %s (recommended >= %s)%s" % (vs, rec, where))
+    env = os.environ.get("UVM_HOME")
+    active = uvm_info(env) if env else uvm_info(os.path.expanduser("~/tools/uvm-1.2"))
+    others = [u for u in [uvm_info(os.path.expanduser(g)) for g in UVM_GUESS] +
+              [uvm_info(os.path.join(os.environ.get("VCS_HOME", ""), "etc", d)) for d in ("uvm-1.2", "uvm")]
+              if u and (not active or os.path.realpath(u["path"]) != os.path.realpath(active["path"]))]
+    good = [u for u in others if u["origin"] == "accellera" and u["version"] == "1.2"]
+    fetch = "download Accellera UVM 1.2 (accellera.org, UVM downloads), unpack it to ~/tools/uvm-1.2 and export UVM_HOME"
+    if not active:
+        lead = "UVM_HOME=%s has no src/uvm_pkg.sv" % env if env else "UVM_HOME not set and ~/tools/uvm-1.2 missing"
+        if good:
+            out["uvm_home"] = ("WARN", "%s; Accellera UVM-1.2 found at %s - export UVM_HOME=%s" % (lead, good[0]["path"], good[0]["path"]))
+        elif others:
+            out["uvm_home"] = ("WARN", "%s; only %s (UVM %s, %s) found - a simulator-bundled UVM can carry vendor code Verilator "
+                               "cannot parse; %s" % (lead, others[0]["path"], others[0]["version"], others[0]["origin"], fetch))
+        else:
+            out["uvm_home"] = ("WARN", "%s; no UVM found - %s" % (lead, fetch))
+    elif active["version"] != "1.2":
+        out["uvm_home"] = ("WARN", "UVM %s at %s: the framework targets UVM-1.2 (RAL, phasing and deprecated APIs differ in 1.1d "
+                           "and IEEE 1800.2); %s" % (active["version"] or "of unknown version", active["path"], fetch))
+    elif active["origin"] == "vendor":
+        out["uvm_home"] = ("WARN", "UVM-1.2 at %s is simulator-bundled: it can carry vendor code Verilator cannot parse - use "
+                           "Accellera UVM-1.2 for the oEDA flow (%s); VCS keeps its own via -ntb_opts uvm-1.2" % (active["path"], fetch))
+    else:
+        note = "" if active["origin"] == "accellera" else " (origin not identified as Accellera - check its README)"
+        out["uvm_home"] = ("READY", "UVM-1.2 at %s%s%s" % (active["path"], " (Accellera, recommended)" if not note else "", note))
+    return out
+
+
 def detect(root, stage=None):
     reg = registry()
     repo = repo_of(root)
     a = load_answers(root)
     scan = None
     out = {}
+    tc = None   # toolchain findings, computed once on first use
     for var in stage_vars(reg, stage):
         if var["kind"] in ("detect_only", "record_only"):
             cur = a["applied"].get(var["id"]) or (infer_from_rewrites(var, root) if var.get("rewrites") else None)
         else:
             cur = current_value(var, root)
         d = {"current": cur, "default": default_of(var, root, a), "candidates": []}
+        if var["id"] in ("verilator", "uvm_home"):
+            tc = tc or toolchain_findings()
+            d["status"], d["advice"] = tc[var["id"]]
         how = var.get("detect", "")
         if how.startswith("env:"):
             v = os.environ.get(how[4:])
@@ -780,8 +878,13 @@ def cmd_check(root, stage, markdown, lint, top):
     repo = repo_of(root)
     ans = a["answers"]
     res = []
+    tc = None   # toolchain findings, computed once on first use
     for v in stage_vars(reg, stage):
         i = v["id"]
+        if v["kind"] == "detect_only" and i in ("verilator", "uvm_home"):
+            tc = tc or toolchain_findings()
+            res.append((tc[i][0], i, tc[i][1]))
+            continue
         if v["kind"] == "detect_only":
             how = v["detect"]
             ok = bool(os.environ.get(how[4:])) if how.startswith("env:") else bool(_which(how[5:]))
