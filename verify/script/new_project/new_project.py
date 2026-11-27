@@ -1164,6 +1164,10 @@ def _doc_map_globs(ops_text):
     return out
 
 
+# carried files whose named section is project state: (repo path, heading, placeholder marker)
+CARRIED_PLACEHOLDERS = (("verify/docs/ops/oeda_local_setup.md", "## This machine", "To be filled in"),)
+
+
 def audit(repo):
     """Framework self-audit: manifest coverage, module names in carried instruction text,
     doc-map coverage of carried .md files, registry coverage. Returns [(level, item, detail)]."""
@@ -1225,6 +1229,15 @@ def audit(repo):
         rel = f[len("verify/"):] if f.startswith("verify/") else f
         if not any(fnmatch.fnmatch(rel, g) or fnmatch.fnmatch(f, g) for g in globs):
             res.append(("FAIL", "doc-map", "%s is carried but not in the ops section 4 doc map" % f))
+    # carried docs with a project section keep it a placeholder in the framework (the project fills its own;
+    # resync merges framework changes into the other sections)
+    if "bootstrapped_from" not in load_answers(verify):
+        for f, head, mark in CARRIED_PLACEHOLDERS:
+            p = os.path.join(repo, f)
+            sec = re.search(r"(?ms)^%s\s*$(.*?)(?=^## |\Z)" % re.escape(head), read_text(p)[0]) if os.path.isfile(p) else None
+            if sec is None or mark not in sec.group(1):
+                res.append(("FAIL", "placeholder", "%s: section '%s' must stay the placeholder ('%s') in the framework - it is carried into every project"
+                            % (f, head, mark)))
     # registry coverage: flow_env variables and config top-level keys
     reg = registry()
     sh_vars = {v["var"] for v in reg["vars"] if v["kind"] == "sh_var"}
@@ -1330,8 +1343,6 @@ def _reset(kind, src_text, ctx):
             "| %s | First real VCS case + one LSF dispatch on this server | global | user | — | pending | after `/new-project` and the first `--guvc`; confirms the flow_env.sh site section |" % TODAY,
         ]
         return "\n".join(hdr + rows) + "\n"
-    if kind == "oeda_setup":
-        return src_text   # generic Linux setup manual; the project fills in its machine section
     if kind == "answers":
         return json.dumps({"bootstrapped_from": {"repo": ctx["src"], "commit": ctx["sha"], "date": TODAY, "with": ctx["with"],
                                                  "source_values": dict(ctx["applied"]), "source_modules": ctx["modules"]},
@@ -1486,6 +1497,20 @@ def _merge3(ours, base, theirs):
         shutil.rmtree(d, ignore_errors=True)
 
 
+MIGRATION_TAG = "- Existing projects:"
+
+
+def _fw_migrations(text):
+    """(entry heading, action) for every '- Existing projects:' line of a fw_env_memory text."""
+    out, head = [], ""
+    for line in text.split("\n"):
+        if line.startswith("## "):
+            head = line[3:].strip()
+        elif line.startswith(MIGRATION_TAG):
+            out.append((head, line[len(MIGRATION_TAG):].strip()))
+    return out
+
+
 def _read_opt(path):
     if not os.path.isfile(path):
         return None
@@ -1623,7 +1648,19 @@ def cmd_resync(root, dry, deletes, base_override, markdown):
         except (OSError, ValueError):
             pass
         if any(f.startswith(GEN_PREFIXES) for f in changed_fw):
-            notes.append("generator/templates changed - dispatch json2env: commit first, then --guvc + git diff + one smoke")
+            notes.append("generator/templates changed - dispatch json2env: commit first, then --guvc + git diff + one smoke "
+                         "(refreshes the assembly files only); module-private files of existing modules are never regenerated - "
+                         "diff them against a scratch generation and port the template hunks (new-project SKILL, sync step 7)")
+        # hand migrations the framework logged for existing projects: '- Existing projects:' lines of
+        # fw_env entries that are new since the base commit (the project's own fw_env is reset at bootstrap)
+        fe = "verify/docs/memory/fw_env_memory.md"
+        fe_t = _read_opt(os.path.join(tt, fe))
+        fe_b = _read_opt(os.path.join(tb, fe)) if has_base else None
+        if isinstance(fe_t, str):
+            seen_b = set(_fw_migrations(fe_b)) if isinstance(fe_b, str) else set()
+            for head, line in _fw_migrations(fe_t):
+                if (head, line) not in seen_b:
+                    notes.append("hand migration [%s]: %s" % (head, line))
         if any(f.startswith(DEPLOY_PREFIXES) for f in changed_fw):
             notes.append("flow scripts changed - redeploy: bash verify/script/file_manage.sh")
         rc, st = _run(["git", "-C", SRC_REPO, "status", "--porcelain", "--", "verify", "deliver_bridge"])

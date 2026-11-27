@@ -23,8 +23,8 @@ Leader duties: analyze user needs, schedule and manage the other agents, analyze
 Sub-agents cannot ask the user mid-run, so file confirmation is tiered:
 
 - **Sub-agents may edit directly** (rollbackable artifacts): their own module's module-private files (`uvc/<mod>/`, `<mod>_seq/test`, `<mod>_block_base_*`, `json/case/<mod>.json`, `tb_top_<mod>.sv`, `uvm_blk_<mod>.f`, `<mod>_if_conn*`), newly written test/seq/coverage code, `docs/features/`, `docs/review/`, agent memories under `docs/memory/`, `deliver_bridge/` reports. Exception: a new reference model (`uvc/<mod>/src/<mod>_ref_model.sv`) is approval-gated — plan first, develop only after user approval (dev_agent charter).
-- **Change plan + user approval required first**: anything under `script/` (generators/flow), `script/uvm_env_config_template.json`, `tb_top/filelist/*.f`, assembly/base template-pure files, `CLAUDE.md`, `.claude/rules/`, cross-module shared files. Exception: the leader writes registry values into these files through `new_project.py apply` after the user confirms the summary table — `/new-project` (project stage) and the §8 register-table and design-input steps (verification stage) — and pulls a newer framework through `new_project.py resync` after the user confirms its dry-run table (`/new-project sync`). Sub-agent Write/Edit of these paths is gated by path_guard (§6: prompt in default mode, block in auto-like modes); Bash-side writes stay advisory.
-**RTL access** — the mode comes from the intake's `spec_dir` (§8 step 1):
+- **Change plan + user approval required first**: anything under `script/` (generators/flow), `script/uvm_env_config_template.json`, `tb_top/filelist/*.f`, assembly/base template-pure files, `CLAUDE.md`, `.claude/rules/`, `docs/ops/`, cross-module shared files. Exception: the leader writes registry values into these files through `new_project.py apply` after the user confirms the summary table — `/new-project` (project stage) and the intake's register-table and design-input steps (verification stage) — and pulls a newer framework through `new_project.py resync` after the user confirms its dry-run table (`/new-project sync`). Sub-agent Write/Edit of these paths is gated by path_guard (§6: prompt in default mode, block in auto-like modes); Bash-side writes stay advisory.
+**RTL access** — the mode comes from the intake's `spec_dir` (`/new-verification` step 1):
 
 - **Pre-research mode** (`spec_dir` none/unset): the reference RTL under the design root is the basis — agents read it freely.
 - **Doc mode** (`spec_dir` is a document directory): verification is black-box by default — agents do not read the design RTL. Three reasons allow a request: **spec ambiguity** (a behaviour the documents allow to read two ways), **suspected issue** (contradictory spec, or failure localization pointing into the DUT), **gray-box verification** (internal signals/state: bound internal SVA, internal FSM coverage, hierarchical probes).
@@ -32,7 +32,7 @@ Sub-agents cannot ask the user mid-run, so file confirmation is tiered:
 - **Approval** — the leader relays it via AskUserQuestion: approve (scope may be narrowed) / reject / ask the design side instead (deliver_agent through `deliver_bridge/`). On approval the leader records a grant for that one dispatch — `python .claude/hooks/rtl_access.py grant --agent <agent> --path <scope> --category <c> --reason <r> --task <id>` — names it in the task prompt (§7), and revokes it (`rtl_access.py revoke --task <id>`) when the report is back; the grant also gets a taskboard row.
 - **Independence** — expected behaviour still comes from the specification. What the RTL shows may resolve an ambiguity or localize a problem, but an ambiguity resolution becomes a spec clarification confirmed by the user or the design side (sent through deliver_agent); the current RTL behaviour is never copied into a reference model or scoreboard expectation.
 - **Records** — the agent logs reason, scope and findings in its module log (`docs/memory/dev|debug/<mod>.md`); gray-box feature points carry the method tag `gray-box (RTL access approved <date>)` in `docs/features/<mod>/`.
-- **Enforcement** — path_guard blocks a sub-agent's Read/Grep/Glob of the design root (or a search rooted above it) in doc mode without a matching grant (§6); Bash reads stay advisory. The structural design scan of §8 stage 2b is not RTL behaviour reading and needs no grant.
+- **Enforcement** — path_guard blocks a sub-agent's Read/Grep/Glob of the design root (or a search rooted above it) in doc mode without a matching grant (§6); Bash reads stay advisory. The structural design scan of intake stage 2b is not RTL behaviour reading and needs no grant.
 
 - **VCS runs**: auto / proposed / confirm tiers - §3.
 
@@ -69,9 +69,9 @@ Retrieval entry point: **look up this table first** to find the canonical home o
 |---|---|---|
 | `verify/README.md` | people | quick start for engineers (setup, run, flow diagrams, checkpoints) - summary + pointers only, no canon |
 | `verify/CLAUDE.md` | whole project (loaded every session) | overview/commands and pass criteria; **canon of regeneration config-knob rules and the three file classes** |
-| `.claude/rules/*.md` | whole project (path-scoped, load when matching files are opened) | **canon of Verilator/OPEN_EDA coding rules + dual-track property mechanism** (`oeda-verilator.md`), UVM architecture facts (UVC pattern, top assembly, runtime toggles, DUT/interface wiring; `uvm-architecture.md`), RAL/reg-table flow behaviour (`ral.md`), two-flow closed-loop policy (`two-flow.md`), maintenance rules R1-R7 (`maintenance.md`), flow settings/deploy/script gotchas (`flow-scripts.md`), filelist conventions (`filelists.md`); assembly-file reminder (`generated-assembly.md`, marks the template-pure files) |
+| `.claude/rules/*.md` | whole project (path-scoped, load when matching files are opened) | **canon of Verilator/OPEN_EDA coding rules + dual-track property mechanism** (`oeda-verilator.md`), UVM architecture facts (UVC pattern, top assembly, runtime toggles, DUT/interface wiring; `uvm-architecture.md`), RAL/reg-table flow behaviour (`ral.md`), two-flow closed-loop policy (`two-flow.md`), maintenance rules R1-R9 (`maintenance.md`), flow settings/deploy/script gotchas (`flow-scripts.md`), filelist conventions (`filelists.md`); assembly-file reminder (`generated-assembly.md`, marks the template-pure files) |
 | `docs/ops/multi_agent_ops.md` | leader | **process canon**: roles/tiered confirmation/scheduling/passrate/hooks/this table |
-| `docs/ops/oeda_local_setup.md` | environment | local oEDA (Verilator) machine setup and invocation pitfalls (machine-specific ops manual) |
+| `docs/ops/oeda_local_setup.md` | environment | local oEDA (Verilator) machine setup and invocation pitfalls (carried; only its "This machine" section is project state) |
 | `docs/memory/arch_memory.md` | whole project (spec2json and json2env update the module rows, R2) | **project state only**: architecture/module table §0, system bring-up §1, open gaps §2 (header TOC; framework policy lives in `.claude/rules/maintenance.md` / `two-flow.md`) |
 | `docs/modules/<mod>.md` | cross-agent | **per-module DUT-knowledge canon**; stable facts distilled from process logs are promoted here per R6 |
 | `docs/memory/fw_env_memory.md` | json2env_agent | environment framework change log |
@@ -82,7 +82,7 @@ Retrieval entry point: **look up this table first** to find the canonical home o
 | `docs/features/<mod>/`, `docs/features/README.md` | dev_agent | feature list (`proposed` status requires user confirmation) + PROGRESS |
 | `docs/review/` | review_agent | review report archive |
 | `.claude/agents/*.md` | each agent | charter: role/flow/inline constraints/report format (enforcement subset of the canons) |
-| `.claude/skills/` (add-test-case, conv-report, new-verification, new-project) | skills | ops manuals, the intake procedure and the new-chip setup (open gaps: arch_memory §2) |
+| `.claude/skills/` (add-test-case, conv-report, new-verification, new-project) | skills | ops manuals, the new-chip setup and **the intake canon** (`new-verification`) (open gaps: arch_memory §2) |
 | `script/new_project/` | leader | new-chip bootstrap: `manifest.txt` (carry/reset/regen/state/exclude classification of every tracked file), `vars.json` (registry of every project value), `new_project.py` (+ `scan`: design-source suggestions, `check --lint`; `audit`: framework self-check - manifest/module-name/doc-map/registry coverage; `resync`: pull a newer framework into a project) and `bootstrap.sh`, `answers.json` (this project's recorded values) |
 | `docs/features/sys_function_splits.md` | spec2json | level-partition plan (project state: generated per project by stage 1, never carried by the framework) |
 | `docs/reports/` | reports | verification campaign reports (`report_template.md` outline + conventions; one per campaign, append-only; leader compiles from agent outputs) |
@@ -91,8 +91,8 @@ Retrieval entry point: **look up this table first** to find the canonical home o
 **Key entries per hot file** (retrieval goes to file + section, not just the file):
 
 - `verify/CLAUDE.md`: Commands (wsim usage, pass criterion) · oEDA section (wsim_oeda usage, pass criterion, block-level flow) · "Regenerating the environment" (R5 canon: skip-if-exists vs template-pure, config knobs + generator-enforced rules) · Conventions (naming, deploy rule, language) · Multi-agent section (leader pointer). Non-obvious UVM facts and RalGen/reg-table behaviour live in `.claude/rules/uvm-architecture.md` / `ral.md`.
-- `docs/memory/arch_memory.md`: §0 module/state table · §1 system bring-up checklist · §2 open development gaps. Maintenance rules R1-R7 and the two-flow policy live in `.claude/rules/maintenance.md` / `two-flow.md`.
-- `docs/ops/multi_agent_ops.md`: §0 roles · §1 tiered confirmation + RTL access · §2 scheduling · §3 passrate/coverage · §4 this map · §5 escalation · §6 hooks · §7 dispatch input · §8 new-requirement intake.
+- `docs/memory/arch_memory.md`: §0 module/state table · §1 system bring-up checklist · §2 open development gaps. Maintenance rules R1-R9 and the two-flow policy live in `.claude/rules/maintenance.md` / `two-flow.md`.
+- `docs/ops/multi_agent_ops.md`: §0 roles · §1 tiered confirmation + RTL access · §2 scheduling · §3 passrate/coverage · §4 this map · §5 escalation · §6 hooks · §7 dispatch input · §8 intake pointer (canon: `new-verification` skill).
 - `docs/modules/<mod>.md`: DUT details/quirks/case macros per module.
 
 **Task routing** (what am I trying to do → where to look):
@@ -125,7 +125,7 @@ Entry format: a dated heading plus the fields of the log's `_template.md` (fw_en
 - **path_guard** (`.claude/hooks/path_guard.py`; a call is a sub-agent call when the hook input carries `agent_id`):
   - Write/Edit outside `verify/`, `deliver_bridge/`, `sim/` → hard block for everyone (`~/.claude/projects` is whitelisted for session/memory state).
   - `git commit` from a sub-agent → hard block, even with `COMMIT_APPROVED=1`; from the main session → blocked unless the command carries `COMMIT_APPROVED=1` (leader-only, after user approval).
-  - Tiered confirmation (§1): a sub-agent Write/Edit of a source-of-truth file (`script/**`, `.claude/**`, `utils/**`, `CLAUDE.md`, `json/module.json`, `tb_top/filelist/*.f` except module-private `uvm_blk_*`/`tb_top_*`, the template-pure assembly files) or the creation of `uvc/<mod>/src/<mod>_ref_model.sv` needs the user. The hook decides by the session's permission mode:
+  - Tiered confirmation (§1): a sub-agent Write/Edit of a source-of-truth file (`script/**`, `.claude/**`, `utils/**`, `docs/ops/**`, `CLAUDE.md`, `json/module.json`, `tb_top/filelist/*.f` except module-private `uvm_blk_*`/`tb_top_*`, the template-pure assembly files) or the creation of `uvc/<mod>/src/<mod>_ref_model.sv` needs the user. The hook decides by the session's permission mode:
     - **default/plan** → permission prompt in the main session naming the agent (the user's answer is the approval; even with a leader-relayed approval the user is asked once more - intended);
     - **auto/acceptEdits/bypassPermissions/dontAsk** → hard block: those modes settle prompts without a human (in auto mode an `ask` goes through unprompted).
   After such a block the agent stops and reports; the user switches to default mode (Shift+Tab) and the leader re-dispatches. `arch_memory.md` stays ungated: it holds project state that json2env/spec2json update (maintenance.md R2).
@@ -138,38 +138,6 @@ Entry format: a dated heading plus the fields of the log's `_template.md` (fw_en
 
 A sub-agent task prompt must contain: target module/scope, spec basis (doc paths or a "pre-research mode" declaration), RTL access (pre-research: free; doc mode: "none" or the approved grant - category, scope, task id), whether it carries user approval (source-of-truth operations), for debug_agent the VCS tier the user approved and the job share (§3), expected outputs and report requirements, and the relevant memory/features file paths. Check the returned report against the charter's report format; ask for missing items before folding into the user report.
 
-## 8. New-requirement intake procedure (leader, on every brand-new verification request)
+## 8. New-requirement intake
 
-**Trigger test** — run this only when the request starts a NEW verification effort (new module, new feature set, new level). A continuation request ("continue debugging <mod>") gets only a next-step proposal, never the full pipeline. Before proposing, the leader does a light state check: arch §0 (does the module exist? block support?), taskboard (in-flight work), `docs/features/<mod>/` (existing feature lists), relevant memories.
-
-Every value the procedure needs is a registry variable of stage `verification` (`script/new_project/vars.json`), read with `new_project.py detect|scan`, recorded with `set` and written with `apply --stage verification` only after the user confirms. Interview style everywhere: AskUserQuestion, at most 4 questions per call, options = detected/scanned candidates (with where they came from), "keep current", default, "defer"; free text through "Other".
-
-**Step 0 — project check** — in a bootstrapped repo (`script/new_project/answers.json` has `bootstrapped_from`) run `new_project.py status --stage project`; if project values are still pending, offer `/new-project` first (run it now / continue anyway).
-
-**Step 1 — verification inputs** — `new_project.py detect --stage verification`; ask `spec_dir` (architecture/design/plan documents, or `none` = pre-research mode on reference RTL) and `rtl_dir` (inside the design root (design root: `hdl`)); `set`. `spec_dir` sets the RTL-access mode of §1; both go into the plan table and the spec2json task.
-
-**Recommended pipeline** — present the stages as a plan table personalized to the requirement; per stage state what it would do HERE, the inputs it uses, expected outputs, and whether it can be skipped with the reason:
-
-| Stage | Agent | What it does here | Skip when |
-|---|---|---|---|
-| 1 | spec2json_agent | level partition → `docs/features/sys_function_splits.md` + config proposal | module & levels already partitioned |
-| 2 | json2env_agent | env build/update (`--guvc`, deploy, smoke) | env for the target already exists (check §0 / fw_env_memory) |
-| 2b | leader | design inputs: scan → suggested design file lists → user confirms → apply + check + lint | no RTL yet (defer all; rerun when it lands) |
-| 3 | dev_agent_N | confirmed feature list + UVC/test/seq/coverage development | — (core stage) |
-| 4 | debug_agent_N | oEDA debug → passrate ≥ 80% → VCS stage & convergence | — (core stage) |
-| 5 | review_agent | code review, P0/P1/P2 report | optional — user decides |
-| 6 | deliver_agent | status feedback to the design side | optional — user decides |
-
-**Decision interaction** — ask via AskUserQuestion: (a) adopt the full pipeline; (b) adopt with named stages skipped; (c) custom instructions. The pipeline is an entry suggestion only — **it never bypasses existing gates** (spec2json/json2env invocation approvals, feature-list confirmation, source-of-truth approvals all still apply, per §1 and the charters).
-
-**After stage 1 (config + register table)** — AskUserQuestion on spec2json's config proposal, including the top-level `enable_ral` / `has_top_if_cfg` (registry owner spec2json). If `enable_ral` is true, ask `reg_table`: candidates from `new_project.py scan` (CSVs carrying the RalGen columns), current value, "defer"; `set reg_table=...` and `apply --stage verification` (writes `WSIM_REG_TABLE`). spec2json then writes the approved config; `check --stage verification` compares the top-level values.
-
-**After stage 2 (json2env), when modules were added or removed** — the R2 sync rewrote the state docs (arch §0/§2, `docs/modules/`): ask the user to run `/doctor prompt-audit docs/` (user-typed); findings are fixed with approval. Instruction files name no modules (maintenance.md R1), so they need no audit here. Not needed when only design lists changed. (`/new-project` asks for the same audit once, before this intake.)
-
-**Stage 2b — design inputs (leader, after json2env's `--guvc` created `tb_top/`)** — `new_project.py scan --markdown`, then per list variable present the scan suggestion with its reasons and confidence and, on a rerun, the +added/-removed diff against the current list (option previews). Round A: `rtl_files` (a design-side filelist referenced with `-f` vs the explicit scanned list), `include_dirs`, `rtl_define_files`, `ip_files`, `rtl_tops`. Round B (gate level, default "defer"): `gate_files`, `gate_ip_files`, `std_libs`, `gpls_libs`. Summary table → confirm → `apply --stage verification` → `check --stage verification --lint` (Verilator lint of the lists; where Verilator is not on PATH, run the printed command where it is) → deferred items become taskboard rows, one fw_env entry. These lists are user-maintained skeletons — later `--guvc` runs keep them. The scan reads structure only (file, module, package, include names); it is not RTL behaviour reading, so the §1 RTL-access rule does not apply — in doc mode its hierarchy output feeds the file lists and the tb_top DUT wiring, not the spec analysis.
-
-**Recording** — write the decision + final plan to `docs/memory/leader_taskboard.md` and update it at every stage transition.
-
-**Explicit invocation** — `/new-verification <requirement>` (skill `.claude/skills/new-verification/`) runs this procedure with the given requirement.
-
-**New chip** — a new chip project is first bootstrapped (`script/new_project/bootstrap.sh`, run by the user) and parameterized with `/new-project` (project stage: identity, design root, tools, server settings, language); that skill ends by asking whether to start this intake. A newer framework version is pulled into an existing project with `/new-project sync <framework-repo>` (3-way per carried file, conflicts to `<file>.fw-new`, each deletion confirmed; only new variables interviewed).
+On every brand-new verification request the leader runs the intake procedure; its canon is the `new-verification` skill (`.claude/skills/new-verification/SKILL.md`, `/new-verification <requirement>`): trigger test, project check, verification inputs (`spec_dir` sets the RTL-access mode of §1), the plan table (stages 1-6 incl. 2b design inputs) and its decision, the config/register-table and design-input steps. It never bypasses the gates of §1 and the charters.

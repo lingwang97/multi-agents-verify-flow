@@ -25,4 +25,6 @@
 
 ## This machine
 
+Project state: each project records its own machine here. The framework keeps this section a placeholder - the file is carried, so `/new-project sync` merges framework changes into the sections above and leaves this one to the project.
+
 - To be filled in: OSS CAD Suite path and Verilator version, `UVM_HOME`, `WSIM_PYTHON`, lz4/zlib packages, waveform viewer.

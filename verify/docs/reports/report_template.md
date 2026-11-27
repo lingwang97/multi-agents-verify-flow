@@ -27,7 +27,7 @@ Ports / parameters / behavior summary; the full DUT canon lives in `docs/modules
 
 ## 3. Verification environment [json2env + leader design inputs]
 
-Env structure per level (json2env); design file lists and register table (leader, ops §8 stage 2b; `script/new_project/answers.json`); config-knob state (history ref `docs/memory/fw_env_memory.md`).
+Env structure per level (json2env); design file lists and register table (leader, `/new-verification` stage 2b; `script/new_project/answers.json`); config-knob state (history ref `docs/memory/fw_env_memory.md`).
 
 ## 4. Feature points & verification mapping [dev_agent]
 

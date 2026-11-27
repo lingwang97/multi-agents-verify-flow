@@ -42,7 +42,7 @@ import sys
 
 # Source-of-truth paths, relative to the project dir (verify/), "/" separators.
 # Module-private filelists (uvm_blk_<mod>.f, tb_top_<mod>.f) are excluded below.
-SOT_PREFIXES = ("script/", ".claude/", "utils/")
+SOT_PREFIXES = ("script/", ".claude/", "utils/", "docs/ops/")
 # The two project-derived assembly names (seq/<project>_sequence_lib.sv,
 # tb_top/tb_top/tb_top_<project>.sv) are built at runtime from the project
 # name in script/new_project/answers.json - no literal to rewrite per project.

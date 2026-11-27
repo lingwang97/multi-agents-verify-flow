@@ -4,7 +4,7 @@ UVM-1.2 (SystemVerilog) verification environment for the SoC `chip`. Mostly gene
 
 - Launch Claude Code from `verify/` (this directory). Hooks, settings, agents, skills and rules all live in `verify/.claude/`; the repo root has no Claude config.
 - Design database (RTL, IP, netlists, register table): repo-root relative (design root: `hdl`); a new project records its own with `/new-project`.
-- `verify/` is the single UVM tree in the repo. Module list/state, bring-up checklist and open gaps: `docs/memory/arch_memory.md` — read it before structural changes (new module, flow branch, skill/script edit); framework maintenance rules R1–R7 live in `.claude/rules/maintenance.md`.
+- `verify/` is the single UVM tree in the repo. Module list/state, bring-up checklist and open gaps: `docs/memory/arch_memory.md` — read it before structural changes (new module, flow branch, skill/script edit); framework maintenance rules R1–R9 live in `.claude/rules/maintenance.md`.
 - Path-scoped rules in `.claude/rules/` load when you open matching files: `oeda-verilator.md` + `uvm-architecture.md` (`*.sv`), `generated-assembly.md` (template-pure assembly files), `filelists.md` (`*.f`), `flow-scripts.md` (`script/sflow`, deploy, `utils/`), `ral.md` (RAL / register table).
 
 ## Commands
@@ -79,4 +79,4 @@ python gen_uvm_env.py -c ... --prune [--yes]         # list/delete files of modu
 
 - The main session is the **leader**: it schedules the `.claude/agents/` subagents (spec2json/json2env/dev/debug/deliver/review; one dev/debug instance per module) and never edits verification code (exceptions - registry writes and user-approved framework maintenance: ops §0). debug_agent runs VCS within the ops §3 tiers (auto / proposed / confirm). Rules (roles, tiered confirmation, scheduling, passrate/coverage, hooks, doc map): `docs/ops/multi_agent_ops.md`.
 - Hard rails (path_guard hook, ops §6): agents write only under `verify/`, `deliver_bridge/`, `sim/`; sub-agent edits of source-of-truth files and new reference models need the user (prompt in default mode, blocked in auto mode); only the leader commits, with a `COMMIT_APPROVED=1` prefix after user approval; in doc mode sub-agents read the design RTL only with a per-dispatch grant the user approved (ops §1 RTL access).
-- On a brand-new verification request the leader runs the intake procedure (ops §8, `/new-verification`). A new chip project is bootstrapped by `script/new_project/bootstrap.sh` and parameterized with `/new-project` first; later framework versions come in with `/new-project sync <framework-repo>`.
+- On a brand-new verification request the leader runs the intake procedure (`/new-verification` skill). A new chip project is bootstrapped by `script/new_project/bootstrap.sh` and parameterized with `/new-project` first; later framework versions come in with `/new-project sync <framework-repo>`.

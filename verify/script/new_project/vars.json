@@ -2,7 +2,7 @@
   "_doc": [
     "Variable registry - the single home of every value a project must define before/while the verification flow runs.",
     "Read by new_project.py (detect/scan/status/set/apply/check) and by the interviews of the /new-project and /new-verification skills.",
-    "A new value the user must define is registered here in the same change (arch_memory R7), with its stage.",
+    "A new value the user must define is registered here in the same change (.claude/rules/maintenance.md R7), with its stage.",
     "stage: 'project' = asked by /new-project (framework migration, once per chip); 'verification' = asked by /new-verification (per verification effort).",
     "phase: interview order inside the stage (project P1 identity+design root, P2 machine tools, P3 VCS server, P4 language;",
     "       verification V1 inputs, V2 config top level, V3 register table, V4 design sources, V5 gate level).",
@@ -86,7 +86,7 @@
             "CLAUDE.md",
             ".claude/agents/dev_agent.md",
             ".claude/agents/spec2json_agent.md",
-            "docs/ops/multi_agent_ops.md"
+            ".claude/skills/new-verification/SKILL.md"
           ],
           "pattern": "(design root: `{v}`)"
         }

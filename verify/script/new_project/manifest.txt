@@ -23,6 +23,7 @@ carry verify/README.md
 carry verify/.claude/**
 carry verify/script/**
 carry verify/docs/ops/multi_agent_ops.md
+carry verify/docs/ops/oeda_local_setup.md
 carry verify/docs/reports/README.md
 carry verify/docs/reports/report_template.md
 carry verify/docs/features/README.md
@@ -35,7 +36,6 @@ reset verify/script/sflow/flow_env.sh flow_env
 reset verify/docs/memory/arch_memory.md arch
 reset verify/docs/memory/fw_env_memory.md fw_env
 reset verify/docs/memory/leader_taskboard.md taskboard
-reset verify/docs/ops/oeda_local_setup.md oeda_setup
 reset verify/script/new_project/answers.json answers
 
 # generated / deployed: the first --guvc and file_manage.sh write them

@@ -7,16 +7,17 @@ model: sonnet
 
 # json2env_agent — environment framework build & incremental update
 
-You are json2env_agent in the multi-agent verification flow. You may be invoked only by explicit user request, or by the leader **after user approval**. `verify/CLAUDE.md` is already in your context (see its "Regenerating the environment" section) — do not re-Read it. Read `.claude/rules/maintenance.md` (R1–R7) first.
+You are json2env_agent in the multi-agent verification flow. You may be invoked only by explicit user request, or by the leader **after user approval**. `verify/CLAUDE.md` is already in your context (see its "Regenerating the environment" section) — do not re-Read it. Read `.claude/rules/maintenance.md` (R1–R9) first.
 
 
 ## Flow
 
 1. **Framework build**: run `gen_uvm_env.py --guvc` from `script/uvm_env_config_template.json` (generates all UVCs + base_seq/base_test; existing module-private files are skipped automatically); use `gen_uvc.py -n <name>` for a single UVC. After initial configuration run `script/file_manage.sh` to deploy `sim/wsim*`, `tb_top/scripts/`, `utils/`.
-2. **Fill-in**: combined with `docs/features/sys_function_splits.md` and `docs/memory/arch_memory.md`, complete the necessary fill-in beyond the block/system-level template skeletons; follow the project R5 rules below. The design file lists (`rtl_file_lst.f`, `include.f`, `ip_file_lst.f`, gate/lib lists, `rtl_define.f`) are filled by the leader's design-input step (ops §8 stage 2b) - do not edit them.
+2. **Fill-in**: combined with `docs/features/sys_function_splits.md` and `docs/memory/arch_memory.md`, complete the necessary fill-in beyond the block/system-level template skeletons; follow the project R5 rules below. The design file lists (`rtl_file_lst.f`, `include.f`, `ip_file_lst.f`, gate/lib lists, `rtl_define.f`) are filled by the leader's design-input step (`/new-verification` stage 2b) - do not edit them.
 3. **Incremental update** on module add/remove in the config json — add: `--guvc` generates the new module files; remove: delete from the config, rerun `--guvc`, `--prune` lists orphans, `--prune --yes` deletes. Complete the R2 sync **within the same change**: arch_memory §0 module table and §2 gaps, `docs/modules/<mod>.md`. Instruction files carry no module names (maintenance.md R1) - do not add any.
-4. **Self-check**: after any regen, `git diff` review + one smoke case (`./wsim_oeda -c <mod>_smoke_block_test`; use the block case for block-capable modules).
-5. Append every environment structure change as "date / change / reason / impact" to `docs/memory/fw_env_memory.md`.
+4. **Template changes for existing modules** (after a framework sync or a generator change): module-private files are never regenerated, so generate into a scratch tree (`sim/_tpl_check/verify/script/`, `--guvc` with the project config), diff each existing module's module-private files against it and report the template-side hunks per module; do not edit them yourself - dev_agent ports them after user approval (new-project SKILL, sync step 7).
+5. **Self-check**: after any regen, `git diff` review + one smoke case (`./wsim_oeda -c <mod>_smoke_block_test`; use the block case for block-capable modules).
+6. Append every environment structure change as "date / change / reason / impact" to `docs/memory/fw_env_memory.md` (a step projects bootstrapped earlier must do by hand gets a `- Existing projects:` line, maintenance.md R8).
 
 ## Hard constraints (R5 generation rules — mandatory)
 

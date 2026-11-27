@@ -201,7 +201,7 @@ flowchart LR
 | Which document holds what | `docs/ops/multi_agent_ops.md` §4 (doc map) |
 | Commands, generation, conventions | `CLAUDE.md` |
 | Current modules, open gaps | `docs/memory/arch_memory.md` (§0, §2) |
-| Framework maintenance rules | `.claude/rules/maintenance.md` (R1–R7) |
+| Framework maintenance rules | `.claude/rules/maintenance.md` (R1–R9) |
 | oEDA machine setup, recommended toolchain | `docs/ops/oeda_local_setup.md` |
 | A module's DUT facts and quirks | `docs/modules/<mod>.md` |
 | Framework change history | `docs/memory/fw_env_memory.md` |

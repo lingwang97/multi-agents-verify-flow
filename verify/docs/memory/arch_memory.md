@@ -17,7 +17,7 @@ This repository is the **framework**: `script/uvm_env_config_template.json` list
 
 ## 1. System-level bring-up checklist (once the chip RTL lands; do not start early)
 
-1. The chip RTL lands under the design root and is listed in `tb_top/filelist/rtl_file_lst.f` through the `/new-verification` design-input step (ops §8 stage 2b) (the generated system top `tb_top_<project>.sv` has clk/rst from the template; DUT instantiation is hand work, not generatable).
+1. The chip RTL lands under the design root and is listed in `tb_top/filelist/rtl_file_lst.f` through the `/new-verification` design-input step (stage 2b) (the generated system top `tb_top_<project>.sv` has clk/rst from the template; DUT instantiation is hand work, not generatable).
 2. The real register-table CSV is provided at the `WSIM_REG_TABLE` location (`verify/script/sflow/flow_env.sh`; the location is asked in the `/new-verification` register-table step and written through `new_project.py set/apply`; placing the file is the user's action) -> triggers RalGen real model AND the derived-width validation (width derivation: `.claude/rules/ral.md` - check `verify/ral/ral_reg_width` covers the real widest register, especially sliced registers).
 3. `tb_top/config/Makefile.initreg.cfg` is referenced by the VCS Makefile but is not generated - create it when register init is first needed.
 4. Chip DUT instance in `tb_top_<project>.sv`, its wiring to the UVC interfaces in `intf/<mod>_if_conn.sv` / `top_if_conn.sv` (included through `tb_top/component/if_conn.sv`; same `dut_*` net convention as the block level, `.claude/rules/uvm-architecture.md` "Interface connection") - hand work per DUT.

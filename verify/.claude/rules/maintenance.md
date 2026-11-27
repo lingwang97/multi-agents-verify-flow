@@ -7,7 +7,7 @@ paths:
   - "json/**"
 ---
 
-# Maintenance rules (R1-R7)
+# Maintenance rules (R1-R9)
 
 Framework maintenance policy. Project state - module table, bring-up checklist, open gaps - stays in `docs/memory/arch_memory.md`; these rules govern how documents, generators and the project registry are kept in sync. They load when a CLAUDE.md, `.claude/`, `docs/`, `script/` or `json/` file is opened, i.e. exactly when source-of-truth files or documentation are being changed.
 
@@ -35,6 +35,7 @@ Framework maintenance policy. Project state - module table, bring-up checklist, 
 ### R6. Documentation governance: canonical homes, summary+link, citation sweeps
 - **Rule:** every fact class has ONE canonical home; other docs keep a short summary plus a pointer, never a full restatement. The canonical map - the home of every fact class - is the doc map in `docs/ops/multi_agent_ops.md` §4; keep it there, not a second list here. Rule/doc change history is the **framework repo's** git log - a project's log starts at its bootstrap, so history questions route to the framework repository (arch_memory keeps only a Last-updated date).
 - **Promotion:** per-agent logs (`fw_env_memory`, `dev/`, `debug/`, `deliver/`, taskboard) record *what happened*; a stable fact distilled from a log is **promoted** into `docs/modules/<mod>.md` and the log entry marked "promoted" — never copy canon into logs.
+- **Carried vs project files:** a carried file (`manifest.txt` class `carry`) never points into the content of a reset or state file - a fw_env entry, a deployment record, a taskboard row: in a project those files start fresh and the pointer dangles. Point at the canon instead.
 - **Anchors:** arch_memory holds only project state; renumbering it requires a grep-guided citation sweep over every `arch §N` reference in every spelling (e.g. `arch_memory.md` §N, "§0 ... and §N"). When a policy changes: edit the canonical home first, then sync the summaries.
 - **Why:** the dual-track property policy once required 7–8 synchronized edits; §-number references already drifted once (§7/§6 ordering).
 - **Check:** before editing a rule, find its canonical home via the doc map (ops §4); grep the old wording afterwards to catch missed summaries.
@@ -43,3 +44,13 @@ Framework maintenance policy. Project state - module table, bring-up checklist, 
 - **Rule:** any new value a project must define (a `flow_env.sh` setting, a top-level config knob, a filelist the user fills, an identity token in docs) is added to `vars.json` in the same change, with its `stage` (project → `/new-project`, verification → `/new-verification`), target, prompt, validation and deferrability; files a new chip must carry or reset go into `manifest.txt`.
 - **Why:** `/new-project` interviews exactly what the registry lists - an unregistered value is silently skipped and the new project inherits the old chip's value.
 - **Check:** `python script/new_project/new_project.py audit` before committing any framework change (every tracked file classified in `manifest.txt`, no module names in carried text, every carried `.md` in the ops §4 doc map, every `flow_env.sh` variable / config key registered, every occurrence of a registered value inside its rewrite files; bootstrap refuses to run while it fails). For bigger changes also bootstrap into a scratch dir under `sim/`, `new_project.py set/apply/check`, `--guvc` one module, one oEDA smoke.
+
+### R8. A framework change that existing projects must finish by hand gets an `Existing projects:` line
+- **Rule:** when a framework change needs a hand step in projects bootstrapped earlier - a module-private template change (never regenerated for existing modules), an edit to a reset or state file (arch_memory, taskboard), a one-time sync conflict - its `docs/memory/fw_env_memory.md` entry carries one line starting exactly `- Existing projects:` that names the action.
+- **Why:** a project's fw_env is reset at bootstrap and module-private files are skip-if-exists, so neither sync nor `--guvc` carries these steps; `new_project.py resync` prints every such line of the framework entries new since the project's base commit as a `hand migration` NOTE (new-project SKILL, sync step 7).
+- **Check:** before committing, every fw_env entry whose Impact mentions projects already bootstrapped has the tagged line.
+
+### R9. Skill commands
+- **Rule:** a skill's SKILL.md calls its scripts as `python3 ${CLAUDE_SKILL_DIR}/<script>.py`. `${CLAUDE_SKILL_DIR}` is substituted only in SKILL.md: charters, manuals and other files read as plain files use the repo-relative path (`python3 .claude/skills/<skill>/<script>.py`).
+- **Why:** the scripts are mode 644 in git, so a bare path is not executable on Linux; in a file read with Read the variable stays a literal string.
+- **Check:** `grep -rn 'CLAUDE_SKILL_DIR' .claude` hits only SKILL.md files, each preceded by `python3`.
