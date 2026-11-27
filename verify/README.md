@@ -94,7 +94,7 @@ cd <repo>/sim
 **Pass** = simulator exit 0 and no `UVM_ERROR` / `UVM_FATAL` in `sim.log`. Results: VCS `result.txt` + rerun commands in `fail_wave.txt` inside the invocation dir `sim/uvm_scratch_<case|mod|group>_<timestamp>_.../`; oEDA per case `sim/uvm_scratch_oeda_<case>/result.txt`, for a regression also `sim/oeda_result.txt` (pass rate) + `sim/oeda_fail_rerun.txt`.
 
 - A **block-level case** carries `+<MOD>_BLOCK_TEST` in its `VCS_MACRO_OPT` (any position); both flows then compile `tb_top/filelist/uvm_blk_<mod>.f` with the top `tb_top_<mod>.sv`.
-- `wsim_oeda` **shares one Verilator build** between cases with the same filelist and defines (`sim/oeda_build/`) and **rebuilds by itself when a source changes** — a module regression usually compiles once or twice.
+- `wsim_oeda` **shares one Verilator build** between cases with the same filelist, defines and wave/coverage flags (`sim/oeda_build/`) and **rebuilds by itself when a source changes** — a module regression usually compiles once or twice.
 
 ```mermaid
 flowchart LR

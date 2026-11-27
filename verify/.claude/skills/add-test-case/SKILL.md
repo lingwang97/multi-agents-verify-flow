@@ -78,4 +78,4 @@ A clean run (no `UVM_ERROR`/`UVM_FATAL`) doesn't mean much until the scoreboard 
 | `ERROR: Test key <name> already exists in <json file>` | same, JSON side | same fix |
 | `ERROR: --function must be an identifier fragment...` | spaces, hyphens, or a leading digit | use `snake_case`, e.g. `write_read` |
 | `ERROR: Cannot place a new class at top level of <file>` | the file ends inside an open class or an open `` `ifdef `` (hand edit left it unbalanced) | close the open `endclass` / `` `endif `` in that file, then rerun - nothing was written |
-| Test compiles but the run fails with `BDTYP` / `INVTST` | the class sits inside another class or an `` `ifdef `` branch (a version of this script before 2026-11-27 put it before the last `` `endif `` of the file) | move the class out to the end of the file, after the base class's `endclass` |
+| Test compiles but the run fails with `BDTYP` / `INVTST` | the class sits inside another class or an `` `ifdef `` branch (hand edit or an older scaffold) | move the class out to the end of the file, after the base class's `endclass` |

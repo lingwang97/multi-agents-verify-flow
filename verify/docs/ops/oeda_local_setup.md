@@ -19,7 +19,7 @@
 ## Pitfalls
 
 - csh/tcsh login shells: `wsim_oeda` is a bash script and does not see variables set only in `~/.cshrc`. Export `UVM_HOME` and source the OSS CAD Suite `environment` where bash sees them (`~/.bashrc` / `~/.profile`), or in the shell before calling `./wsim_oeda`.
-- Builds live in `sim/oeda_build/<tag>_<sig>/` (three levels below the repo root, matching the `.f` path depth), shared by every case with the same filelist and defines; delete the directory to force a rebuild. Builds are serialized with `flock` (util-linux) and the run queue needs bash >= 4.3.
+- Builds live in `sim/oeda_build/<tag>_<sig>/` (three levels below the repo root, matching the `.f` path depth), shared by every case with the same filelist, defines and wave/coverage flags (`-wave`/`-nowave`, `-covrpt` give separate builds); delete the directory to force a rebuild. Builds are serialized with `flock` (util-linux) and the run queue needs bash >= 4.3.
 - Simulations run `-j 2` in parallel by default; raise `-j` on a machine with more cores and memory (each Verilator build already uses every core).
 - Default build fails at link time but `-nowave` passes: the lz4/zlib development libraries are missing (FST tracing needs them; `wsim_oeda` prints the install hint).
 

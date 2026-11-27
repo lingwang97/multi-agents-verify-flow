@@ -26,7 +26,7 @@ This repository is the **framework**: `script/uvm_env_config_template.json` list
 
 ## 2. Open development gaps
 
-Confirmed gaps of the generated environment that a developer hits when writing tests. Former `test_case_dev_manual.md` §7 table (section removed from the manual); IDs keep the old row numbers for traceability. **Lifecycle:** when a gap closes, delete its row here, log the fix in `docs/memory/fw_env_memory.md` (state lives here, history there), and, for G3, remove the RAL-macro-naming caveat in `test_case_dev_manual.md` §3.4 (the manual describes the generated skeleton generically; the other gaps have no caveat there). Placeholder JSON tokens are tracked in §1 item 6.
+Confirmed gaps of the generated environment that a developer hits when writing tests. IDs are stable - a closed gap leaves its number unused. **Lifecycle:** when a gap closes, delete its row here, log the fix in `docs/memory/fw_env_memory.md` (state lives here, history there), and, for G3, remove the RAL-macro-naming caveat in `test_case_dev_manual.md` §3.4 (the manual describes the generated skeleton generically; the other gaps have no caveat there). Placeholder JSON tokens are tracked in §1 item 6.
 
 | ID | Gap | Where | Done looks like |
 |---|---|---|---|
