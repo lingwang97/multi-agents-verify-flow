@@ -58,23 +58,70 @@ def class_exists(path, class_name):
     return re.search(r"\bclass\s+" + re.escape(class_name) + r"\b", content) is not None
 
 
-def insert_before_trailing_endif_or_append(path, new_text):
-    """Insert new_text before a trailing `endif guard if one exists,
-    otherwise append at end of file. Handles both guarded test/*.sv files
-    and unguarded seq/*.sv files with one code path."""
-    with open(path, "r", encoding="utf-8") as f:
+_PP_OPEN = re.compile(r"\s*`(ifdef|ifndef)\b")
+_PP_CLOSE = re.compile(r"\s*`endif\b")
+_CLASS_OPEN = re.compile(r"\s*(virtual\s+)?class\b")
+_CLASS_CLOSE = re.compile(r"\s*endclass\b")
+
+
+def _code_lines(lines):
+    """(index, stripped text) of the lines that are not blank and not // comments."""
+    return [(i, l.strip()) for i, l in enumerate(lines) if l.strip() and not l.strip().startswith("//")]
+
+
+def _include_guard_end(lines):
+    """Index of the closing `endif of a file-level include guard, else None.
+
+    A guard is: first code line `ifndef X, the next one `define X, and the last
+    code line `endif. Per-module test/seq files have no guard - their `endif
+    lines belong to `ifdef OPEN_EDA blocks inside the classes and must never be
+    taken as an insertion point."""
+    code = _code_lines(lines)
+    if len(code) < 3:
+        return None
+    m = re.match(r"`ifndef\s+(\w+)", code[0][1])
+    if not m or not re.match(r"`define\s+%s\b" % re.escape(m.group(1)), code[1][1]):
+        return None
+    return code[-1][0] if code[-1][1].startswith("`endif") else None
+
+
+def _top_level_at(lines, idx, expected_pp_depth):
+    """True when line idx sits outside every class and at the expected preprocessor depth."""
+    pp = cls = 0
+    for l in lines[:idx]:
+        if _PP_OPEN.match(l):
+            pp += 1
+        elif _PP_CLOSE.match(l):
+            pp -= 1
+        elif _CLASS_OPEN.match(l):
+            cls += 1
+        elif _CLASS_CLOSE.match(l):
+            cls -= 1
+    return pp == expected_pp_depth and cls == 0
+
+
+def plan_class_insert(path, new_text):
+    """New content of a per-module test/seq file with a top-level class added.
+
+    Inside a file-level include guard: before its closing `endif. Otherwise:
+    appended at the end of the file. Refuses (dies, nothing written) when the
+    insertion point would land inside a class or inside an `ifdef block - a
+    class placed there compiles but never registers with the factory (UVM
+    BDTYP/INVTST at run time). Callers plan every file before writing any, so
+    a refusal leaves no partial edit."""
+    with open(path, "r", encoding="utf-8", newline="") as f:   # keep the file's own line endings
         lines = f.readlines()
-    endif_idx = None
-    for i in range(len(lines) - 1, -1, -1):
-        if lines[i].lstrip().startswith("`endif"):
-            endif_idx = i
-            break
-    if endif_idx is not None:
-        new_lines = lines[:endif_idx] + [new_text] + lines[endif_idx:]
+    end = _include_guard_end(lines)
+    if end is not None:
+        idx, depth = end, 1
     else:
-        new_lines = lines + [new_text]
-    with open(path, "w", encoding="utf-8") as f:
-        f.writelines(new_lines)
+        idx, depth = len(lines), 0
+        if lines and not lines[-1].endswith("\n"):
+            lines[-1] += "\n"
+    if not _top_level_at(lines, idx, depth):
+        die("Cannot place a new class at top level of %s: the insertion point would be inside a class "
+            "or an `ifdef block (unbalanced class/`ifdef structure?). Nothing was written." % path)
+    return "".join(lines[:idx] + [new_text] + lines[idx:])
 
 
 def main():
@@ -182,7 +229,7 @@ endclass : %(test_class)s
 ''' % dict(test_class=test_class, test_base=test_base, seq_class=seq_class,
            start_target=start_target)
 
-    insert_before_trailing_endif_or_append(test_file, test_text)
+    new_test = plan_class_insert(test_file, test_text)
 
     # ---- seq class ----
     seq_text = '''
@@ -202,8 +249,12 @@ class %(seq_class)s extends %(seq_base)s;
 endclass : %(seq_class)s
 ''' % dict(seq_class=seq_class, seq_base=seq_base, func=func)
 
-    with open(seq_file, "a", encoding="utf-8") as f:
-        f.write(seq_text)
+    new_seq = plan_class_insert(seq_file, seq_text)
+
+    # both files planned without a refusal - only now write them
+    for path, content in ((test_file, new_test), (seq_file, new_seq)):
+        with open(path, "w", encoding="utf-8", newline="") as f:
+            f.write(content)
 
     # ---- JSON entry ----
     macro_opt = args.macro_opt

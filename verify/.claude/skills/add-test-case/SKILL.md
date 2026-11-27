@@ -12,7 +12,7 @@ Paths below are relative to `verify/` (the "verify root").
 ## Run this — the driver
 
 ```bash
-${CLAUDE_SKILL_DIR}/add_test_case.py \
+python3 ${CLAUDE_SKILL_DIR}/add_test_case.py \
   --module <mod> \
   --function <short_scenario_name> \
   --level <system|block> \
@@ -25,15 +25,15 @@ Examples:
 
 ```bash
 # system-level
-${CLAUDE_SKILL_DIR}/add_test_case.py \
+python3 ${CLAUDE_SKILL_DIR}/add_test_case.py \
   --module <mod> --function toggle_check --level system --stage1 true --smoke true
 
 # block-level (the module needs its block base pair - see Gotchas)
-${CLAUDE_SKILL_DIR}/add_test_case.py \
+python3 ${CLAUDE_SKILL_DIR}/add_test_case.py \
   --module <mod> --function burn_and_read --level block --stage2 true --iteration 4
 
 # block-level with an extra compile define for this case only
-${CLAUDE_SKILL_DIR}/add_test_case.py \
+python3 ${CLAUDE_SKILL_DIR}/add_test_case.py \
   --module <mod> --function wait_states_block --level block --macro-opt "+<EXTRA_DEFINE>"
 ```
 
@@ -45,7 +45,7 @@ This creates, per the naming rule `<mod>_<function>_test` / `<mod>_<function>_se
 - **Block level**: appends `<mod>_<function>_test extends <mod>_block_base_test` into `test/<mod>_block_base_test.sv`, and the seq analog into `seq/<mod>_block_base_seq.sv`. The test starts the sequence on `<mod>_env_h.vseqr_h` (the module env's own sequencer).
 - Either way: a new entry keyed `"<mod>_<function>_test"` in `json/case/<mod>.json`'s `"tests"` object, with `UVM_TESTNAME` set to the same class name, and - for block level - `VCS_MACRO_OPT` prefixed with `+<MOD>_BLOCK_TEST`.
 
-The script refuses (clear error, no partial edits) if: the module is not in `json/module.json`, `--function` isn't a valid identifier fragment, the class name already exists in the target file, the JSON key already exists, or - for block level - the module has no block base pair yet.
+The script refuses (clear error, no partial edits) if: the module is not in `json/module.json`, `--function` isn't a valid identifier fragment, the class name already exists in the target file, the JSON key already exists, the new class could not be placed at the top level of the target file (see below), or - for block level - the module has no block base pair yet.
 
 ## After running
 
@@ -66,6 +66,7 @@ A clean run (no `UVM_ERROR`/`UVM_FATAL`) doesn't mean much until the scoreboard 
 - **The target `json/case/<mod>.json` is fully re-serialized** (Python `json`, 4-space indent) when an entry is added - semantically identical, formatting normalized. Expected.
 - **Duplicate-safe, not idempotent**: running the same `--module`/`--function`/`--level` twice fails on the second run instead of overwriting.
 - **No new files are created for leaf classes** - the script appends into the existing per-module file, which is already `` `include ``-d by `env/top_pkg.sv` (system tests), `seq/chip_sequence_lib.sv` (system seqs) or the block `.f` filelist (block level).
+- **Placement is always top level**: after the last class of the file, or - when the file has a file-level include guard (`` `ifndef X `` / `` `define X `` ... `` `endif ``) - just before the guard's closing `` `endif ``. An `` `endif `` that closes an `` `ifdef OPEN_EDA `` block inside a class is never an insertion point: a class placed there compiles but never registers with the factory (`BDTYP` / `INVTST` at run time).
 
 ## Troubleshooting
 
@@ -76,3 +77,5 @@ A clean run (no `UVM_ERROR`/`UVM_FATAL`) doesn't mean much until the scoreboard 
 | `ERROR: Class <name> already exists in <file>` | re-ran with the same `--module`/`--function`/`--level` | pick a different `--function`, or edit the existing test |
 | `ERROR: Test key <name> already exists in <json file>` | same, JSON side | same fix |
 | `ERROR: --function must be an identifier fragment...` | spaces, hyphens, or a leading digit | use `snake_case`, e.g. `write_read` |
+| `ERROR: Cannot place a new class at top level of <file>` | the file ends inside an open class or an open `` `ifdef `` (hand edit left it unbalanced) | close the open `endclass` / `` `endif `` in that file, then rerun - nothing was written |
+| Test compiles but the run fails with `BDTYP` / `INVTST` | the class sits inside another class or an `` `ifdef `` branch (a version of this script before 2026-11-27 put it before the last `` `endif `` of the file) | move the class out to the end of the file, after the base class's `endclass` |

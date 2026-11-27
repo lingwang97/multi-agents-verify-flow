@@ -9,7 +9,7 @@ paths:
 
 # Two-flow closed loop: oEDA first, VCS sign-off
 
-Closed-loop policy, moved from `docs/memory/arch_memory.md` §5 (the section number is retired there). Neighbouring canons: usage and pass criteria `verify/CLAUDE.md` (Commands / oEDA section); Verilator/OPEN_EDA coding rules `.claude/rules/oeda-verilator.md`; process tiers, passrate accounting and coverage ownership `docs/ops/multi_agent_ops.md` §3; RAL/reg-table behaviour `.claude/rules/ral.md`.
+Closed-loop policy. Neighbouring canons: usage and pass criteria `verify/CLAUDE.md` (Commands / oEDA section); Verilator/OPEN_EDA coding rules `.claude/rules/oeda-verilator.md`; process tiers, passrate accounting and coverage ownership `docs/ops/multi_agent_ops.md` §3; RAL/reg-table behaviour `.claude/rules/ral.md`.
 
 Naming: the open-source flow is **oEDA** (script `wsim_oeda`, scratch `sim/uvm_scratch_oeda_<case>/`, isolation define `+define+OPEN_EDA`); the business flow is VCS (`wsim`, one `sim/uvm_scratch_<case|mod|group>_<timestamp>_.../` per invocation; layout in CLAUDE.md Commands).
 

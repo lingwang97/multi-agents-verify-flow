@@ -10,9 +10,9 @@ Read-only report over the repo-root `sim/` scratch trees. No simulation is run.
 ## Run it
 
 ```bash
-${CLAUDE_SKILL_DIR}/conv_report.py                  # all cases
-${CLAUDE_SKILL_DIR}/conv_report.py --case <mod>     # substring filter
-${CLAUDE_SKILL_DIR}/conv_report.py -o conv_report.txt   # + write sim/conv_report.txt
+python3 ${CLAUDE_SKILL_DIR}/conv_report.py          # all cases
+python3 ${CLAUDE_SKILL_DIR}/conv_report.py --case <mod>   # substring filter
+python3 ${CLAUDE_SKILL_DIR}/conv_report.py -o conv_report.txt   # + write sim/conv_report.txt
 ```
 
 The script resolves the repo-root `sim/` from its own location, so it runs from any cwd on any host (paths are plain filesystem, no simulator needed).

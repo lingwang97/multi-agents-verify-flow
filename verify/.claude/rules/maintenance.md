@@ -9,7 +9,7 @@ paths:
 
 # Maintenance rules (R1-R7)
 
-Framework maintenance policy, moved from `docs/memory/arch_memory.md` §1 (the section number is retired there). Project state - module table, deferred items, bring-up checklist, open gaps - stays in `docs/memory/arch_memory.md`; these rules govern how documents, generators and the project registry are kept in sync. They load when a CLAUDE.md, `.claude/`, `docs/`, `script/` or `json/` file is opened, i.e. exactly when source-of-truth files or documentation are being changed.
+Framework maintenance policy. Project state - module table, bring-up checklist, open gaps - stays in `docs/memory/arch_memory.md`; these rules govern how documents, generators and the project registry are kept in sync. They load when a CLAUDE.md, `.claude/`, `docs/`, `script/` or `json/` file is opened, i.e. exactly when source-of-truth files or documentation are being changed.
 
 ### R1. Instruction files stay module-agnostic
 - **Rule:** no instruction file (CLAUDE.md, `.claude/rules/`, `.claude/agents/`, the add-test-case skill and its manual) names the chip's modules - examples use `<mod>` / `<case>`. The add-test-case script reads the valid modules from `json/module.json` and detects block-level support from the block base files, so adding or removing a module needs no instruction-file edit.
@@ -32,10 +32,10 @@ Framework maintenance policy, moved from `docs/memory/arch_memory.md` §1 (the s
 - **Rule:** canon is `verify/CLAUDE.md` "Regenerating the environment" (module-private files skip-if-exists; assembly files are template-pure and rewritten on every regen — never hand-edit, lift changes into `gen_uvm_env.py` templates). The enforcement subset is inlined in the json2env_agent charter.
 - **History (framework lifts):** logged in `docs/memory/fw_env_memory.md` (OPEN_EDA guards, TB_TOP=tb_top, clk/rst in both tb_top templates, etc.).
 
-### R6. Documentation governance: canonical homes, summary+link, frozen anchors
+### R6. Documentation governance: canonical homes, summary+link, citation sweeps
 - **Rule:** every fact class has ONE canonical home; other docs keep a short summary plus a pointer, never a full restatement. The canonical map - the home of every fact class - is the doc map in `docs/ops/multi_agent_ops.md` §4; keep it there, not a second list here. Rule/doc change history is the **framework repo's** git log - a project's log starts at its bootstrap, so history questions route to the framework repository (arch_memory keeps only a Last-updated date).
 - **Promotion:** per-agent logs (`fw_env_memory`, `dev/`, `debug/`, `deliver/`, taskboard) record *what happened*; a stable fact distilled from a log is **promoted** into `docs/modules/<mod>.md` and the log entry marked "promoted" — never copy canon into logs.
-- **Anchors:** arch_memory holds only project state and is renumbered on cleanup (2026-11-26, user decision - the old freeze was lifted); renumbering requires a grep-guided citation sweep over all `arch §N` references. When a policy changes: edit the canonical home first, then sync the summaries.
+- **Anchors:** arch_memory holds only project state; renumbering it requires a grep-guided citation sweep over every `arch §N` reference in every spelling (e.g. `arch_memory.md` §N, "§0 ... and §N"). When a policy changes: edit the canonical home first, then sync the summaries.
 - **Why:** the dual-track property policy once required 7–8 synchronized edits; §-number references already drifted once (§7/§6 ordering).
 - **Check:** before editing a rule, find its canonical home via the doc map (ops §4); grep the old wording afterwards to catch missed summaries.
 

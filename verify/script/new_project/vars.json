@@ -109,6 +109,22 @@
       "prompt": "Verilator on PATH for the oEDA flow (OSS CAD Suite environment sourced)."
     },
     {
+      "id": "lz4",
+      "stage": "project",
+      "phase": 2,
+      "kind": "detect_only",
+      "detect": "toolchain",
+      "prompt": "lz4 + zlib development libraries: Verilator links FST waveform tracing with -llz4 -lz; without them every waved oEDA build fails at link time."
+    },
+    {
+      "id": "wave_viewer",
+      "stage": "project",
+      "phase": 2,
+      "kind": "detect_only",
+      "detect": "toolchain",
+      "prompt": "FST waveform viewer on PATH (Surfer or GTKWave; both ship with the OSS CAD Suite) - optional, only for looking at waveforms."
+    },
+    {
       "id": "vcs",
       "stage": "project",
       "phase": 2,

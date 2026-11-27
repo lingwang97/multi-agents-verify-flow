@@ -319,6 +319,12 @@ function compile() {
     if [ $? -ne 0 ]; then
         echo "****$me****: [$BUILD_TAG] COMPILE FAILED - tail of $BUILD_DIR/compile.log:"
         tail -40 "$BUILD_DIR/compile.log"
+        # FST tracing links -llz4 -lz (verilated.mk): name the missing package instead of leaving a bare link error
+        if grep -qE -- "-llz4|-lz([^a-z0-9]|$)|lz4\.h|zlib\.h|undefined reference to .?(LZ4_|deflate|inflate)" "$BUILD_DIR/compile.log"; then
+            echo "****$me****: HINT: FST waveform tracing needs the lz4 and zlib development libraries - install"
+            echo "****$me****:       liblz4-dev + zlib1g-dev (Debian/Ubuntu) or lz4-devel + zlib-devel (RHEL/Rocky),"
+            echo "****$me****:       or rerun with -nowave (verify/docs/ops/oeda_local_setup.md)"
+        fi
         return 1
     fi
     echo "$build_key" > "$BUILD_DIR/.build_key"

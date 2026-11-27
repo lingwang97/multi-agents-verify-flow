@@ -1,8 +1,8 @@
 # arch_memory
 
-Project state for this verify tree: the architecture/module table (in a chip project this section holds the chip's module table), the system bring-up checklist and the open development gaps. Read before structural changes and append project state here - not policy: framework rules live in the carried rule files (`.claude/rules/maintenance.md`, `two-flow.md` and the other canons of the ops §4 doc map) and history lives in the logs. Sections renumbered 2026-11-26 (user decision; the old number freeze was lifted with a grep-guided citation sweep - any future renumbering requires the same sweep). Last updated 2026-11-26. Change history: `git log -- docs/memory/arch_memory.md` (framework changes: `docs/memory/fw_env_memory.md`).
+Project state for this verify tree: the architecture/module table (in a chip project this section holds the chip's module table), the system bring-up checklist and the open development gaps. Read before structural changes and append project state here - not policy: framework rules live in the carried rule files (`.claude/rules/maintenance.md`, `two-flow.md` and the other canons of the ops §4 doc map) and history lives in the logs. Renumbering rule: `.claude/rules/maintenance.md` R6. Last updated 2026-11-27. Change history: `git log -- docs/memory/arch_memory.md` (framework changes: `docs/memory/fw_env_memory.md`).
 
-**TOC**: §0 architecture state → §1 system bring-up checklist → §2 open development gaps. Former sections (all moved or removed 2026-11-18..26, numbers not reused): §1 maintenance rules → `.claude/rules/maintenance.md`; §2 machine setup → `docs/ops/oeda_local_setup.md`; §3 block-level conventions → `.claude/rules/filelists.md` + `uvm-architecture.md`; §4 Verilator rules → `.claude/rules/oeda-verilator.md`; §5 two-flow closed loop → `.claude/rules/two-flow.md`; §6 deferred items (canons absorbed into their rule files; the placeholder-path item became gap G9); §8 multi-agent deployment record → `docs/memory/fw_env_memory.md` (2026-11-17 entry) and `docs/ops/multi_agent_ops.md`.
+**TOC**: §0 architecture state → §1 system bring-up checklist → §2 open development gaps.
 
 ---
 

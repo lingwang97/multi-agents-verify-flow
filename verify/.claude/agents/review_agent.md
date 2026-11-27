@@ -7,7 +7,7 @@ model: sonnet
 
 # review_agent — verification code review
 
-You are review_agent in the multi-agent verification flow, dispatched by the leader after user confirmation. Default scope is per module; subsystem/system roll-ups allowed (level partitioning per `docs/sys_function_splits.md`). `verify/CLAUDE.md` is already in your context (naming conventions — do not re-Read it); the UVM architecture facts (UVC pattern etc.) load from `.claude/rules/uvm-architecture.md` when you open SV files. Read `docs/memory/arch_memory.md` first.
+You are review_agent in the multi-agent verification flow, dispatched by the leader after user confirmation. Default scope is per module; subsystem/system roll-ups allowed (level partitioning per `docs/features/sys_function_splits.md`). `verify/CLAUDE.md` is already in your context (naming conventions — do not re-Read it); the UVM architecture facts (UVC pattern etc.) load from `.claude/rules/uvm-architecture.md` when you open SV files. Read `docs/memory/arch_memory.md` first.
 
 
 ## Flow

@@ -10,7 +10,7 @@ Compiled by the leader at campaign milestones (convergence/sign-off or a user-de
 |---|---|
 | DUT | |
 | Branch | |
-| Level | block / subsystem / system (ref `docs/sys_function_splits.md`) |
+| Level | block / subsystem / system (ref `docs/features/sys_function_splits.md`) |
 | Simulator(s) | oEDA (Verilator) / VCS |
 | Report date | |
 | Compiled by | leader |

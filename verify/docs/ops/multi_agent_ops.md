@@ -1,6 +1,6 @@
 # multi_agent_ops — multi-agent verification flow runbook
 
-Roles are defined in `verify/.claude/agents/`; this runbook targets the **leader (the main session)**. Deployment record: `docs/memory/arch_memory.md` §8.
+Roles are defined in `verify/.claude/agents/`; this runbook targets the **leader (the main session)**.
 
 **Language rule:** all conversational output — leader/agent replies, reports, AskUserQuestion — is in Chinese; every file written into the project (this one included) is in English.
 
@@ -23,7 +23,7 @@ Leader duties: analyze user needs, schedule and manage the other agents, analyze
 Sub-agents cannot ask the user mid-run, so file confirmation is tiered:
 
 - **Sub-agents may edit directly** (rollbackable artifacts): their own module's module-private files (`uvc/<mod>/`, `<mod>_seq/test`, `<mod>_block_base_*`, `json/case/<mod>.json`, `tb_top_<mod>.sv`, `uvm_blk_<mod>.f`, `<mod>_if_conn*`), newly written test/seq/coverage code, `docs/features/`, `docs/review/`, agent memories under `docs/memory/`, `deliver_bridge/` reports. Exception: a new reference model (`uvc/<mod>/src/<mod>_ref_model.sv`) is approval-gated — plan first, develop only after user approval (dev_agent charter).
-- **Change plan + user approval required first**: anything under `script/` (generators/flow), `script/uvm_env_config_template.json`, `tb_top/filelist/*.f`, assembly/base template-pure files, `CLAUDE.md`, `.claude/rules/`, rule-bearing entries of `arch_memory.md`, cross-module shared files. Exception: the leader writes registry values into these files through `new_project.py apply` after the user confirms the summary table — `/new-project` (project stage) and the §8 register-table and design-input steps (verification stage) — and pulls a newer framework through `new_project.py resync` after the user confirms its dry-run table (`/new-project sync`). Sub-agent Write/Edit of these paths (except `arch_memory.md`) is gated by path_guard (§6: prompt in default mode, block in auto-like modes); Bash-side writes stay advisory.
+- **Change plan + user approval required first**: anything under `script/` (generators/flow), `script/uvm_env_config_template.json`, `tb_top/filelist/*.f`, assembly/base template-pure files, `CLAUDE.md`, `.claude/rules/`, cross-module shared files. Exception: the leader writes registry values into these files through `new_project.py apply` after the user confirms the summary table — `/new-project` (project stage) and the §8 register-table and design-input steps (verification stage) — and pulls a newer framework through `new_project.py resync` after the user confirms its dry-run table (`/new-project sync`). Sub-agent Write/Edit of these paths is gated by path_guard (§6: prompt in default mode, block in auto-like modes); Bash-side writes stay advisory.
 **RTL access** — the mode comes from the intake's `spec_dir` (§8 step 1):
 
 - **Pre-research mode** (`spec_dir` none/unset): the reference RTL under the design root is the basis — agents read it freely.
@@ -84,7 +84,7 @@ Retrieval entry point: **look up this table first** to find the canonical home o
 | `.claude/agents/*.md` | each agent | charter: role/flow/inline constraints/report format (enforcement subset of the canons) |
 | `.claude/skills/` (add-test-case, conv-report, new-verification, new-project) | skills | ops manuals, the intake procedure and the new-chip setup (open gaps: arch_memory §2) |
 | `script/new_project/` | leader | new-chip bootstrap: `manifest.txt` (carry/reset/regen/state/exclude classification of every tracked file), `vars.json` (registry of every project value), `new_project.py` (+ `scan`: design-source suggestions, `check --lint`; `audit`: framework self-check - manifest/module-name/doc-map/registry coverage; `resync`: pull a newer framework into a project) and `bootstrap.sh`, `answers.json` (this project's recorded values) |
-| `docs/sys_function_splits.md` | spec2json | level-partition plan (exists once produced) |
+| `docs/features/sys_function_splits.md` | spec2json | level-partition plan (project state: generated per project by stage 1, never carried by the framework) |
 | `docs/reports/` | reports | verification campaign reports (`report_template.md` outline + conventions; one per campaign, append-only; leader compiles from agent outputs) |
 | `deliver_bridge/README.md` | interface | design↔verification directory conventions |
 
@@ -128,7 +128,7 @@ Entry format everywhere: **date / change (or symptom) / reason / impact**. The l
   - Tiered confirmation (§1): a sub-agent Write/Edit of a source-of-truth file (`script/**`, `.claude/**`, `utils/**`, `CLAUDE.md`, `json/module.json`, `tb_top/filelist/*.f` except module-private `uvm_blk_*`/`tb_top_*`, the template-pure assembly files) or the creation of `uvc/<mod>/src/<mod>_ref_model.sv` needs the user. The hook decides by the session's permission mode:
     - **default/plan** → permission prompt in the main session naming the agent (the user's answer is the approval; even with a leader-relayed approval the user is asked once more - intended);
     - **auto/acceptEdits/bypassPermissions/dontAsk** → hard block: those modes settle prompts without a human (in auto mode an `ask` goes through unprompted).
-  After such a block the agent stops and reports; the user switches to default mode (Shift+Tab) and the leader re-dispatches. `arch_memory.md` stays advisory (rule vs state entries cannot be told apart).
+  After such a block the agent stops and reports; the user switches to default mode (Shift+Tab) and the leader re-dispatches. `arch_memory.md` stays ungated: it holds project state that json2env/spec2json update (maintenance.md R2).
   - After any edit of the hook run `python .claude/hooks/test_path_guard.py` (decision matrix; a syntax error makes the hook fail open silently).
   - RTL access (§1): in doc mode a sub-agent Read/Grep/Glob of the design root - or a search rooted above it - is blocked unless `.claude/state/rtl_access.json` holds a grant for that agent and path (leader-only helper `.claude/hooks/rtl_access.py`; sub-agents cannot write `.claude/`). Mode and design root come from `script/new_project/answers.json` (`spec_dir`, `design_root`); pre-research mode is not gated.
 - File-path writes inside Bash (generators, sed, scripts) are advisory only (string-level checks misfire too often): discipline comes from the agent charters + leader review; out-of-root file changes are done by the user, or on explicit user instruction.
@@ -152,7 +152,7 @@ Every value the procedure needs is a registry variable of stage `verification` (
 
 | Stage | Agent | What it does here | Skip when |
 |---|---|---|---|
-| 1 | spec2json_agent | level partition → `sys_function_splits.md` + config proposal | module & levels already partitioned |
+| 1 | spec2json_agent | level partition → `docs/features/sys_function_splits.md` + config proposal | module & levels already partitioned |
 | 2 | json2env_agent | env build/update (`--guvc`, deploy, smoke) | env for the target already exists (check §0 / fw_env_memory) |
 | 2b | leader | design inputs: scan → suggested design file lists → user confirms → apply + check + lint | no RTL yet (defer all; rerun when it lands) |
 | 3 | dev_agent_N | confirmed feature list + UVC/test/seq/coverage development | — (core stage) |

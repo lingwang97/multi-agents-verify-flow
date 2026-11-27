@@ -507,6 +507,8 @@ VERILATOR_GUESS = ("~/tools/oss-cad-suite/bin/verilator", "/opt/oss-cad-suite/bi
                    "/tools/oss-cad-suite/bin/verilator", "/usr/local/oss-cad-suite/bin/verilator")
 UVM_GUESS = ("~/tools/uvm-1.2", "/opt/uvm-1.2", "/tools/uvm-1.2", "/usr/local/uvm-1.2")
 VENDOR_HINTS = ("synopsys", "/vcs", "questa", "mentor", "xcelium", "cadence", "/etc/uvm")
+TOOLCHAIN_IDS = ("verilator", "uvm_home", "lz4", "wave_viewer")   # P2 ids reported by toolchain_findings()
+WAVE_VIEWERS = ("surfer", "gtkwave")
 
 
 def verilator_info():
@@ -547,8 +549,27 @@ def uvm_info(path):
     return {"path": path, "version": ver, "origin": origin}
 
 
+def link_probe(libs):
+    """True/False whether the C++ compiler links an empty program against libs, None when no compiler.
+    Verilator links FST tracing with -llz4 -lz (verilated.mk), so a missing lz4/zlib development package
+    makes every waved oEDA build fail at link time while -nowave builds still pass."""
+    cxx = _which("c++") or _which("g++") or _which("clang++")
+    if not cxx:
+        return None
+    import tempfile
+    d = tempfile.mkdtemp(prefix="np_link_")
+    try:
+        src, out = os.path.join(d, "t.cpp"), os.path.join(d, "t.out")
+        with open(src, "w") as f:
+            f.write("int main() { return 0; }\n")
+        rc, _ = _run([cxx, src, "-o", out] + list(libs), timeout=60)
+        return rc == 0
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def toolchain_findings():
-    """{'verilator': (level, detail), 'uvm_home': (level, detail)} for /new-project P2 and check."""
+    """{id: (level, detail)} for the TOOLCHAIN_IDS - /new-project P2 and check."""
     rec = "%d.%03d" % VERILATOR_RECOMMENDED
     doc = "docs/ops/oeda_local_setup.md"
     out = {}
@@ -591,6 +612,26 @@ def toolchain_findings():
     else:
         note = "" if active["origin"] == "accellera" else " (origin not identified as Accellera - check its README)"
         out["uvm_home"] = ("READY", "UVM-1.2 at %s%s%s" % (active["path"], " (Accellera, recommended)" if not note else "", note))
+    # FST tracing links -llz4 -lz: without the dev packages the default (waved) oEDA build fails at link time
+    if not v:
+        out["lz4"] = ("WARN", "not probed - Verilator not found (FST waveforms need the lz4 and zlib development packages, %s)" % doc)
+    else:
+        ok = link_probe(["-llz4", "-lz"])
+        if ok is None:
+            out["lz4"] = ("WARN", "not probed - no C++ compiler on PATH (Verilator needs one to build simv)")
+        elif ok:
+            out["lz4"] = ("READY", "lz4 + zlib link (FST waveform builds)")
+        else:
+            out["lz4"] = ("WARN", "lz4/zlib development libraries missing: every waved oEDA build fails at link time "
+                          "(-nowave still passes) - install liblz4-dev + zlib1g-dev (Debian/Ubuntu) or lz4-devel + "
+                          "zlib-devel (RHEL/CentOS/Rocky) - %s" % doc)
+    # waveform viewers: optional GUIs (the OSS CAD Suite ships both); a headless server views waves elsewhere
+    found = [(t, _which(t)) for t in WAVE_VIEWERS if _which(t)]
+    if found:
+        out["wave_viewer"] = ("READY", ", ".join("%s (%s)" % f for f in found))
+    else:
+        out["wave_viewer"] = ("WARN", "no FST viewer on PATH (surfer / gtkwave; both ship with the OSS CAD Suite) - "
+                              "optional: only needed to look at waveforms; a headless server can view them elsewhere")
     return out
 
 
@@ -607,7 +648,7 @@ def detect(root, stage=None):
         else:
             cur = current_value(var, root)
         d = {"current": cur, "default": default_of(var, root, a), "candidates": []}
-        if var["id"] in ("verilator", "uvm_home"):
+        if var["id"] in TOOLCHAIN_IDS:
             tc = tc or toolchain_findings()
             d["status"], d["advice"] = tc[var["id"]]
         how = var.get("detect", "")
@@ -881,7 +922,7 @@ def cmd_check(root, stage, markdown, lint, top):
     tc = None   # toolchain findings, computed once on first use
     for v in stage_vars(reg, stage):
         i = v["id"]
-        if v["kind"] == "detect_only" and i in ("verilator", "uvm_home"):
+        if v["kind"] == "detect_only" and i in TOOLCHAIN_IDS:
             tc = tc or toolchain_findings()
             res.append((tc[i][0], i, tc[i][1]))
             continue

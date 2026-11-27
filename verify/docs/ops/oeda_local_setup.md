@@ -6,21 +6,23 @@
 
 - **Verilator >= 5.054** (a recent OSS CAD Suite). Older releases reject some UVM/SystemVerilog forms - 5.040, for example, cannot parse `uvm_config_db #(<pkg>::<type>)::get/set` and rejects a function without a return type. The framework isolates the known cases under `OPEN_EDA` (`.claude/rules/oeda-verilator.md`); new code on an older release may hit more.
 - **Accellera UVM-1.2** source tree. A simulator-bundled UVM can carry vendor code Verilator cannot parse; UVM 1.1d and IEEE 1800.2 differ in RAL, phasing and deprecated APIs.
-- `/new-project` (P2) and `new_project.py check --stage project` report what this machine has against these versions; `wsim_oeda` prints a warning on every run when Verilator or UVM differs. Both are warnings - other versions still run.
+- `/new-project` (P2) and `new_project.py check --stage project` report what this machine has against these versions, plus the lz4/zlib link probe and the waveform viewers below; `wsim_oeda` prints a warning on every run when Verilator or UVM differs. All are warnings - other versions still run.
 
 ## One-time setup
 
 - Verilator: unpack the OSS CAD Suite and source its `environment` in the shell that runs the flow (`source <oss-cad-suite>/environment`); `verilator --version` must answer.
 - UVM-1.2 library: `export UVM_HOME=<path>/uvm-1.2` (`wsim_oeda` default: `$HOME/tools/uvm-1.2`). Use a plain Accellera UVM-1.2 source tree - a simulator-bundled UVM can carry vendor code Verilator cannot parse.
 - Python 3 with openpyxl for RalGen: `WSIM_PYTHON` in `script/sflow/flow_env.sh`, else `/usr/bin/python3` (the OSS CAD Suite python has no openpyxl).
-- Waveforms: an FST viewer (Surfer or GTKWave).
+- lz4 and zlib development libraries: Verilator links FST waveform tracing with `-llz4 -lz`, so they are required for the default (waved) build - `liblz4-dev zlib1g-dev` (Debian/Ubuntu) or `lz4-devel zlib-devel` (RHEL/CentOS/Rocky). The C++ compiler Verilator uses must find them.
+- Waveforms: an FST viewer - Surfer or GTKWave, both shipped in the OSS CAD Suite `bin/` (on PATH once its `environment` is sourced). Optional: a headless server can leave viewing to another machine.
 
 ## Pitfalls
 
 - csh/tcsh login shells: `wsim_oeda` is a bash script and does not see variables set only in `~/.cshrc`. Export `UVM_HOME` and source the OSS CAD Suite `environment` where bash sees them (`~/.bashrc` / `~/.profile`), or in the shell before calling `./wsim_oeda`.
 - Builds live in `sim/oeda_build/<tag>_<sig>/` (three levels below the repo root, matching the `.f` path depth), shared by every case with the same filelist and defines; delete the directory to force a rebuild. Builds are serialized with `flock` (util-linux) and the run queue needs bash >= 4.3.
 - Simulations run `-j 2` in parallel by default; raise `-j` on a machine with more cores and memory (each Verilator build already uses every core).
+- Default build fails at link time but `-nowave` passes: the lz4/zlib development libraries are missing (FST tracing needs them; `wsim_oeda` prints the install hint).
 
 ## This machine
 
-- To be filled in: OSS CAD Suite path and Verilator version, `UVM_HOME`, `WSIM_PYTHON`, waveform viewer.
+- To be filled in: OSS CAD Suite path and Verilator version, `UVM_HOME`, `WSIM_PYTHON`, lz4/zlib packages, waveform viewer.

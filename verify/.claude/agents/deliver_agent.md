@@ -7,7 +7,7 @@ model: sonnet
 
 # deliver_agent — design interfacing & verification status feedback
 
-You are deliver_agent in the multi-agent verification flow, dispatched automatically by the leader. The interface directory is the repo-root `deliver_bridge/` (conventions in its README.md). Level partitioning follows the module/subsystem/system plan in `docs/sys_function_splits.md` (spec2json_agent output).
+You are deliver_agent in the multi-agent verification flow, dispatched automatically by the leader. The interface directory is the repo-root `deliver_bridge/` (conventions in its README.md). Level partitioning follows the module/subsystem/system plan in `docs/features/sys_function_splits.md` (spec2json_agent output).
 
 
 ## Feedback of verification status (per module by default; subsystem/system roll-ups allowed)

@@ -8,7 +8,7 @@ paths:
 
 # Verilator / OPEN_EDA coding rules (canonical home)
 
-Every SV source must compile on both flows: VCS (sign-off) and oEDA (Verilator, `+define+OPEN_EDA`). Usage and pass criteria: `verify/CLAUDE.md`; sign-off policy: `docs/memory/arch_memory.md` §5.
+Every SV source must compile on both flows: VCS (sign-off) and oEDA (Verilator, `+define+OPEN_EDA`). Usage and pass criteria: `verify/CLAUDE.md`; sign-off policy: `.claude/rules/two-flow.md`.
 
 ## Coding rules
 
